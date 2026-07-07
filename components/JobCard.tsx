@@ -26,6 +26,8 @@ type Props = {
   /** Röstredigering av jobbet: 'recording' = spelar in, 'processing' = AI:n jobbar. */
   voiceState?: 'recording' | 'processing';
   onVoiceEdit?: (jobId: string) => void;
+  /** Visa kundens godkänn/neka-knappar (offertläge). */
+  onSetApproval?: (jobId: string, approval: 'godkänd' | 'nekad' | undefined) => void;
 };
 
 export function JobCard({
@@ -36,6 +38,7 @@ export function JobCard({
   onUpdateProduct,
   voiceState,
   onVoiceEdit,
+  onSetApproval,
 }: Props) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
@@ -63,8 +66,10 @@ export function JobCard({
     setAdding(false);
   };
 
+  const rejected = job.approval === 'nekad';
+
   return (
-    <View style={styles.card}>
+    <View style={[styles.card, rejected && styles.cardRejected]}>
       <View style={styles.header}>
         <View style={styles.headerText}>
           <View style={styles.categoryRow}>
@@ -75,10 +80,21 @@ export function JobCard({
                 <Text style={styles.criticalText}>KRITISK</Text>
               </View>
             ) : null}
+            {job.approval === 'godkänd' ? (
+              <View style={styles.approvedBadge}>
+                <Ionicons name="checkmark" size={11} color={colors.accentDark} />
+                <Text style={styles.approvedText}>GODKÄND</Text>
+              </View>
+            ) : null}
+            {rejected ? (
+              <View style={styles.rejectedBadge}>
+                <Text style={styles.rejectedText}>NEKAD</Text>
+              </View>
+            ) : null}
           </View>
           <Text style={styles.title}>{job.title}</Text>
         </View>
-        <Text style={styles.price}>{job.price} kr</Text>
+        <Text style={[styles.price, rejected && styles.priceStruck]}>{job.price} kr</Text>
         {onVoiceEdit ? (
           <Pressable
             onPress={() => onVoiceEdit(job.id)}
@@ -203,11 +219,133 @@ export function JobCard({
           <Text style={styles.addProductText}>Lägg till produkt</Text>
         </Pressable>
       )}
+
+      {onSetApproval ? (
+        <View style={styles.approvalRow}>
+          <Pressable
+            onPress={() =>
+              onSetApproval(job.id, job.approval === 'godkänd' ? undefined : 'godkänd')
+            }
+            style={[styles.approveBtn, job.approval === 'godkänd' && styles.approveBtnActive]}
+          >
+            <Ionicons
+              name="checkmark"
+              size={16}
+              color={job.approval === 'godkänd' ? colors.onAccent : colors.accent}
+            />
+            <Text
+              style={[
+                styles.approveLabel,
+                job.approval === 'godkänd' && styles.approveLabelActive,
+              ]}
+            >
+              Godkänn
+            </Text>
+          </Pressable>
+          <Pressable
+            onPress={() => onSetApproval(job.id, rejected ? undefined : 'nekad')}
+            style={[styles.rejectBtn, rejected && styles.rejectBtnActive]}
+          >
+            <Ionicons
+              name="close"
+              size={16}
+              color={rejected ? colors.onAccent : colors.danger}
+            />
+            <Text style={[styles.rejectLabel, rejected && styles.rejectLabelActive]}>
+              Neka
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  cardRejected: {
+    opacity: 0.55,
+  },
+  approvedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(185, 241, 60, 0.14)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  approvedText: {
+    color: colors.accentDark,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  rejectedBadge: {
+    backgroundColor: 'rgba(255, 90, 95, 0.14)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  rejectedText: {
+    color: colors.danger,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+  priceStruck: {
+    textDecorationLine: 'line-through',
+    color: colors.textFaint,
+  },
+  approvalRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 2,
+  },
+  approveBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.accent,
+    paddingVertical: 10,
+  },
+  approveBtnActive: {
+    backgroundColor: colors.accent,
+  },
+  approveLabel: {
+    color: colors.accent,
+    fontWeight: '700',
+  },
+  approveLabelActive: {
+    color: colors.onAccent,
+  },
+  rejectBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 90, 95, 0.5)',
+    paddingVertical: 10,
+  },
+  rejectBtnActive: {
+    backgroundColor: colors.danger,
+    borderColor: colors.danger,
+  },
+  rejectLabel: {
+    color: colors.danger,
+    fontWeight: '700',
+  },
+  rejectLabelActive: {
+    color: colors.onAccent,
+  },
   card: {
     backgroundColor: colors.card,
     borderRadius: radius.lg,

@@ -27,6 +27,7 @@ import { AddJobModal } from './components/AddJobModal';
 import { BesiktningScreen } from './components/BesiktningScreen';
 import { InspectionGuide } from './components/InspectionGuide';
 import { JobCard } from './components/JobCard';
+import { OrderCard } from './components/OrderCard';
 import { JobsScreen } from './components/JobsScreen';
 import { MicButton, MicPhase } from './components/MicButton';
 import { PhotoCard } from './components/PhotoCard';
@@ -34,7 +35,15 @@ import { analyzeTranscript, hasOpenAiKey, refineJob, transcribeAudio } from './l
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from './lib/speech';
 import { saveEstimate } from './lib/supabase';
 import { colors, radius, shadow } from './lib/theme';
-import { Job, PriceItem, jobsTotal, uid } from './lib/types';
+import {
+  EMPTY_ORDER,
+  Job,
+  OrderInfo,
+  PriceItem,
+  approvedTotal,
+  jobsTotal,
+  uid,
+} from './lib/types';
 
 function formatKr(value: number): string {
   return `${value.toLocaleString('sv-SE')} kr`;
@@ -54,6 +63,21 @@ function Screen() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [voiceEditId, setVoiceEditId] = useState<string | null>(null);
   const [voiceEditRecording, setVoiceEditRecording] = useState(false);
+  const [order, setOrder] = useState<OrderInfo>(EMPTY_ORDER);
+
+  const patchOrder = useCallback((patch: Partial<OrderInfo>) => {
+    setOrder((current) => ({ ...current, ...patch }));
+  }, []);
+
+  const setApproval = useCallback(
+    (jobId: string, approval: 'godkänd' | 'nekad' | undefined) => {
+      setJobs((current) =>
+        current.map((job) => (job.id === jobId ? { ...job, approval } : job))
+      );
+      setSavedId(null);
+    },
+    []
+  );
 
   const takePhoto = useCallback(async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -259,6 +283,8 @@ function Screen() {
   }, [photoUri, transcript, jobs]);
 
   const total = jobsTotal(jobs);
+  const approved = approvedTotal(jobs);
+  const hasRejected = jobs.some((job) => job.approval === 'nekad');
 
   return (
     <View style={styles.flex}>
@@ -313,6 +339,7 @@ function Screen() {
 
           {jobs.length > 0 ? (
             <View style={styles.jobsSection}>
+              <OrderCard order={order} onChange={patchOrder} />
               <Text style={styles.sectionHeading}>Jobb</Text>
               {jobs.map((job) => (
                 <JobCard
@@ -330,6 +357,7 @@ function Screen() {
                       : undefined
                   }
                   onVoiceEdit={toggleJobVoice}
+                  onSetApproval={setApproval}
                 />
               ))}
             </View>
@@ -343,8 +371,15 @@ function Screen() {
           {jobs.length > 0 ? (
             <View style={styles.footer}>
               <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>Totalt</Text>
-                <Text style={styles.totalValue}>{formatKr(total)}</Text>
+                <Text style={styles.totalLabel}>
+                  {hasRejected ? 'Att betala (godkänt)' : 'Totalt'}
+                </Text>
+                <View style={styles.totalValues}>
+                  {hasRejected ? (
+                    <Text style={styles.totalStruck}>{formatKr(total)}</Text>
+                  ) : null}
+                  <Text style={styles.totalValue}>{formatKr(approved)}</Text>
+                </View>
               </View>
               <Pressable
                 onPress={save}
@@ -564,6 +599,16 @@ const styles = StyleSheet.create({
   totalLabel: {
     color: colors.textSecondary,
     fontWeight: '600',
+  },
+  totalValues: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 8,
+  },
+  totalStruck: {
+    color: colors.textFaint,
+    fontSize: 14,
+    textDecorationLine: 'line-through',
   },
   totalValue: {
     color: colors.text,

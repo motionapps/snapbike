@@ -18,6 +18,25 @@ export type Job = {
   products: Product[];
   /** 'kritisk' = trafikfarligt/måste åtgärdas innan cykeln kan användas. */
   severity?: 'kritisk' | 'normal';
+  /** Kundens beslut per åtgärd; undefined = ej beslutat än. */
+  approval?: 'godkänd' | 'nekad';
+};
+
+/**
+ * Arbetsordermetadata runt cykeln. Lokalt i appen tills vidare – redo att
+ * kopplas mot Supabase (kundregister, ledigt cykelnummer, godkännande).
+ */
+export type OrderInfo = {
+  /** Verkstadens cykelnummer 1–100. "Ledigt" avgörs av backend senare. */
+  bikeNumber: string;
+  customerName: string;
+  customerPhone: string;
+};
+
+export const EMPTY_ORDER: OrderInfo = {
+  bikeNumber: '',
+  customerName: '',
+  customerPhone: '',
 };
 
 export type PriceItem = {
@@ -59,10 +78,17 @@ export function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
+export function jobTotal(job: Job): number {
+  return job.price + job.products.reduce((p, prod) => p + prod.price, 0);
+}
+
 export function jobsTotal(jobs: Job[]): number {
-  return jobs.reduce(
-    (sum, job) =>
-      sum + job.price + job.products.reduce((p, prod) => p + prod.price, 0),
-    0
-  );
+  return jobs.reduce((sum, job) => sum + jobTotal(job), 0);
+}
+
+/** Summa för de åtgärder kunden inte har nekat (nekade räknas bort). */
+export function approvedTotal(jobs: Job[]): number {
+  return jobs
+    .filter((job) => job.approval !== 'nekad')
+    .reduce((sum, job) => sum + jobTotal(job), 0);
 }
