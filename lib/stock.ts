@@ -123,21 +123,19 @@ function variants(token: string): string[] {
 }
 
 /**
- * Enkel tokenbaserad sökning i lagerlistan. Poängsätter på hur många av
- * sökorden (eller deras synonymer) som förekommer i artikelnamnet och lyfter
- * varor som finns i lager och har pris. Minst hälften av sökorden måste träffa.
+ * Poängsätter en lista mot sökorden. Returnerar sorterade träffar och om
+ * någon artikel var en FULLTRÄFF (matchade samtliga sökord) – det senare
+ * avgör om kassan "täcker" sökningen eller om vi måste beställa.
  */
-export function searchStock(query: string, limit = 12): StockItem[] {
-  const tokens = normalize(query)
-    .split(/\s+/)
-    .filter((token) => token.length > 1)
-    .map((token) => variants(token));
-  if (tokens.length === 0) return [];
-
-  const minMatches = Math.ceil(tokens.length / 2);
+function scoreList(
+  list: StockItem[],
+  tokens: string[][],
+  minMatches: number,
+  stockBonus = 0
+): { results: StockItem[]; hasFullMatch: boolean } {
   const scored: { item: StockItem; score: number }[] = [];
-
-  for (const item of loadStock()) {
+  let hasFullMatch = false;
+  for (const item of list) {
     const name = ` ${normalize(item.name)} `;
     let matches = 0;
     let score = 0;
@@ -150,15 +148,55 @@ export function searchStock(query: string, limit = 12): StockItem[] {
       }
     }
     if (matches < minMatches) continue;
+    if (matches === tokens.length) {
+      hasFullMatch = true;
+      score += 8;
+    }
     score = score * (matches / tokens.length);
-    if (matches === tokens.length) score += 8;
-    if (item.stock > 0) score += 5;
     if (item.sellPrice > 0) score += 2;
+    // Lager-bonus lyfter varor vi har hemma vid ungefär lika relevans, men
+    // låter en betydligt starkare katalogträff (t.ex. rätt GP5000) gå före.
+    if (item.stock > 0) score += stockBonus;
     scored.push({ item, score });
   }
+  return {
+    results: scored.sort((a, b) => b.score - a.score).map((e) => e.item),
+    hasFullMatch,
+  };
+}
 
-  return scored
-    .sort((a, b) => b.score - a.score)
-    .slice(0, limit)
-    .map((entry) => entry.item);
+/**
+ * Tvåstegssökning: butikens kassa (~1500 lagerförda artiklar) i FÖRSTA hand,
+ * och först när vi INTE har varan i lager fylls resten på med beställningsvaror
+ * ur hela katalogen (~67 000). "Har i lager" = minst en lagervara är fullträff
+ * på alla sökord; då visas bara lagervaror. Annars kompletteras med bästa
+ * beställningsvarorna (lager 0) så att t.ex. ett specifikt GP5000 kan föreslås
+ * även om det inte finns hemma. Minst hälften av sökorden (eller deras
+ * synonymer) måste förekomma i artikelnamnet.
+ */
+export function searchStock(query: string, limit = 12): StockItem[] {
+  const tokens = normalize(query)
+    .split(/\s+/)
+    .filter((token) => token.length > 1)
+    .map((token) => variants(token));
+  if (tokens.length === 0) return [];
+
+  const minMatches = Math.ceil(tokens.length / 2);
+  const all = loadStock();
+
+  const inStock = scoreList(
+    all.filter((item) => item.stock > 0),
+    tokens,
+    minMatches
+  );
+
+  // Har vi en riktig träff i kassan? Visa bara lagervaror.
+  if (inStock.hasFullMatch) {
+    return inStock.results.slice(0, limit);
+  }
+
+  // Annars: sök hela katalogen (lagervaror + beställningsvaror) med lager-bonus,
+  // så att en specifik vara vi inte har hemma (t.ex. rätt GP5000) kan föreslås
+  // som beställningsvara utan att svaga lagervaror tränger undan den.
+  return scoreList(all, tokens, minMatches, 5).results.slice(0, limit);
 }
