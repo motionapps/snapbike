@@ -7,7 +7,7 @@ import {
   setAudioModeAsync,
   useAudioRecorder,
 } from 'expo-audio';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -28,6 +28,7 @@ import { BesiktningScreen } from './components/BesiktningScreen';
 import { InspectionGuide } from './components/InspectionGuide';
 import { JobCard } from './components/JobCard';
 import { OrderCard } from './components/OrderCard';
+import { clearDraft, loadDraft, saveDraft } from './lib/persist';
 import { JobsScreen } from './components/JobsScreen';
 import { MicButton, MicPhase } from './components/MicButton';
 import { PhotoCard } from './components/PhotoCard';
@@ -64,9 +65,38 @@ function Screen() {
   const [voiceEditId, setVoiceEditId] = useState<string | null>(null);
   const [voiceEditRecording, setVoiceEditRecording] = useState(false);
   const [order, setOrder] = useState<OrderInfo>(EMPTY_ORDER);
+  const restored = useRef(false);
+
+  // Återställ ev. autosparat utkast vid start (webben; native tills backend).
+  useEffect(() => {
+    const draft = loadDraft();
+    if (draft) {
+      setPhotoUri(draft.photoUri);
+      setTranscript(draft.transcript);
+      setJobs(draft.jobs);
+      setOrder(draft.order);
+    }
+    restored.current = true;
+  }, []);
+
+  // Autospar vid varje ändring (efter att ev. utkast återställts).
+  useEffect(() => {
+    if (!restored.current) return;
+    saveDraft({ photoUri, transcript, jobs, order });
+  }, [photoUri, transcript, jobs, order]);
 
   const patchOrder = useCallback((patch: Partial<OrderInfo>) => {
     setOrder((current) => ({ ...current, ...patch }));
+  }, []);
+
+  const newOrder = useCallback(() => {
+    clearDraft();
+    setPhotoUri(null);
+    setTranscript('');
+    setJobs([]);
+    setOrder(EMPTY_ORDER);
+    setError('');
+    setSavedId(null);
   }, []);
 
   const setApproval = useCallback(
@@ -306,6 +336,12 @@ function Screen() {
           <View style={styles.titleRow}>
             <Text style={styles.title}>SnapBike</Text>
             <Text style={styles.subtitle}>Verkstadsanteckning</Text>
+            {transcript || jobs.length > 0 || photoUri ? (
+              <Pressable onPress={newOrder} style={styles.newOrder} hitSlop={8}>
+                <Ionicons name="add" size={15} color={colors.textSecondary} />
+                <Text style={styles.newOrderText}>Ny order</Text>
+              </Pressable>
+            ) : null}
           </View>
 
           <PhotoCard uri={photoUri} onTakePhoto={takePhoto} />
@@ -520,6 +556,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 10,
+  },
+  newOrder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    marginLeft: 'auto',
+    borderRadius: radius.sm,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  newOrderText: {
+    color: colors.textSecondary,
+    fontWeight: '600',
+    fontSize: 12,
   },
   title: {
     color: colors.text,
