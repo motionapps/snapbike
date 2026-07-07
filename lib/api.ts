@@ -3,6 +3,7 @@ import { fetch } from 'expo/fetch';
 import { File } from 'expo-file-system';
 
 import { PRICE_CSV } from './prices';
+import { SERVICE_GUIDE } from './servicepaket';
 import { searchStock } from './stock';
 import { Job, uid } from './types';
 
@@ -205,7 +206,8 @@ const SYSTEM_PROMPT =
   'visas som beställningsvara). Hittar du ingen rimlig produkt alls: lägg med ' +
   'delen med pris 0 och utan artikelnummer.\n\n' +
   'När du är klar: anropa create_job_list exakt en gång med hela jobblistan.\n\n' +
-  'PRISLISTA:\n' +
+  SERVICE_GUIDE +
+  '\n\nPRISLISTA:\n' +
   PRICE_CSV;
 
 const MAX_TOOL_ROUNDS = 8;
