@@ -24,6 +24,7 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { AddJobModal } from './components/AddJobModal';
+import { BesiktningScreen } from './components/BesiktningScreen';
 import { JobCard } from './components/JobCard';
 import { JobsScreen } from './components/JobsScreen';
 import { MicButton, MicPhase } from './components/MicButton';
@@ -293,10 +294,11 @@ function Screen() {
   );
 }
 
-type Tab = 'note' | 'jobs';
+type Tab = 'note' | 'inspect' | 'jobs';
 
 const TABS: { key: Tab; label: string; icon: string; iconActive: string }[] = [
   { key: 'note', label: 'Anteckna', icon: 'mic-outline', iconActive: 'mic' },
+  { key: 'inspect', label: 'Besiktning', icon: 'clipboard-outline', iconActive: 'clipboard' },
   { key: 'jobs', label: 'Jobb', icon: 'file-tray-full-outline', iconActive: 'file-tray-full' },
 ];
 
@@ -310,6 +312,9 @@ function Root() {
 
       <View style={[styles.page, tab !== 'note' && styles.pageHidden]}>
         <Screen />
+      </View>
+      <View style={[styles.page, tab !== 'inspect' && styles.pageHidden]}>
+        <BesiktningScreen />
       </View>
       <View style={[styles.page, tab !== 'jobs' && styles.pageHidden]}>
         <JobsScreen active={tab === 'jobs'} />
