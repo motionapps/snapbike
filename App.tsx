@@ -30,7 +30,8 @@ import { JobCard } from './components/JobCard';
 import { JobsScreen } from './components/JobsScreen';
 import { MicButton, MicPhase } from './components/MicButton';
 import { PhotoCard } from './components/PhotoCard';
-import { analyzeTranscript, transcribeAudio } from './lib/api';
+import { analyzeTranscript, hasOpenAiKey, transcribeAudio } from './lib/api';
+import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from './lib/speech';
 import { saveEstimate } from './lib/supabase';
 import { colors, radius, shadow } from './lib/theme';
 import { Job, PriceItem, jobsTotal, uid } from './lib/types';
@@ -65,8 +66,20 @@ function Screen() {
     }
   }, []);
 
+  // Utan Whisper-nyckel: använd webbläsarens taligenkänning på webben i stället.
+  const useWebSpeech = !hasOpenAiKey && webSpeechAvailable;
+
   const startRecording = useCallback(async () => {
     setError('');
+    if (useWebSpeech) {
+      try {
+        startWebSpeech();
+        setPhase('recording');
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+      return;
+    }
     const permission = await AudioModule.requestRecordingPermissionsAsync();
     if (!permission.granted) {
       Alert.alert('Mikrofon', 'Ge appen tillgång till mikrofonen i Inställningar.');
@@ -76,17 +89,22 @@ function Screen() {
     await recorder.prepareToRecordAsync();
     recorder.record();
     setPhase('recording');
-  }, [recorder]);
+  }, [recorder, useWebSpeech]);
 
   const stopRecording = useCallback(async () => {
     try {
       setPhase('transcribing');
-      await recorder.stop();
-      await setAudioModeAsync({ allowsRecording: false });
-      const uri = recorder.uri;
-      if (!uri) throw new Error('Ingen inspelning hittades.');
-
-      const text = await transcribeAudio(uri);
+      let text: string;
+      if (useWebSpeech) {
+        text = await stopWebSpeech();
+        if (!text) throw new Error('Ingen text uppfattades – försök igen.');
+      } else {
+        await recorder.stop();
+        await setAudioModeAsync({ allowsRecording: false });
+        const uri = recorder.uri;
+        if (!uri) throw new Error('Ingen inspelning hittades.');
+        text = await transcribeAudio(uri);
+      }
       setTranscript(text);
 
       setPhase('analyzing');
@@ -98,7 +116,7 @@ function Screen() {
     } finally {
       setPhase('idle');
     }
-  }, [recorder]);
+  }, [recorder, useWebSpeech]);
 
   const handleToggle = useCallback(() => {
     if (phase === 'recording') {

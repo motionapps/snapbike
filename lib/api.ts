@@ -9,6 +9,9 @@ import { Job, uid } from './types';
 const OPENAI_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '';
 const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY ?? '';
 
+/** Sant när en riktig Whisper-nyckel finns (inte tom/platshållare). */
+export const hasOpenAiKey = OPENAI_KEY.startsWith('sk-');
+
 /**
  * Sends a recorded audio file to OpenAI Whisper and returns the Swedish
  * transcript.
