@@ -18,20 +18,22 @@ import {
   inspectionIssues,
   inspectionSummaryText,
 } from '../lib/besiktning';
-import { colors, radius, shadow } from '../lib/theme';
+import { colors, radius } from '../lib/theme';
 
-const SUMMARY_STEP = INSPECTION_TEMPLATE.length;
-
+/**
+ * Hela besiktningen som en scrollbar lista (Marken → Bak → Fram) med en
+ * sammanfattning i botten som uppdateras löpande – tänkt att visas för
+ * kunden på en telefon eller skärm medan cykeln gås igenom.
+ */
 export function BesiktningScreen() {
   const insets = useSafeAreaInsets();
-  const [step, setStep] = useState(0);
   const [results, setResults] = useState<InspectionState>({});
 
   const setStatus = useCallback((itemId: string, status: InspectionStatus) => {
     setResults((current) => {
       const existing = current[itemId];
       if (existing?.status === status) {
-        // Tap on the active status clears the item again.
+        // Tryck på aktiv status nollställer punkten igen.
         const next = { ...current };
         delete next[itemId];
         return next;
@@ -65,16 +67,11 @@ export function BesiktningScreen() {
 
   const reset = useCallback(() => {
     setResults({});
-    setStep(0);
   }, []);
 
-  const checkedCount = useMemo(
-    () => Object.keys(results).length,
-    [results]
-  );
-
-  const section = step < SUMMARY_STEP ? INSPECTION_TEMPLATE[step] : null;
+  const checkedCount = useMemo(() => Object.keys(results).length, [results]);
   const issues = useMemo(() => inspectionIssues(results), [results]);
+  const done = checkedCount === INSPECTION_ITEM_COUNT;
 
   return (
     <View style={styles.root}>
@@ -88,6 +85,12 @@ export function BesiktningScreen() {
         <Text style={styles.subtitle}>
           {checkedCount}/{INSPECTION_ITEM_COUNT} punkter
         </Text>
+        {issues.length > 0 ? (
+          <View style={styles.issueCounter}>
+            <Ionicons name="warning" size={12} color={colors.danger} />
+            <Text style={styles.issueCounterText}>{issues.length}</Text>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.progressTrack}>
@@ -99,32 +102,6 @@ export function BesiktningScreen() {
         />
       </View>
 
-      <View style={styles.stepRow}>
-        {INSPECTION_TEMPLATE.map((s, index) => (
-          <Pressable
-            key={s.key}
-            onPress={() => setStep(index)}
-            style={[styles.stepDot, index === step && styles.stepDotActive]}
-          >
-            <Ionicons
-              name={s.icon as never}
-              size={16}
-              color={index === step ? colors.onAccent : colors.textFaint}
-            />
-          </Pressable>
-        ))}
-        <Pressable
-          onPress={() => setStep(SUMMARY_STEP)}
-          style={[styles.stepDot, step === SUMMARY_STEP && styles.stepDotActive]}
-        >
-          <Ionicons
-            name="flag-outline"
-            size={16}
-            color={step === SUMMARY_STEP ? colors.onAccent : colors.textFaint}
-          />
-        </Pressable>
-      </View>
-
       <ScrollView
         contentContainerStyle={[
           styles.content,
@@ -132,142 +109,145 @@ export function BesiktningScreen() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
-        {section ? (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>{section.title}</Text>
-              <Text style={styles.sectionStep}>
-                Steg {step + 1} av {SUMMARY_STEP}
-              </Text>
-            </View>
-
-            {section.items.map((item) => {
-              const result = results[item.id];
-              return (
-                <View key={item.id} style={styles.itemCard}>
-                  <View style={styles.itemRow}>
-                    <View style={styles.itemText}>
-                      <Text style={styles.itemTitle}>{item.title}</Text>
-                      <Text style={styles.itemHint}>{item.hint}</Text>
-                    </View>
-                    <View style={styles.statusRow}>
-                      <StatusButton
-                        icon="checkmark"
-                        active={result?.status === 'ok'}
-                        activeColor={colors.accent}
-                        onPress={() => setStatus(item.id, 'ok')}
-                      />
-                      <StatusButton
-                        icon="warning"
-                        active={result?.status === 'issue'}
-                        activeColor={colors.danger}
-                        onPress={() => setStatus(item.id, 'issue')}
-                      />
-                      <StatusButton
-                        icon="remove"
-                        active={result?.status === 'skip'}
-                        activeColor={colors.textSecondary}
-                        onPress={() => setStatus(item.id, 'skip')}
-                      />
-                    </View>
-                  </View>
-                  {result?.status === 'issue' ? (
-                    <TextInput
-                      style={styles.noteInput}
-                      placeholder="Anteckning (t.ex. kedja 0,75 % sliten)"
-                      placeholderTextColor={colors.textFaint}
-                      value={result.note}
-                      onChangeText={(text) => setNote(item.id, text)}
-                      multiline
-                    />
-                  ) : null}
-                </View>
-              );
-            })}
-
-            <Pressable onPress={() => markSectionOk(step)} style={styles.allOk}>
-              <Ionicons
-                name="checkmark-done-outline"
-                size={18}
-                color={colors.accent}
-              />
-              <Text style={styles.allOkText}>Resten av sektionen OK</Text>
-            </Pressable>
-          </>
-        ) : (
-          <>
-            <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Sammanfattning</Text>
-              <Text style={styles.sectionStep}>
-                {checkedCount}/{INSPECTION_ITEM_COUNT} kontrollerade
-              </Text>
-            </View>
-
-            {issues.length === 0 ? (
-              <View style={styles.noIssues}>
+        {INSPECTION_TEMPLATE.map((section, sectionIndex) => {
+          const sectionDone = section.items.every((item) => results[item.id]);
+          return (
+            <View key={section.key} style={styles.section}>
+              <View style={styles.sectionHeader}>
                 <Ionicons
-                  name="checkmark-circle-outline"
-                  size={32}
-                  color={colors.accent}
+                  name={section.icon as never}
+                  size={16}
+                  color={sectionDone ? colors.accent : colors.textSecondary}
                 />
-                <Text style={styles.noIssuesText}>Inga anmärkningar</Text>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
+                {sectionDone ? (
+                  <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
+                ) : null}
               </View>
-            ) : (
-              issues.map((issue, index) => (
-                <View key={index} style={styles.issueCard}>
-                  <Ionicons name="warning" size={16} color={colors.danger} />
-                  <View style={styles.issueText}>
-                    <Text style={styles.issueTitle}>
-                      {issue.title}
-                      <Text style={styles.issueSection}> · {issue.section}</Text>
-                    </Text>
-                    {issue.note ? (
-                      <Text style={styles.issueNote}>{issue.note}</Text>
+
+              {section.items.map((item) => {
+                const result = results[item.id];
+                return (
+                  <View key={item.id} style={styles.itemCard}>
+                    <View style={styles.itemRow}>
+                      <View style={styles.itemText}>
+                        <Text style={styles.itemTitle}>{item.title}</Text>
+                        <Text style={styles.itemHint}>{item.hint}</Text>
+                      </View>
+                      <View style={styles.statusRow}>
+                        <StatusButton
+                          icon="checkmark"
+                          active={result?.status === 'ok'}
+                          activeColor={colors.accent}
+                          onPress={() => setStatus(item.id, 'ok')}
+                        />
+                        <StatusButton
+                          icon="warning"
+                          active={result?.status === 'issue'}
+                          activeColor={colors.danger}
+                          onPress={() => setStatus(item.id, 'issue')}
+                        />
+                        <StatusButton
+                          icon="remove"
+                          active={result?.status === 'skip'}
+                          activeColor={colors.textSecondary}
+                          onPress={() => setStatus(item.id, 'skip')}
+                        />
+                      </View>
+                    </View>
+                    {result?.status === 'issue' ? (
+                      <TextInput
+                        style={styles.noteInput}
+                        placeholder="Anteckning (t.ex. kedja 0,75 % sliten)"
+                        placeholderTextColor={colors.textFaint}
+                        value={result.note}
+                        onChangeText={(text) => setNote(item.id, text)}
+                        multiline
+                      />
                     ) : null}
                   </View>
-                </View>
-              ))
-            )}
+                );
+              })}
 
+              {!sectionDone ? (
+                <Pressable
+                  onPress={() => markSectionOk(sectionIndex)}
+                  style={styles.allOk}
+                >
+                  <Ionicons
+                    name="checkmark-done-outline"
+                    size={18}
+                    color={colors.accent}
+                  />
+                  <Text style={styles.allOkText}>Resten av sektionen OK</Text>
+                </Pressable>
+              ) : null}
+            </View>
+          );
+        })}
+
+        <View style={styles.summary}>
+          <View style={styles.sectionHeader}>
+            <Ionicons
+              name="flag-outline"
+              size={16}
+              color={done ? colors.accent : colors.textSecondary}
+            />
+            <Text style={styles.sectionTitle}>Sammanfattning</Text>
+            <Text style={styles.summaryCount}>
+              {checkedCount}/{INSPECTION_ITEM_COUNT}
+            </Text>
+          </View>
+
+          {checkedCount === 0 ? (
+            <Text style={styles.emptyText}>
+              Sammanfattningen fylls i medan besiktningen pågår.
+            </Text>
+          ) : issues.length === 0 ? (
+            <View style={styles.noIssues}>
+              <Ionicons
+                name="checkmark-circle-outline"
+                size={28}
+                color={colors.accent}
+              />
+              <Text style={styles.noIssuesText}>
+                {done ? 'Inga anmärkningar' : 'Inga anmärkningar hittills'}
+              </Text>
+            </View>
+          ) : (
+            issues.map((issue, index) => (
+              <View key={index} style={styles.issueCard}>
+                <Ionicons name="warning" size={16} color={colors.danger} />
+                <View style={styles.issueText}>
+                  <Text style={styles.issueTitle}>
+                    {issue.title}
+                    <Text style={styles.issueSection}> · {issue.section}</Text>
+                  </Text>
+                  {issue.note ? (
+                    <Text style={styles.issueNote}>{issue.note}</Text>
+                  ) : null}
+                </View>
+              </View>
+            ))
+          )}
+
+          {checkedCount > 0 ? (
             <View style={styles.summaryBox}>
               <Text style={styles.summaryLabel}>SOM TEXT</Text>
               <Text selectable style={styles.summaryText}>
                 {inspectionSummaryText(results)}
               </Text>
             </View>
+          ) : null}
 
+          {checkedCount > 0 ? (
             <Pressable onPress={reset} style={styles.resetButton}>
               <Ionicons name="refresh-outline" size={18} color={colors.text} />
               <Text style={styles.resetText}>Ny besiktning</Text>
             </Pressable>
-          </>
-        )}
+          ) : null}
+        </View>
       </ScrollView>
-
-      <View style={[styles.navRow, { paddingBottom: insets.bottom + 8 }]}>
-        <Pressable
-          onPress={() => setStep((s) => Math.max(0, s - 1))}
-          disabled={step === 0}
-          style={[styles.navButton, step === 0 && styles.navButtonDisabled]}
-        >
-          <Ionicons name="chevron-back" size={18} color={colors.text} />
-          <Text style={styles.navText}>Föregående</Text>
-        </Pressable>
-        <Pressable
-          onPress={() => setStep((s) => Math.min(SUMMARY_STEP, s + 1))}
-          disabled={step === SUMMARY_STEP}
-          style={[
-            styles.navButton,
-            styles.navButtonNext,
-            step === SUMMARY_STEP && styles.navButtonDisabled,
-          ]}
-        >
-          <Text style={[styles.navText, styles.navTextNext]}>
-            {step === SUMMARY_STEP - 1 ? 'Sammanfattning' : 'Nästa'}
-          </Text>
-          <Ionicons name="chevron-forward" size={18} color={colors.onAccent} />
-        </Pressable>
-      </View>
     </View>
   );
 }
@@ -315,6 +295,21 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: colors.textFaint,
+    flex: 1,
+  },
+  issueCounter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 90, 95, 0.12)',
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  issueCounterText: {
+    color: colors.danger,
+    fontSize: 12,
+    fontWeight: '800',
   },
   progressTrack: {
     height: 4,
@@ -322,50 +317,36 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: colors.border,
     overflow: 'hidden',
+    marginBottom: 6,
   },
   progressFill: {
     height: 4,
     borderRadius: 2,
     backgroundColor: colors.accent,
   },
-  stepRow: {
-    flexDirection: 'row',
-    gap: 8,
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-  },
-  stepDot: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.card,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  stepDotActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
   content: {
     paddingHorizontal: 20,
+    paddingTop: 8,
+    gap: 22,
+  },
+  section: {
     gap: 10,
   },
   sectionHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'baseline',
-    marginBottom: 4,
+    alignItems: 'center',
+    gap: 8,
   },
   sectionTitle: {
     color: colors.text,
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
+    flexShrink: 1,
   },
-  sectionStep: {
+  summaryCount: {
     color: colors.textFaint,
     fontSize: 12,
+    marginLeft: 'auto',
   },
   itemCard: {
     backgroundColor: colors.card,
@@ -428,16 +409,26 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     borderStyle: 'dashed',
     paddingVertical: 12,
-    marginTop: 2,
+  },
+  summary: {
+    gap: 10,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+    paddingTop: 18,
   },
   allOkText: {
     color: colors.accent,
     fontWeight: '600',
   },
+  emptyText: {
+    color: colors.textFaint,
+    fontSize: 13,
+  },
   noIssues: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 24,
+    gap: 10,
+    paddingVertical: 8,
   },
   noIssuesText: {
     color: colors.textSecondary,
@@ -479,7 +470,6 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 14,
     gap: 6,
-    marginTop: 4,
   },
   summaryLabel: {
     color: colors.textFaint,
@@ -502,44 +492,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     paddingVertical: 13,
-    marginTop: 4,
   },
   resetText: {
     color: colors.text,
     fontWeight: '600',
-  },
-  navRow: {
-    flexDirection: 'row',
-    gap: 10,
-    paddingHorizontal: 20,
-    paddingTop: 8,
-  },
-  navButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: colors.border,
-    backgroundColor: colors.card,
-    paddingVertical: 13,
-  },
-  navButtonNext: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-    ...shadow.button,
-  },
-  navButtonDisabled: {
-    opacity: 0.4,
-  },
-  navText: {
-    color: colors.text,
-    fontWeight: '700',
-  },
-  navTextNext: {
-    color: colors.onAccent,
   },
 });
