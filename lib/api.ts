@@ -366,19 +366,27 @@ export async function analyzeTranscript(transcript: string): Promise<Job[]> {
  * intalade jobblistan – så personalen bara behöver prata igenom besiktningen.
  */
 export async function jobsFromInspection(
-  issues: { section: string; title: string; note: string }[]
+  issues: { section: string; title: string; note: string }[],
+  transcript = ''
 ): Promise<Job[]> {
   if (issues.length === 0) return [];
-  const text =
-    'Detta är anmärkningarna från besiktningen. Skapa en prissatt jobblista ' +
-    'för att åtgärda dem:\n' +
-    issues
-      .map(
-        (issue) =>
-          `- ${issue.title} (${issue.section})${issue.note ? `: ${issue.note}` : ''}`
-      )
-      .join('\n');
-  return analyzeTranscript(text);
+  const parts = [
+    'Skapa en prissatt jobblista som åtgärdar följande anmärkningar från ' +
+      'besiktningen:',
+    ...issues.map(
+      (issue) =>
+        `- ${issue.title} (${issue.section})${issue.note ? `: ${issue.note}` : ''}`
+    ),
+  ];
+  if (transcript.trim()) {
+    parts.push(
+      '',
+      'Mekanikerns hela inspelning (använd för detaljer om delar – märke, ' +
+        'modell och mått – när du söker i lagret):',
+      transcript.trim()
+    );
+  }
+  return analyzeTranscript(parts.join('\n'));
 }
 
 /**

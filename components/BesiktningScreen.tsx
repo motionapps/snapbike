@@ -5,7 +5,7 @@ import {
   setAudioModeAsync,
   useAudioRecorder,
 } from 'expo-audio';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -32,7 +32,14 @@ import {
   InspectionStatus,
   inspectionIssues,
   inspectionSummaryText,
+  matchInspectionPhrase,
 } from '../lib/besiktning';
+
+/** itemId → sektionsnyckel, för att kunna scrolla till rätt sektion live. */
+const ITEM_SECTION: Record<string, string> = {};
+for (const section of INSPECTION_TEMPLATE) {
+  for (const item of section.items) ITEM_SECTION[item.id] = section.key;
+}
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from '../lib/speech';
 import { colors, radius } from '../lib/theme';
 import { MicButton, MicPhase } from './MicButton';
@@ -55,14 +62,41 @@ export function BesiktningScreen() {
   const [phase, setPhase] = useState<MicPhase>('idle');
   const [micError, setMicError] = useState('');
   const [creatingJobs, setCreatingJobs] = useState(false);
+  const scrollRef = useRef<ScrollView>(null);
+  const sectionY = useRef<Record<string, number>>({});
+  const transcriptRef = useRef('');
 
   const useWebSpeech = !hasOpenAiKey && webSpeechAvailable;
+
+  const scrollToItem = useCallback((itemId: string) => {
+    const y = sectionY.current[ITEM_SECTION[itemId]];
+    if (y != null) {
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
+    }
+  }, []);
+
+  // Live medan man pratar: markera punkten och scrolla dit (webb-taligenkänning).
+  const handlePhrase = useCallback(
+    (phrase: string) => {
+      const hits = matchInspectionPhrase(phrase);
+      if (hits.length === 0) return;
+      setResults((current) => {
+        const next = { ...current };
+        for (const hit of hits) {
+          next[hit.itemId] = { status: hit.status, note: hit.note };
+        }
+        return next;
+      });
+      scrollToItem(hits[0].itemId);
+    },
+    [scrollToItem]
+  );
 
   const startRecording = useCallback(async () => {
     setMicError('');
     if (useWebSpeech) {
       try {
-        startWebSpeech();
+        startWebSpeech(handlePhrase);
         setPhase('recording');
       } catch (err) {
         setMicError(err instanceof Error ? err.message : String(err));
@@ -78,7 +112,7 @@ export function BesiktningScreen() {
     await recorder.prepareToRecordAsync();
     recorder.record();
     setPhase('recording');
-  }, [recorder, useWebSpeech]);
+  }, [handlePhrase, recorder, useWebSpeech]);
 
   const stopRecording = useCallback(async () => {
     try {
@@ -94,10 +128,12 @@ export function BesiktningScreen() {
         text = await transcribeAudio(uri);
       }
       if (!text) throw new Error('Ingen text uppfattades – försök igen.');
+      // Spara hela inspelningen (för att kunna skapa jobblista med delar).
+      transcriptRef.current = `${transcriptRef.current} ${text}`.trim();
 
       setPhase('analyzing');
       const found = await analyzeInspection(text);
-      // Slå ihop med det som redan är ifyllt så flera pass fungerar.
+      // AI:n är facit och skriver över live-gissningarna för nämnda punkter.
       setResults((current) => ({ ...current, ...found }));
     } catch (err) {
       setMicError(err instanceof Error ? err.message : String(err));
@@ -149,6 +185,7 @@ export function BesiktningScreen() {
 
   const reset = useCallback(() => {
     setResults({});
+    transcriptRef.current = '';
   }, []);
 
   const checkedCount = useMemo(() => Object.keys(results).length, [results]);
@@ -161,7 +198,7 @@ export function BesiktningScreen() {
     setMicError('');
     setCreatingJobs(true);
     try {
-      const newJobs = await jobsFromInspection(issues);
+      const newJobs = await jobsFromInspection(issues, transcriptRef.current);
       setJobs((current) => [...current, ...newJobs]);
       goToOrder();
     } catch (err) {
@@ -201,6 +238,7 @@ export function BesiktningScreen() {
       </View>
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + 24 },
@@ -220,9 +258,9 @@ export function BesiktningScreen() {
             labels={MIC_LABELS}
           />
           <Text style={styles.micHint}>
-            Prata dig igenom cykeln – t.ex. "styrlagret glappar, kedjan behöver
-            bytas, sadeln är fin" – så fylls punkterna i nedan. Du kan alltid
-            justera manuellt.
+            Prata dig igenom cykeln bak → fram. Punkterna bockas av och listan
+            scrollar med medan du pratar; när du stoppar finjusteras allt. Du
+            kan alltid ändra manuellt.
           </Text>
         </View>
 
@@ -236,7 +274,13 @@ export function BesiktningScreen() {
         {INSPECTION_TEMPLATE.map((section, sectionIndex) => {
           const sectionDone = section.items.every((item) => results[item.id]);
           return (
-            <View key={section.key} style={styles.section}>
+            <View
+              key={section.key}
+              style={styles.section}
+              onLayout={(e) => {
+                sectionY.current[section.key] = e.nativeEvent.layout.y;
+              }}
+            >
               <View style={styles.sectionHeader}>
                 <Ionicons
                   name={section.icon as never}

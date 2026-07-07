@@ -149,6 +149,86 @@ export function inspectionIssues(
   return issues;
 }
 
+// --- Live-matchning medan man pratar (lokalt, utan API) -------------------
+
+/** Nyckelord per kontrollpunkt. Fram/bak-punkter kräver riktningsord. */
+const ITEM_KEYWORDS: Record<string, { words: string[]; needsSide?: 'fram' | 'bak' }> = {
+  'ground-headset': { words: ['headset', 'styrlag'] },
+  'rear-tire': { words: ['däck', 'punktering', 'punka', 'slang', 'ringen'], needsSide: 'bak' },
+  'rear-rim': { words: ['fälg', 'hjul'], needsSide: 'bak' },
+  'rear-hub': { words: ['nav'], needsSide: 'bak' },
+  'rear-axle': { words: ['snabbkoppling', 'thru', 'genomgående axel'], needsSide: 'bak' },
+  'rear-brake': { words: ['broms', 'bromsbelägg', 'bromsklossar', 'bromsskiva'], needsSide: 'bak' },
+  'drive-cassette': { words: ['kassett', 'drev', 'frikrans'] },
+  'drive-chain': { words: ['kedja', 'kedjan'] },
+  'drive-derailleur': { words: ['bakväxel', 'växeln', 'växelöra', 'växlar'] },
+  'drive-bb': { words: ['vevlag', 'vevpart'] },
+  'drive-chainrings': { words: ['kling', 'framdrev'] },
+  'drive-pedals': { words: ['pedal', 'pedaler'] },
+  'mid-cables': { words: ['vajrar', 'vajer', 'hölj'] },
+  'mid-hoses': { words: ['hydraulslang', 'slangar', 'bromsslang'] },
+  'mid-frame': { words: ['ram', 'ramen', 'gaffel', 'gaffeln'] },
+  'mid-stem': { words: ['styre', 'styrstam', 'stam'] },
+  'mid-saddle': { words: ['sadel', 'sadeln', 'sadelstolpe'] },
+  'mid-accessories': { words: ['tillbehör', 'stänkskärm', 'pakethållare', 'ringklocka'] },
+  'mid-kickstand': { words: ['stöd', 'ställ', 'benstöd'] },
+  'front-tire': { words: ['däck', 'punktering', 'punka', 'slang', 'ringen'], needsSide: 'fram' },
+  'front-rim': { words: ['fälg', 'hjul'], needsSide: 'fram' },
+  'front-hub': { words: ['nav'], needsSide: 'fram' },
+  'front-axle': { words: ['snabbkoppling', 'thru', 'genomgående axel'], needsSide: 'fram' },
+  'front-brake': { words: ['broms', 'bromsbelägg', 'bromsklossar', 'bromsskiva'], needsSide: 'fram' },
+  'extra-suspension': { words: ['framgaffel', 'bakdämpare', 'dämpare', 'fjädring'] },
+  'extra-dropper': { words: ['dropper', 'teleskopstolpe'] },
+};
+
+const ISSUE_CUES = [
+  'glapp', 'glappar', 'trasig', 'trasigt', 'byt', 'byta', 'byte', 'sliten',
+  'slitet', 'slitna', 'punktering', 'punka', 'läck', 'skev', 'rikta', 'riktas',
+  'dålig', 'dåligt', 'behöver', 'kärvar', 'gnissl', 'sprick', 'bucklig', 'bucklor',
+  'lös', 'löst', 'saknas', 'går inte', 'funkar inte', 'trög', 'skad',
+];
+
+const OK_CUES = [
+  'fin', 'fint', 'fina', 'bra', 'okej', 'hel', 'helt', 'inga', 'ingen anmärkning',
+];
+
+const FRONT_WORDS = ['fram', 'främre', 'framhjul', 'framdäck', 'frambroms', 'framnav'];
+const BACK_WORDS = ['bak', 'bakre', 'bakhjul', 'bakdäck', 'bakbroms', 'baknav'];
+
+/**
+ * Snabb lokal gissning: vilka kontrollpunkter en talad fras handlar om och om
+ * de verkar OK eller ha en anmärkning. Används för live-avbockning medan
+ * mekanikern pratar; AI:n gör sedan en exakt slutkontroll. Fram/bak-punkter
+ * matchas bara om frasen nämner riktning.
+ */
+export function matchInspectionPhrase(
+  phrase: string
+): { itemId: string; status: InspectionStatus; note: string }[] {
+  const p = ` ${phrase.toLowerCase()} `;
+  // Ord för ord, så korta nyckelord (ram/nav) inte matchar inuti andra ord
+  // (t.ex. "ram" i "fram"). Långa nyckelord (>=4) tillåts som delsträng i
+  // ett ord för att fånga svenska sammansättningar ("däck" i "framdäcket").
+  const words = p.split(/[^a-zåäö]+/).filter(Boolean);
+  const wordHit = (kw: string) =>
+    kw.length >= 4
+      ? words.some((w) => w.includes(kw))
+      : words.some((w) => w === kw || w.startsWith(kw));
+
+  const hasFront = FRONT_WORDS.some((w) => p.includes(w));
+  const hasBack = BACK_WORDS.some((w) => p.includes(w));
+  const isIssue = ISSUE_CUES.some((w) => p.includes(w));
+  const status: InspectionStatus = isIssue ? 'issue' : 'ok';
+
+  const hits: { itemId: string; status: InspectionStatus; note: string }[] = [];
+  for (const [itemId, def] of Object.entries(ITEM_KEYWORDS)) {
+    if (!def.words.some(wordHit)) continue;
+    if (def.needsSide === 'fram' && !hasFront) continue;
+    if (def.needsSide === 'bak' && !hasBack) continue;
+    hits.push({ itemId, status, note: isIssue ? phrase.trim() : '' });
+  }
+  return hits;
+}
+
 /** Plain-text summary of the inspection, e.g. to paste into a message. */
 export function inspectionSummaryText(state: InspectionState): string {
   const issues = inspectionIssues(state);
