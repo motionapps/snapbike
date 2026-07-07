@@ -69,6 +69,69 @@ const SEARCH_STOCK_TOOL = {
   },
 };
 
+const JOB_ITEM_SCHEMA = {
+  type: 'object',
+  properties: {
+    title: {
+      type: 'string',
+      description:
+        'Exakt "Beskrivning" från prislistan för det matchade jobbet.',
+    },
+    category: {
+      type: 'string',
+      description: 'Exakt "Servicetyp" från prislistan.',
+    },
+    price: {
+      type: 'number',
+      description: 'Exakt "Pris" från prislistan i kr.',
+    },
+    severity: {
+      type: 'string',
+      enum: ['kritisk', 'normal'],
+      description:
+        '"kritisk" om felet gör cykeln trafikfarlig/oanvändbar ' +
+        '(måste åtgärdas), annars "normal".',
+    },
+    products: {
+      type: 'array',
+      description:
+        'Produktförslag för jobbet, från lagersökningarna. Först ' +
+        'samma märke/modell som kundens del, därefter 1–2 alternativ.',
+      items: {
+        type: 'object',
+        properties: {
+          name: {
+            type: 'string',
+            description: 'Exakt namn från lagerlistan.',
+          },
+          price: {
+            type: 'number',
+            description: 'Exakt pris (kr) från lagerlistan, 0 om okänt.',
+          },
+          articleNumber: {
+            type: 'string',
+            description: 'Exakt artikelnummer från lagerlistan.',
+          },
+          stock: {
+            type: 'number',
+            description: 'Exakt lagersaldo från lagerlistan.',
+          },
+          label: {
+            type: 'string',
+            enum: ['samma', 'likvärdig', 'billigare'],
+            description:
+              '"samma" = samma märke/modell som kundens del, ' +
+              '"likvärdig" = likvärdigt alternativ från annat märke, ' +
+              '"billigare" = enklare/billigare alternativ.',
+          },
+        },
+        required: ['name', 'price'],
+      },
+    },
+  },
+  required: ['title', 'category', 'price', 'products'],
+};
+
 const JOB_LIST_TOOL = {
   name: 'create_job_list',
   description:
@@ -82,72 +145,23 @@ const JOB_LIST_TOOL = {
       jobs: {
         type: 'array',
         description: 'Ett objekt per jobb som kunden behöver.',
-        items: {
-          type: 'object',
-          properties: {
-            title: {
-              type: 'string',
-              description:
-                'Exakt "Beskrivning" från prislistan för det matchade jobbet.',
-            },
-            category: {
-              type: 'string',
-              description: 'Exakt "Servicetyp" från prislistan.',
-            },
-            price: {
-              type: 'number',
-              description: 'Exakt "Pris" från prislistan i kr.',
-            },
-            severity: {
-              type: 'string',
-              enum: ['kritisk', 'normal'],
-              description:
-                '"kritisk" om felet gör cykeln trafikfarlig/oanvändbar ' +
-                '(måste åtgärdas), annars "normal".',
-            },
-            products: {
-              type: 'array',
-              description:
-                'Produktförslag för jobbet, från lagersökningarna. Först ' +
-                'samma märke/modell som kundens del, därefter 1–2 alternativ.',
-              items: {
-                type: 'object',
-                properties: {
-                  name: {
-                    type: 'string',
-                    description: 'Exakt namn från lagerlistan.',
-                  },
-                  price: {
-                    type: 'number',
-                    description:
-                      'Exakt pris (kr) från lagerlistan, 0 om okänt.',
-                  },
-                  articleNumber: {
-                    type: 'string',
-                    description: 'Exakt artikelnummer från lagerlistan.',
-                  },
-                  stock: {
-                    type: 'number',
-                    description: 'Exakt lagersaldo från lagerlistan.',
-                  },
-                  label: {
-                    type: 'string',
-                    enum: ['samma', 'likvärdig', 'billigare'],
-                    description:
-                      '"samma" = samma märke/modell som kundens del, ' +
-                      '"likvärdig" = likvärdigt alternativ från annat märke, ' +
-                      '"billigare" = enklare/billigare alternativ.',
-                  },
-                },
-                required: ['name', 'price'],
-              },
-            },
-          },
-          required: ['title', 'category', 'price', 'products'],
-        },
+        items: JOB_ITEM_SCHEMA,
       },
     },
     required: ['jobs'],
+  },
+};
+
+const UPDATE_JOB_TOOL = {
+  name: 'update_job',
+  description:
+    'Returnera jobbet i sin uppdaterade form enligt personalens instruktion.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      job: JOB_ITEM_SCHEMA,
+    },
+    required: ['job'],
   },
 };
 
@@ -159,14 +173,12 @@ type ToolProduct = {
   label?: 'samma' | 'likvärdig' | 'billigare';
 };
 
-type ToolJobs = {
-  jobs: {
-    title: string;
-    category: string;
-    price: number;
-    severity?: 'kritisk' | 'normal';
-    products: ToolProduct[];
-  }[];
+type ToolJob = {
+  title: string;
+  category: string;
+  price: number;
+  severity?: 'kritisk' | 'normal';
+  products: ToolProduct[];
 };
 
 type ContentBlock = {
@@ -187,6 +199,13 @@ type MessageParam = {
       )[];
 };
 
+const WHEEL_RULES =
+  'DEBITERINGSREGEL HJUL: Punktering, slangbyte och däckbyte är samma ' +
+  'arbetsmoment. Använd raden "Däckbyte - per hjul" som arbete (ett jobb per ' +
+  'hjul) och lägg slang och/eller däck som produkter på det jobbet. Debitera ' +
+  'ALDRIG två arbeten för samma hjul (t.ex. både "Punktering inkl. ' +
+  'standardslang" och "Däckbyte - per hjul").';
+
 const SYSTEM_PROMPT =
   'Du är assistent på en cykelverkstad. Du får en transkriberad röstanteckning ' +
   'från besiktningen av en kundcykel. Identifiera varje jobb som nämns och matcha ' +
@@ -205,7 +224,24 @@ const SYSTEM_PROMPT =
   'om inget passande finns i lager, ta med bästa träffen ändå (lagersaldo 0 ' +
   'visas som beställningsvara). Hittar du ingen rimlig produkt alls: lägg med ' +
   'delen med pris 0 och utan artikelnummer.\n\n' +
-  'När du är klar: anropa create_job_list exakt en gång med hela jobblistan.\n\n' +
+  WHEEL_RULES +
+  '\n\nNär du är klar: anropa create_job_list exakt en gång med hela jobblistan.\n\n' +
+  SERVICE_GUIDE +
+  '\n\nPRISLISTA:\n' +
+  PRICE_CSV;
+
+const REFINE_PROMPT =
+  'Du är assistent på en cykelverkstad. Personalen har talat in en ändring av ' +
+  'ETT jobb på en pågående arbetsorder. Du får jobbet som JSON tillsammans med ' +
+  'instruktionen. Följ instruktionen: byt ut, lägg till eller ta bort ' +
+  'produktförslag, eller byt arbetsrad om instruktionen kräver det (matcha då ' +
+  'exakt mot prislistan nedan). När instruktionen gäller delar – t.ex. andra ' +
+  'märken, en annan däckbredd, eller att kontrollera lagersaldo – använd ' +
+  'search_stock och ange exakta namn, priser, artikelnummer och lagersaldon ' +
+  'från sökresultaten. Behåll allt som instruktionen inte berör oförändrat.\n\n' +
+  WHEEL_RULES +
+  '\n\nNär du är klar: anropa update_job exakt en gång med hela det ' +
+  'uppdaterade jobbet.\n\n' +
   SERVICE_GUIDE +
   '\n\nPRISLISTA:\n' +
   PRICE_CSV;
@@ -213,16 +249,21 @@ const SYSTEM_PROMPT =
 const MAX_TOOL_ROUNDS = 8;
 
 /**
- * Sends the transcript to Claude (claude-sonnet-5) with two tools: the model
- * may search the shop's stock list (search_stock, answered locally) any number
- * of times before it must deliver the structured job list via create_job_list.
+ * Runs a Claude tool loop: the model may call search_stock (answered locally
+ * with the shop's stock list) any number of times before it must deliver its
+ * structured answer via the given final tool.
  */
-export async function analyzeTranscript(transcript: string): Promise<Job[]> {
+async function runToolLoop(
+  system: string,
+  userContent: string,
+  finalTool: { name: string },
+  errorText: string
+): Promise<Record<string, unknown>> {
   if (!ANTHROPIC_KEY) {
     throw new Error('EXPO_PUBLIC_ANTHROPIC_API_KEY saknas i .env');
   }
 
-  const messages: MessageParam[] = [{ role: 'user', content: transcript }];
+  const messages: MessageParam[] = [{ role: 'user', content: userContent }];
 
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
     const forceFinal = round === MAX_TOOL_ROUNDS;
@@ -237,11 +278,11 @@ export async function analyzeTranscript(transcript: string): Promise<Job[]> {
       body: JSON.stringify({
         model: 'claude-sonnet-5',
         max_tokens: 4096,
-        system: SYSTEM_PROMPT,
+        system,
         messages,
-        tools: [SEARCH_STOCK_TOOL, JOB_LIST_TOOL],
+        tools: [SEARCH_STOCK_TOOL, finalTool],
         tool_choice: forceFinal
-          ? { type: 'tool', name: 'create_job_list' }
+          ? { type: 'tool', name: finalTool.name }
           : { type: 'auto' },
       }),
     });
@@ -253,11 +294,11 @@ export async function analyzeTranscript(transcript: string): Promise<Job[]> {
 
     const json = (await res.json()) as { content: ContentBlock[] };
 
-    const jobList = json.content.find(
-      (block) => block.type === 'tool_use' && block.name === 'create_job_list'
+    const final = json.content.find(
+      (block) => block.type === 'tool_use' && block.name === finalTool.name
     );
-    if (jobList?.input) {
-      return mapJobs(jobList.input as ToolJobs);
+    if (final?.input) {
+      return final.input;
     }
 
     const searches = json.content.filter(
@@ -277,22 +318,72 @@ export async function analyzeTranscript(transcript: string): Promise<Job[]> {
         })),
       });
     } else {
-      // Inget verktygsanrop alls – be om jobblistan explicit.
+      // Inget verktygsanrop alls – be om svaret explicit.
       messages.push({
         role: 'user',
-        content: 'Anropa create_job_list med jobblistan nu.',
+        content: `Anropa ${finalTool.name} nu.`,
       });
     }
   }
 
-  throw new Error('Claude returnerade ingen jobblista.');
+  throw new Error(errorText);
 }
 
-function mapJobs(input: ToolJobs): Job[] {
+/**
+ * Analyserar besiktningstranskriptet och returnerar en prissatt jobblista
+ * med lagermatchade produktförslag.
+ */
+export async function analyzeTranscript(transcript: string): Promise<Job[]> {
+  const input = (await runToolLoop(
+    SYSTEM_PROMPT,
+    transcript,
+    JOB_LIST_TOOL,
+    'Claude returnerade ingen jobblista.'
+  )) as { jobs?: ToolJob[] };
+
   if (!input.jobs) {
     throw new Error('Claude returnerade ingen jobblista.');
   }
-  return input.jobs.map((job) => ({
+  return input.jobs.map(mapJob);
+}
+
+/**
+ * Uppdaterar ETT jobb utifrån en intalad instruktion, t.ex. "föreslå andra
+ * Pirelli 28 mm däck" eller "byt till 32 mm och kolla saldot".
+ */
+export async function refineJob(job: Job, instruction: string): Promise<Job> {
+  const payload = JSON.stringify({
+    jobb: {
+      title: job.title,
+      category: job.category,
+      price: job.price,
+      severity: job.severity,
+      products: job.products.map((product) => ({
+        name: product.name,
+        price: product.price,
+        articleNumber: product.articleNumber,
+        stock: product.stock,
+        label: product.label,
+      })),
+    },
+    instruktion: instruction,
+  });
+
+  const input = (await runToolLoop(
+    REFINE_PROMPT,
+    payload,
+    UPDATE_JOB_TOOL,
+    'Claude returnerade inget uppdaterat jobb.'
+  )) as { job?: ToolJob };
+
+  if (!input.job) {
+    throw new Error('Claude returnerade inget uppdaterat jobb.');
+  }
+  return { ...mapJob(input.job), id: job.id };
+}
+
+function mapJob(job: ToolJob): Job {
+  return {
     id: uid(),
     title: job.title,
     category: job.category,
@@ -306,5 +397,5 @@ function mapJobs(input: ToolJobs): Job[] {
       stock: product.stock,
       label: product.label,
     })),
-  }));
+  };
 }

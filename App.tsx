@@ -30,7 +30,7 @@ import { JobCard } from './components/JobCard';
 import { JobsScreen } from './components/JobsScreen';
 import { MicButton, MicPhase } from './components/MicButton';
 import { PhotoCard } from './components/PhotoCard';
-import { analyzeTranscript, hasOpenAiKey, transcribeAudio } from './lib/api';
+import { analyzeTranscript, hasOpenAiKey, refineJob, transcribeAudio } from './lib/api';
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from './lib/speech';
 import { saveEstimate } from './lib/supabase';
 import { colors, radius, shadow } from './lib/theme';
@@ -52,6 +52,8 @@ function Screen() {
   const [showAddJob, setShowAddJob] = useState(false);
   const [saving, setSaving] = useState(false);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [voiceEditId, setVoiceEditId] = useState<string | null>(null);
+  const [voiceEditRecording, setVoiceEditRecording] = useState(false);
 
   const takePhoto = useCallback(async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
@@ -121,10 +123,69 @@ function Screen() {
   const handleToggle = useCallback(() => {
     if (phase === 'recording') {
       void stopRecording();
-    } else if (phase === 'idle') {
+    } else if (phase === 'idle' && !voiceEditId) {
       void startRecording();
     }
-  }, [phase, startRecording, stopRecording]);
+  }, [phase, startRecording, stopRecording, voiceEditId]);
+
+  // Röstredigering av ett enskilt jobb: tryck mic på kortet, prata in
+  // ändringen (t.ex. "föreslå andra Pirelli 28 mm"), tryck stopp.
+  const toggleJobVoice = useCallback(
+    async (jobId: string) => {
+      const job = jobs.find((item) => item.id === jobId);
+      if (!job) return;
+
+      if (voiceEditId === jobId && voiceEditRecording) {
+        setVoiceEditRecording(false);
+        try {
+          let text: string;
+          if (useWebSpeech) {
+            text = await stopWebSpeech();
+          } else {
+            await recorder.stop();
+            await setAudioModeAsync({ allowsRecording: false });
+            const uri = recorder.uri;
+            if (!uri) throw new Error('Ingen inspelning hittades.');
+            text = await transcribeAudio(uri);
+          }
+          if (!text) throw new Error('Ingen text uppfattades – försök igen.');
+
+          const updated = await refineJob(job, text);
+          setJobs((current) =>
+            current.map((item) => (item.id === jobId ? updated : item))
+          );
+          setSavedId(null);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : String(err));
+        } finally {
+          setVoiceEditId(null);
+        }
+        return;
+      }
+
+      if (voiceEditId || phase !== 'idle') return;
+      setError('');
+      try {
+        if (useWebSpeech) {
+          startWebSpeech();
+        } else {
+          const permission = await AudioModule.requestRecordingPermissionsAsync();
+          if (!permission.granted) {
+            Alert.alert('Mikrofon', 'Ge appen tillgång till mikrofonen i Inställningar.');
+            return;
+          }
+          await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+          await recorder.prepareToRecordAsync();
+          recorder.record();
+        }
+        setVoiceEditId(jobId);
+        setVoiceEditRecording(true);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [jobs, phase, recorder, useWebSpeech, voiceEditId, voiceEditRecording]
+  );
 
   const removeJob = useCallback((jobId: string) => {
     setJobs((current) => current.filter((job) => job.id !== jobId));
@@ -261,6 +322,14 @@ function Screen() {
                   onAddProduct={addProduct}
                   onRemoveProduct={removeProduct}
                   onUpdateProduct={updateProduct}
+                  voiceState={
+                    voiceEditId === job.id
+                      ? voiceEditRecording
+                        ? 'recording'
+                        : 'processing'
+                      : undefined
+                  }
+                  onVoiceEdit={toggleJobVoice}
                 />
               ))}
             </View>

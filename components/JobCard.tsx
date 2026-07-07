@@ -1,6 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import {
+  ActivityIndicator,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
 import { colors, radius, shadow, statusColors } from '../lib/theme';
 import { Job, Product } from '../lib/types';
 
@@ -16,6 +23,9 @@ type Props = {
   onAddProduct: (jobId: string, name: string, price: number) => void;
   onRemoveProduct: (jobId: string, productId: string) => void;
   onUpdateProduct: (jobId: string, productId: string, price: number) => void;
+  /** Röstredigering av jobbet: 'recording' = spelar in, 'processing' = AI:n jobbar. */
+  voiceState?: 'recording' | 'processing';
+  onVoiceEdit?: (jobId: string) => void;
 };
 
 export function JobCard({
@@ -24,6 +34,8 @@ export function JobCard({
   onAddProduct,
   onRemoveProduct,
   onUpdateProduct,
+  voiceState,
+  onVoiceEdit,
 }: Props) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
@@ -67,10 +79,33 @@ export function JobCard({
           <Text style={styles.title}>{job.title}</Text>
         </View>
         <Text style={styles.price}>{job.price} kr</Text>
+        {onVoiceEdit ? (
+          <Pressable
+            onPress={() => onVoiceEdit(job.id)}
+            hitSlop={8}
+            style={[styles.voice, voiceState === 'recording' && styles.voiceActive]}
+            disabled={voiceState === 'processing'}
+          >
+            {voiceState === 'processing' ? (
+              <ActivityIndicator size="small" color={colors.accent} />
+            ) : (
+              <Ionicons
+                name={voiceState === 'recording' ? 'stop' : 'mic-outline'}
+                size={16}
+                color={voiceState === 'recording' ? colors.onAccent : colors.accent}
+              />
+            )}
+          </Pressable>
+        ) : null}
         <Pressable onPress={() => onRemove(job.id)} hitSlop={8} style={styles.remove}>
           <Ionicons name="close" size={16} color={colors.textFaint} />
         </Pressable>
       </View>
+      {voiceState === 'recording' ? (
+        <Text style={styles.voiceHint}>
+          Prata in ändringen, t.ex. "föreslå andra Pirelli 28 mm" – tryck stopp när du är klar.
+        </Text>
+      ) : null}
 
       {job.products.map((product) => (
         <View key={product.id} style={styles.productRow}>
@@ -213,6 +248,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cardRaised,
+  },
+  voice: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.cardRaised,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  voiceActive: {
+    backgroundColor: colors.recording,
+    borderColor: colors.recording,
+  },
+  voiceHint: {
+    color: colors.textFaint,
+    fontSize: 11,
   },
   productRow: {
     flexDirection: 'row',
