@@ -1,0 +1,125 @@
+// Auto-generated from assets/prices.csv — regenerate by re-running the generator in README
+import { PriceItem } from './types';
+
+export const PRICE_CSV = `Servicetyp;Beskrivning;Pris
+Elcykel;Felsökning elcykel.;999
+Tillägg;Elcykel - tillägg;99
+Försäkring;Besiktning skadad cykel (kontroll av ram - gaffel och hjul samt offert till försäkringsbolag);499
+Servicepaket;Lådcykelservice;1899
+Tillägg;Lådcykeltillägg;199
+Tillägg;Tillägg – eldrift på låd-/lastcykel;399
+Byte;Byte styre - racer (ej med invändig dragning);799
+Byte;Byte styrlinda - racer;329
+Byte;Byte av styre med intern dragning och hydraulik;1699
+Växelservice;Byte växel-/bromsreglage - racer;599
+Bromsservice;Luftning hydraulisk broms - per styck;399
+Bromsservice;Byte bromsklossar (fälgbroms) - per par;179
+Bromsservice;Bromsvajerbyte och hölje inkl. material - bak;329
+Bromsservice;Bromsvajerbyte och hölje inkl. material - fram;279
+Bromsservice;Byte bromsbelägg - per par (Skivbroms);249
+Bromsservice;Byte bromsbelägg - per par (Fälgbroms);169
+Bromsservice;Byte av bromsok/handtag/reglage (Mekaniskt);299
+Bromsservice;Byte bromsok/handtag/reglage inkl. luftn. (ej racer);499
+Bromsservice;Riktning av bromsskiva;169
+Bromsservice;Justering fälg- eller skivbroms - per styck;169
+Bromsservice;Byte av bromsskiva;299
+Byte;Byte display elcykel;599
+Byte;Byte pedaler;169
+Byte;Byte handtag;139
+Byte;Byte hjullager/axel/body;399
+Byte;Byte sadel/sadelstolpe;149
+Byte;Byte styre - standard/mtb;499
+Byte;Byte styrstam;249
+Byte;Byte styrlager;349
+Byte;Byte vevarm - vänster sida;229
+Byte;Byte vevlager;699
+Drivlina;Byte Kedja 1tim;449
+Drivlina;Byte Kedja och krans. Fotbromsad cykel;399
+Drivlina;Byte Kedja;349
+Drivlina;Byte Kedja & kassett/frikrans;599
+Drivlina;Byte rulltrissor;249
+Drivlina;Byte framdrev;329
+Drivlina;Byte vevparti;499
+Drivlina;Byte drivlina (vevparti - kedja - kassett - rulltrissor och justering);999
+Däck och Slang;Däckbyte med 2 nya Dubbdäck Routa W248 42-622;2299
+Däck och Slang;Däckbyte med 2 nya Dubbdäck Routa W124 42-622;1999
+Däck och Slang;Punktering < 1 tim inkl. standardslang;499
+Däck och Slang;Byte däck/slang - löst hjul ink standardslang;329
+Däck och Slang;Däckbyte - per hjul;299
+Däck och Slang;Däckbyte fram+bak;499
+Däck och Slang;Tubeless (inkl. fälgtejp - vätska - ventil) - per hjul;699
+Däck och Slang;Påfyllning av vätska Tubeless (ink vätska);299
+Däck och Slang;Punktering inkl. standardslang;399
+Däck och Slang;Däckbyte med 2 nya Dubbdäck Routa W244 35-622;2199
+Däck och Slang;Däckbyte med 2 nya Dubbdäck Routa W122 35-622;1898
+Däck och Slang;Barnvagnspunktering inkl. slang;299
+Frakt;Frakt standard online ej cykel;89
+Frakt;Frakt cykel standard online;499
+Hjulriktning;Hjulbygge med motor;1599
+Hjulriktning;Hjulriktning med motor;899
+Hjulservice;Justering hjullager;199
+Hjulservice;Service framnav fr.;349
+Hjulservice;Service/byte - lager/body bakhjul;499
+Hjulservice;Service baknav - oväxlat fr.;499
+Hjulservice;Hjulriktning löst hjul - per hjul;449
+Hjulservice;Ekrar vid riktning - per st;33
+Hjulservice;Hjulbygge - per hjul (Standard - Hybrid - mtb);1299
+Hjulservice;Byte bakhjul - däck och drev/kassett;399
+Hjulservice;Byte kassett;359
+Hjulservice;Hjulriktning - per hjul;499
+Montering;Montering kjolskydd;149
+Montering;Byte stöd;249
+Montering;Montering framlampa/baklampa dynamo;249
+Montering;Montering kedjeskydd innanför vevlager;399
+Montering;Montering pakethållare enkla inkl. demontering;349
+Montering;Montering stänkskärmar svårare inkl. demontering;449
+Montering;Montering stänkskärmar svårare - fram/bak;399
+Montering;Montering barnstol;249
+Montering;Montering lås;199
+Montering;Montering pakethållare;249
+Montering;Montering stänkskärmar enklare - fram/bak;299
+Montering;Montering stänkskärmar utan stag - fram/bak;329
+Montering;Montering stöd;159
+Montering;Montering/reparation helsmidd vevarm (fauber);799
+Montering;Montering framlampa/baklampa ;199
+Montering;Montering övrigt - kr/min (min 20min);25
+Montering;Montering kedjeskydd utanpå;299
+Montering;Montering korg;299
+Servicepaket;Grundservice & däckbyte elcykel;1699
+Servicepaket;Grundservice fotbromsad & däckbyte;1099
+Servicepaket;Grundservice – Elcykel;1299
+Servicepaket;Grundservice Fotbromsade cyklar;599
+Servicepaket;Grundservice Utanpåliggande växlar;699
+Servicepaket;Grundservice och däckbyte utanpåliggande växlar;1199
+Servicepaket;Utökad Grundservice för Tävlings/Träningscyklar;1199
+Tillägg;Heltäckande kedjeskydd - tillägg;119
+Växelservice;Riktning växelöra;259
+Växelservice;Byte av växelreglage med intern dragning;549
+Växelservice;Justering fram- och bakväxel;349
+Växelservice;Justering navväxel;169
+Växelservice;Service Shimano navvxl Alfin/Nexus - 3–8 vxl;699
+Växelservice;Byte bakväxel/framväxel;429
+Växelservice;Byte navinsats Nexus;599
+Växelservice;Byte växelvajer och hölje - navväxel;299
+Växelservice;Byte/riktning växelöra;299
+Växelservice;Byte växelreglage. Nexus - Sram och Torpedo;399
+Växelservice;Byte växel-/bromsreglage - standard/mtb;369
+Växelservice;Byte växelwire/hölje. MTB/hybrid;299
+Växelservice;Byte växelvajer och hölje - racer;499
+Övrigt verkstad;Öppning lås + 100kr per klinga;449
+Övrigt verkstad;Justering styrlager (Ej omfettning);179
+Övrigt verkstad;Reparation fast belysning;299
+Övrigt verkstad;Felsökning belysning/navdynamo;229
+Övrigt verkstad;Spänna kedja;199
+Övrigt verkstad;Torka och Olja kedja;59
+Övrigt verkstad;Gänginstats;400`;
+
+export const PRICE_LIST: PriceItem[] = PRICE_CSV.split('\n')
+  .slice(1)
+  .map((line) => line.split(';'))
+  .filter((parts) => parts.length === 3 && !Number.isNaN(Number(parts[2])))
+  .map(([category, title, price]) => ({
+    category: category.trim(),
+    title: title.trim(),
+    price: Number(price),
+  }));
