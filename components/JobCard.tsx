@@ -1,8 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { colors, radius, shadow } from '../lib/theme';
-import { Job } from '../lib/types';
+import { colors, radius, shadow, statusColors } from '../lib/theme';
+import { Job, Product } from '../lib/types';
+
+const PRODUCT_LABELS: Record<NonNullable<Product['label']>, string> = {
+  samma: 'Samma modell',
+  likvärdig: 'Likvärdigt alternativ',
+  billigare: 'Billigare alternativ',
+};
 
 type Props = {
   job: Job;
@@ -49,7 +55,15 @@ export function JobCard({
     <View style={styles.card}>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <Text style={styles.category}>{job.category.toUpperCase()}</Text>
+          <View style={styles.categoryRow}>
+            <Text style={styles.category}>{job.category.toUpperCase()}</Text>
+            {job.severity === 'kritisk' ? (
+              <View style={styles.criticalBadge}>
+                <Ionicons name="alert-circle" size={11} color={colors.danger} />
+                <Text style={styles.criticalText}>KRITISK</Text>
+              </View>
+            ) : null}
+          </View>
           <Text style={styles.title}>{job.title}</Text>
         </View>
         <Text style={styles.price}>{job.price} kr</Text>
@@ -61,7 +75,26 @@ export function JobCard({
       {job.products.map((product) => (
         <View key={product.id} style={styles.productRow}>
           <Ionicons name="cube-outline" size={15} color={colors.textSecondary} />
-          <Text style={styles.productName}>{product.name}</Text>
+          <View style={styles.productInfo}>
+            <Text style={styles.productName}>{product.name}</Text>
+            {product.label || product.stock !== undefined ? (
+              <Text style={styles.productMeta}>
+                {product.label ? PRODUCT_LABELS[product.label] : null}
+                {product.label && product.stock !== undefined ? ' · ' : null}
+                {product.stock !== undefined ? (
+                  <Text
+                    style={
+                      product.stock > 0 ? styles.inStock : styles.orderItem
+                    }
+                  >
+                    {product.stock > 0
+                      ? `I lager (${product.stock})`
+                      : 'Beställningsvara'}
+                  </Text>
+                ) : null}
+              </Text>
+            ) : null}
+          </View>
           {editingId === product.id ? (
             <TextInput
               style={[styles.input, styles.inputEditPrice]}
@@ -187,9 +220,44 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingLeft: 6,
   },
-  productName: {
+  productInfo: {
     flex: 1,
+    gap: 1,
+  },
+  productName: {
     color: colors.textSecondary,
+  },
+  productMeta: {
+    color: colors.textFaint,
+    fontSize: 11,
+  },
+  inStock: {
+    color: colors.accentDark,
+    fontWeight: '600',
+  },
+  orderItem: {
+    color: statusColors.inspected,
+    fontWeight: '600',
+  },
+  categoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  criticalBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: 'rgba(255, 90, 95, 0.12)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  criticalText: {
+    color: colors.danger,
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.5,
   },
   productPrice: {
     color: colors.textSecondary,

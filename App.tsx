@@ -25,6 +25,7 @@ import {
 } from 'react-native-safe-area-context';
 import { AddJobModal } from './components/AddJobModal';
 import { BesiktningScreen } from './components/BesiktningScreen';
+import { InspectionGuide } from './components/InspectionGuide';
 import { JobCard } from './components/JobCard';
 import { JobsScreen } from './components/JobsScreen';
 import { MicButton, MicPhase } from './components/MicButton';
@@ -203,6 +204,8 @@ function Screen() {
           </View>
 
           <PhotoCard uri={photoUri} onTakePhoto={takePhoto} />
+
+          <InspectionGuide />
 
           <MicButton
             phase={phase}

@@ -2,6 +2,12 @@ export type Product = {
   id: string;
   name: string;
   price: number;
+  /** Artikelnummer i lagerlistan, om produkten matchats mot lagret. */
+  articleNumber?: string;
+  /** Lagersaldo vid matchningen; 0 = beställningsvara. */
+  stock?: number;
+  /** Typ av förslag: samma modell/märke, likvärdigt alternativ eller billigare. */
+  label?: 'samma' | 'likvärdig' | 'billigare';
 };
 
 export type Job = {
@@ -10,6 +16,8 @@ export type Job = {
   category: string;
   price: number;
   products: Product[];
+  /** 'kritisk' = trafikfarligt/måste åtgärdas innan cykeln kan användas. */
+  severity?: 'kritisk' | 'normal';
 };
 
 export type PriceItem = {

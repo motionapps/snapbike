@@ -9,31 +9,30 @@ export type InspectionItem = {
 export type InspectionSection = {
   key: string;
   title: string;
+  /** Kort etikett för kompakta vyer (chips i besiktningsguiden). */
+  short: string;
   icon: string;
   items: InspectionItem[];
 };
 
 /**
- * Verkstadens besiktningsmall (Bak → Fram). Speglar dokumentet
- * "Besiktningsmall" – ordningen är tänkt att följas med kunden på plats.
+ * Verkstadens besiktningsmall. Headset kontrolleras på marken innan cykeln
+ * lyfts upp i stativet; därefter gås cykeln igenom Bak → Fram med kunden
+ * på plats. Bromsfunktion kan testas även med cykeln upphängd.
  */
 export const INSPECTION_TEMPLATE: InspectionSection[] = [
   {
     key: 'ground',
-    title: 'På marken',
+    short: 'Marken',
+    title: 'På marken – innan cykeln lyfts',
     icon: 'bicycle-outline',
     items: [
       { id: 'ground-headset', title: 'Headset', hint: 'glapp/tröghet' },
-      { id: 'ground-stem', title: 'Styre & styrstam', hint: 'riktning, bultar' },
-      {
-        id: 'ground-saddle',
-        title: 'Sadel & sadelstolpe',
-        hint: 'höjd, lutning, fastsättning',
-      },
     ],
   },
   {
     key: 'rear',
+    short: 'Bak',
     title: 'Bakre delen',
     icon: 'arrow-back-circle-outline',
     items: [
@@ -50,6 +49,7 @@ export const INSPECTION_TEMPLATE: InspectionSection[] = [
   },
   {
     key: 'drivetrain',
+    short: 'Drivlina',
     title: 'Drivlina',
     icon: 'cog-outline',
     items: [
@@ -67,18 +67,26 @@ export const INSPECTION_TEMPLATE: InspectionSection[] = [
   },
   {
     key: 'mid',
+    short: 'Ram',
     title: 'Mitten / Ram',
     icon: 'git-commit-outline',
     items: [
       { id: 'mid-cables', title: 'Vajrar & höljen', hint: 'skick' },
       { id: 'mid-hoses', title: 'Hydraulslangar', hint: 'läckage/skador' },
       { id: 'mid-frame', title: 'Ram & gaffel', hint: 'sprickor, bucklor' },
+      { id: 'mid-stem', title: 'Styre & styrstam', hint: 'riktning, bultar' },
+      {
+        id: 'mid-saddle',
+        title: 'Sadel & sadelstolpe',
+        hint: 'höjd, lutning, fastsättning',
+      },
       { id: 'mid-accessories', title: 'Tillbehör', hint: 'sitter fast' },
       { id: 'mid-kickstand', title: 'Stöd', hint: 'fjädring, rörlighet' },
     ],
   },
   {
     key: 'front',
+    short: 'Fram',
     title: 'Främre delen',
     icon: 'arrow-forward-circle-outline',
     items: [
@@ -95,6 +103,7 @@ export const INSPECTION_TEMPLATE: InspectionSection[] = [
   },
   {
     key: 'extra',
+    short: 'Extra',
     title: 'Extra (om finns)',
     icon: 'options-outline',
     items: [
