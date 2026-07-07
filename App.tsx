@@ -28,6 +28,7 @@ import { BesiktningScreen } from './components/BesiktningScreen';
 import { InspectionGuide } from './components/InspectionGuide';
 import { JobCard } from './components/JobCard';
 import { OrderCard } from './components/OrderCard';
+import { OrderContext, useOrderContext } from './lib/orderContext';
 import { clearDraft, loadDraft, saveDraft } from './lib/persist';
 import { JobsScreen } from './components/JobsScreen';
 import { MicButton, MicPhase } from './components/MicButton';
@@ -53,18 +54,17 @@ function formatKr(value: number): string {
 function Screen() {
   const insets = useSafeAreaInsets();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const { jobs, setJobs, order, setOrder, savedId, setSavedId } =
+    useOrderContext();
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [phase, setPhase] = useState<MicPhase>('idle');
   const [transcript, setTranscript] = useState('');
-  const [jobs, setJobs] = useState<Job[]>([]);
   const [error, setError] = useState('');
   const [showAddJob, setShowAddJob] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [savedId, setSavedId] = useState<string | null>(null);
   const [voiceEditId, setVoiceEditId] = useState<string | null>(null);
   const [voiceEditRecording, setVoiceEditRecording] = useState(false);
-  const [order, setOrder] = useState<OrderInfo>(EMPTY_ORDER);
   const restored = useRef(false);
 
   // Återställ ev. autosparat utkast vid start (webben; native tills backend).
@@ -466,8 +466,16 @@ const TABS: { key: Tab; label: string; icon: string; iconActive: string }[] = [
 function Root() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('note');
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [order, setOrder] = useState<OrderInfo>(EMPTY_ORDER);
+  const [savedId, setSavedId] = useState<string | null>(null);
+
+  const goToOrder = useCallback(() => setTab('note'), []);
 
   return (
+    <OrderContext.Provider
+      value={{ jobs, setJobs, order, setOrder, savedId, setSavedId, goToOrder }}
+    >
     <View style={styles.root}>
       <StatusBar style="light" />
 
@@ -503,6 +511,7 @@ function Root() {
         })}
       </View>
     </View>
+    </OrderContext.Provider>
   );
 }
 

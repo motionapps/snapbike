@@ -361,6 +361,27 @@ export async function analyzeTranscript(transcript: string): Promise<Job[]> {
 }
 
 /**
+ * Skapar en prissatt jobblista utifrån besiktningens anmärkningar. Återanvänder
+ * samma matchning (prislista, servicepaket, hjulregel, lagerförslag) som den
+ * intalade jobblistan – så personalen bara behöver prata igenom besiktningen.
+ */
+export async function jobsFromInspection(
+  issues: { section: string; title: string; note: string }[]
+): Promise<Job[]> {
+  if (issues.length === 0) return [];
+  const text =
+    'Detta är anmärkningarna från besiktningen. Skapa en prissatt jobblista ' +
+    'för att åtgärda dem:\n' +
+    issues
+      .map(
+        (issue) =>
+          `- ${issue.title} (${issue.section})${issue.note ? `: ${issue.note}` : ''}`
+      )
+      .join('\n');
+  return analyzeTranscript(text);
+}
+
+/**
  * Uppdaterar ETT jobb utifrån en intalad instruktion, t.ex. "föreslå andra
  * Pirelli 28 mm däck" eller "byt till 32 mm och kolla saldot".
  */

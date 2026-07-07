@@ -7,6 +7,7 @@ import {
 } from 'expo-audio';
 import { useCallback, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   Platform,
   Pressable,
@@ -17,7 +18,13 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { analyzeInspection, hasOpenAiKey, transcribeAudio } from '../lib/api';
+import {
+  analyzeInspection,
+  hasOpenAiKey,
+  jobsFromInspection,
+  transcribeAudio,
+} from '../lib/api';
+import { useOrderContext } from '../lib/orderContext';
 import {
   INSPECTION_ITEM_COUNT,
   INSPECTION_TEMPLATE,
@@ -42,10 +49,12 @@ const MIC_LABELS: Partial<Record<MicPhase, string>> = {
  */
 export function BesiktningScreen() {
   const insets = useSafeAreaInsets();
+  const { setJobs, goToOrder } = useOrderContext();
   const [results, setResults] = useState<InspectionState>({});
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [phase, setPhase] = useState<MicPhase>('idle');
   const [micError, setMicError] = useState('');
+  const [creatingJobs, setCreatingJobs] = useState(false);
 
   const useWebSpeech = !hasOpenAiKey && webSpeechAvailable;
 
@@ -145,6 +154,22 @@ export function BesiktningScreen() {
   const checkedCount = useMemo(() => Object.keys(results).length, [results]);
   const issues = useMemo(() => inspectionIssues(results), [results]);
   const done = checkedCount === INSPECTION_ITEM_COUNT;
+
+  // Gör en prissatt jobblista av anmärkningarna och hoppa till offerten.
+  const createJobs = useCallback(async () => {
+    if (issues.length === 0) return;
+    setMicError('');
+    setCreatingJobs(true);
+    try {
+      const newJobs = await jobsFromInspection(issues);
+      setJobs((current) => [...current, ...newJobs]);
+      goToOrder();
+    } catch (err) {
+      setMicError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setCreatingJobs(false);
+    }
+  }, [issues, setJobs, goToOrder]);
 
   return (
     <View style={styles.root}>
@@ -329,6 +354,29 @@ export function BesiktningScreen() {
               </View>
             ))
           )}
+
+          {issues.length > 0 ? (
+            <Pressable
+              onPress={createJobs}
+              disabled={creatingJobs}
+              style={[styles.createJobs, creatingJobs && styles.createJobsBusy]}
+            >
+              {creatingJobs ? (
+                <ActivityIndicator color={colors.onAccent} />
+              ) : (
+                <>
+                  <Ionicons
+                    name="construct-outline"
+                    size={18}
+                    color={colors.onAccent}
+                  />
+                  <Text style={styles.createJobsText}>
+                    Skapa jobblista av anmärkningarna ({issues.length})
+                  </Text>
+                </>
+              )}
+            </Pressable>
+          ) : null}
 
           {checkedCount > 0 ? (
             <View style={styles.summaryBox}>
@@ -592,6 +640,23 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     marginTop: 2,
     fontSize: 13,
+  },
+  createJobs: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.accent,
+    borderRadius: radius.lg,
+    borderCurve: 'continuous',
+    paddingVertical: 14,
+  },
+  createJobsBusy: {
+    opacity: 0.8,
+  },
+  createJobsText: {
+    color: colors.onAccent,
+    fontWeight: '700',
   },
   summaryBox: {
     backgroundColor: colors.card,
