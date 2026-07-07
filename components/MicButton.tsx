@@ -10,6 +10,8 @@ type Props = {
   onToggle: () => void;
   onHoldStart: () => void;
   onHoldEnd: () => void;
+  /** Skriv över standardtexterna, t.ex. "Matchar…" på besiktningen. */
+  labels?: Partial<Record<MicPhase, string>>;
 };
 
 const PHASE_LABEL: Record<MicPhase, string> = {
@@ -19,7 +21,7 @@ const PHASE_LABEL: Record<MicPhase, string> = {
   analyzing: 'Matchar mot prislistan…',
 };
 
-export function MicButton({ phase, onToggle, onHoldStart, onHoldEnd }: Props) {
+export function MicButton({ phase, onToggle, onHoldStart, onHoldEnd, labels }: Props) {
   const pulse = useRef(new Animated.Value(1)).current;
   const holding = useRef(false);
   const busy = phase === 'transcribing' || phase === 'analyzing';
@@ -80,7 +82,7 @@ export function MicButton({ phase, onToggle, onHoldStart, onHoldEnd }: Props) {
           )}
         </Pressable>
       </View>
-      <Text style={styles.label}>{PHASE_LABEL[phase]}</Text>
+      <Text style={styles.label}>{labels?.[phase] ?? PHASE_LABEL[phase]}</Text>
     </View>
   );
 }

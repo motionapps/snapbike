@@ -2,6 +2,11 @@ import { Platform } from 'react-native';
 import { fetch } from 'expo/fetch';
 import { File } from 'expo-file-system';
 
+import {
+  INSPECTION_TEMPLATE,
+  InspectionState,
+  InspectionStatus,
+} from './besiktning';
 import { PRICE_CSV } from './prices';
 import { SERVICE_GUIDE } from './servicepaket';
 import { searchStock } from './stock';
@@ -406,4 +411,135 @@ function mapJob(job: ToolJob): Job {
       label: product.label,
     })),
   };
+}
+
+// --- Besiktning via röst -------------------------------------------------
+
+/** Kontrollpunkterna som text till prompten: "- <id>: <titel> (<hint>)". */
+const INSPECTION_ITEMS_TEXT = INSPECTION_TEMPLATE.map(
+  (section) =>
+    `${section.title}:\n` +
+    section.items.map((i) => `- ${i.id}: ${i.title} (${i.hint})`).join('\n')
+).join('\n\n');
+
+const SET_INSPECTION_TOOL = {
+  name: 'set_inspection',
+  description:
+    'Registrera besiktningens kontrollpunkter utifrån vad personalen sagt.',
+  input_schema: {
+    type: 'object' as const,
+    properties: {
+      items: {
+        type: 'array',
+        description: 'En post per kontrollpunkt som nämns i inspelningen.',
+        items: {
+          type: 'object',
+          properties: {
+            itemId: {
+              type: 'string',
+              description: 'Exakt id för kontrollpunkten (ur listan).',
+            },
+            status: {
+              type: 'string',
+              enum: ['ok', 'issue'],
+              description:
+                '"ok" om punkten är bra/utan anmärkning, "issue" om det finns ' +
+                'en anmärkning.',
+            },
+            note: {
+              type: 'string',
+              description:
+                'Kort anteckning på svenska för anmärkningar (issue), t.ex. ' +
+                '"glapp, behöver justeras". Utelämna för ok.',
+            },
+          },
+          required: ['itemId', 'status'],
+        },
+      },
+    },
+    required: ['items'],
+  },
+};
+
+const INSPECTION_PROMPT =
+  'Du är assistent på en cykelverkstad. Personalen går igenom en kundcykel och ' +
+  'pratar in vad de ser, punkt för punkt. Mappa det som sägs mot besiktningens ' +
+  'kontrollpunkter nedan. För varje punkt som NÄMNS: ange dess exakta itemId, ' +
+  'status "ok" om den är bra/utan anmärkning eller "issue" om det finns en ' +
+  'anmärkning, och en kort note på svenska för anmärkningar. Ta bara med punkter ' +
+  'som faktiskt nämns – hitta inte på, gissa inte. Om något sägs allmänt (t.ex. ' +
+  '"resten ser bra ut") ska du INTE fylla i alla punkter, bara de som nämnts ' +
+  'specifikt. Använd bara itemId som finns i listan. Anropa set_inspection ' +
+  'exakt en gång.\n\nKONTROLLPUNKTER:\n' +
+  INSPECTION_ITEMS_TEXT;
+
+type ToolInspection = {
+  items?: { itemId: string; status: InspectionStatus; note?: string }[];
+};
+
+/** Alla giltiga item-id, för att filtrera bort ev. påhittade id. */
+const VALID_ITEM_IDS = new Set(
+  INSPECTION_TEMPLATE.flatMap((section) => section.items.map((i) => i.id))
+);
+
+/**
+ * Mappar en intalad besiktningsgenomgång mot checklistan. Returnerar bara de
+ * punkter som nämnts, som en delmängd av InspectionState att slå ihop med det
+ * som redan är ifyllt.
+ */
+export async function analyzeInspection(
+  transcript: string
+): Promise<InspectionState> {
+  if (!ANTHROPIC_KEY) {
+    throw new Error('EXPO_PUBLIC_ANTHROPIC_API_KEY saknas i .env');
+  }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': ANTHROPIC_KEY,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-5',
+      max_tokens: 1024,
+      thinking: { type: 'disabled' },
+      system: [
+        {
+          type: 'text',
+          text: INSPECTION_PROMPT,
+          cache_control: { type: 'ephemeral' },
+        },
+      ],
+      messages: [{ role: 'user', content: transcript }],
+      tools: [SET_INSPECTION_TOOL],
+      tool_choice: { type: 'tool', name: 'set_inspection' },
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.text();
+    throw new Error(`Claude-fel (${res.status}): ${body.slice(0, 200)}`);
+  }
+
+  const json = (await res.json()) as { content: ContentBlock[] };
+  const toolUse = json.content.find(
+    (block) => block.type === 'tool_use' && block.name === 'set_inspection'
+  );
+  const items = (toolUse?.input as ToolInspection | undefined)?.items;
+  if (!items) {
+    throw new Error('Claude returnerade ingen besiktning.');
+  }
+
+  const state: InspectionState = {};
+  for (const item of items) {
+    if (!VALID_ITEM_IDS.has(item.itemId)) continue;
+    state[item.itemId] = {
+      status: item.status === 'issue' ? 'issue' : 'ok',
+      note: item.status === 'issue' ? item.note?.trim() ?? '' : '',
+    };
+  }
+  return state;
 }

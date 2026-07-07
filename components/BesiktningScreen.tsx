@@ -1,6 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
+import {
+  AudioModule,
+  RecordingPresets,
+  setAudioModeAsync,
+  useAudioRecorder,
+} from 'expo-audio';
 import { useCallback, useMemo, useState } from 'react';
 import {
+  Alert,
   Platform,
   Pressable,
   ScrollView,
@@ -10,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { analyzeInspection, hasOpenAiKey, transcribeAudio } from '../lib/api';
 import {
   INSPECTION_ITEM_COUNT,
   INSPECTION_TEMPLATE,
@@ -18,7 +26,14 @@ import {
   inspectionIssues,
   inspectionSummaryText,
 } from '../lib/besiktning';
+import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from '../lib/speech';
 import { colors, radius } from '../lib/theme';
+import { MicButton, MicPhase } from './MicButton';
+
+const MIC_LABELS: Partial<Record<MicPhase, string>> = {
+  idle: 'Prata in genomgången – tryck för att spela in',
+  analyzing: 'Fyller i checklistan…',
+};
 
 /**
  * Hela besiktningen som en scrollbar lista (Marken → Bak → Fram) med en
@@ -28,6 +43,64 @@ import { colors, radius } from '../lib/theme';
 export function BesiktningScreen() {
   const insets = useSafeAreaInsets();
   const [results, setResults] = useState<InspectionState>({});
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const [phase, setPhase] = useState<MicPhase>('idle');
+  const [micError, setMicError] = useState('');
+
+  const useWebSpeech = !hasOpenAiKey && webSpeechAvailable;
+
+  const startRecording = useCallback(async () => {
+    setMicError('');
+    if (useWebSpeech) {
+      try {
+        startWebSpeech();
+        setPhase('recording');
+      } catch (err) {
+        setMicError(err instanceof Error ? err.message : String(err));
+      }
+      return;
+    }
+    const permission = await AudioModule.requestRecordingPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert('Mikrofon', 'Ge appen tillgång till mikrofonen i Inställningar.');
+      return;
+    }
+    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+    await recorder.prepareToRecordAsync();
+    recorder.record();
+    setPhase('recording');
+  }, [recorder, useWebSpeech]);
+
+  const stopRecording = useCallback(async () => {
+    try {
+      setPhase('transcribing');
+      let text: string;
+      if (useWebSpeech) {
+        text = await stopWebSpeech();
+      } else {
+        await recorder.stop();
+        await setAudioModeAsync({ allowsRecording: false });
+        const uri = recorder.uri;
+        if (!uri) throw new Error('Ingen inspelning hittades.');
+        text = await transcribeAudio(uri);
+      }
+      if (!text) throw new Error('Ingen text uppfattades – försök igen.');
+
+      setPhase('analyzing');
+      const found = await analyzeInspection(text);
+      // Slå ihop med det som redan är ifyllt så flera pass fungerar.
+      setResults((current) => ({ ...current, ...found }));
+    } catch (err) {
+      setMicError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setPhase('idle');
+    }
+  }, [recorder, useWebSpeech]);
+
+  const handleMic = useCallback(() => {
+    if (phase === 'recording') void stopRecording();
+    else if (phase === 'idle') void startRecording();
+  }, [phase, startRecording, stopRecording]);
 
   const setStatus = useCallback((itemId: string, status: InspectionStatus) => {
     setResults((current) => {
@@ -109,6 +182,32 @@ export function BesiktningScreen() {
         ]}
         keyboardShouldPersistTaps="handled"
       >
+        <View style={styles.micCard}>
+          <MicButton
+            phase={phase}
+            onToggle={handleMic}
+            onHoldStart={() => {
+              if (phase === 'idle') void startRecording();
+            }}
+            onHoldEnd={() => {
+              if (phase === 'recording') void stopRecording();
+            }}
+            labels={MIC_LABELS}
+          />
+          <Text style={styles.micHint}>
+            Prata dig igenom cykeln – t.ex. "styrlagret glappar, kedjan behöver
+            bytas, sadeln är fin" – så fylls punkterna i nedan. Du kan alltid
+            justera manuellt.
+          </Text>
+        </View>
+
+        {micError ? (
+          <View style={styles.errorBox}>
+            <Ionicons name="warning-outline" size={16} color={colors.danger} />
+            <Text style={styles.errorText}>{micError}</Text>
+          </View>
+        ) : null}
+
         {INSPECTION_TEMPLATE.map((section, sectionIndex) => {
           const sectionDone = section.items.every((item) => results[item.id]);
           return (
@@ -328,6 +427,38 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 8,
     gap: 22,
+  },
+  micCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 18,
+    paddingHorizontal: 16,
+    gap: 12,
+    alignItems: 'center',
+  },
+  micHint: {
+    color: colors.textFaint,
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 17,
+  },
+  errorBox: {
+    flexDirection: 'row',
+    gap: 8,
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(255, 90, 95, 0.1)',
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 90, 95, 0.35)',
+    padding: 12,
+  },
+  errorText: {
+    flex: 1,
+    color: colors.danger,
   },
   section: {
     gap: 10,
