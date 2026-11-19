@@ -6,9 +6,9 @@ import {
   INSPECTION_TEMPLATE,
   InspectionState,
   InspectionStatus,
-} from './besiktning';
+} from './inspection';
 import { PRICE_CSV } from './prices';
-import { SERVICE_GUIDE } from './servicepaket';
+import { SERVICE_GUIDE } from './servicePackage';
 import { searchStock } from './stock';
 import { Job, uid } from './types';
 

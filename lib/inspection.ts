@@ -152,13 +152,13 @@ export function inspectionIssues(
 // --- Live-matchning medan man pratar (lokalt, utan API) -------------------
 
 /** Nyckelord per kontrollpunkt. Fram/bak-punkter kräver riktningsord. */
-const ITEM_KEYWORDS: Record<string, { words: string[]; needsSide?: 'fram' | 'bak' }> = {
+const ITEM_KEYWORDS: Record<string, { words: string[]; needsSide?: 'front' | 'back' }> = {
   'ground-headset': { words: ['headset', 'styrlag'] },
-  'rear-tire': { words: ['däck', 'punktering', 'punka', 'slang', 'ringen'], needsSide: 'bak' },
-  'rear-rim': { words: ['fälg', 'hjul'], needsSide: 'bak' },
-  'rear-hub': { words: ['nav'], needsSide: 'bak' },
-  'rear-axle': { words: ['snabbkoppling', 'thru', 'genomgående axel'], needsSide: 'bak' },
-  'rear-brake': { words: ['broms', 'bromsbelägg', 'bromsklossar', 'bromsskiva'], needsSide: 'bak' },
+  'rear-tire': { words: ['däck', 'punktering', 'punka', 'slang', 'ringen'], needsSide: 'back' },
+  'rear-rim': { words: ['fälg', 'hjul'], needsSide: 'back' },
+  'rear-hub': { words: ['nav'], needsSide: 'back' },
+  'rear-axle': { words: ['snabbkoppling', 'thru', 'genomgående axel'], needsSide: 'back' },
+  'rear-brake': { words: ['broms', 'bromsbelägg', 'bromsklossar', 'bromsskiva'], needsSide: 'back' },
   'drive-cassette': { words: ['kassett', 'drev', 'frikrans'] },
   'drive-chain': { words: ['kedja', 'kedjan'] },
   'drive-derailleur': { words: ['bakväxel', 'växeln', 'växelöra', 'växlar'] },
@@ -172,11 +172,11 @@ const ITEM_KEYWORDS: Record<string, { words: string[]; needsSide?: 'fram' | 'bak
   'mid-saddle': { words: ['sadel', 'sadeln', 'sadelstolpe'] },
   'mid-accessories': { words: ['tillbehör', 'stänkskärm', 'pakethållare', 'ringklocka'] },
   'mid-kickstand': { words: ['stöd', 'ställ', 'benstöd'] },
-  'front-tire': { words: ['däck', 'punktering', 'punka', 'slang', 'ringen'], needsSide: 'fram' },
-  'front-rim': { words: ['fälg', 'hjul'], needsSide: 'fram' },
-  'front-hub': { words: ['nav'], needsSide: 'fram' },
-  'front-axle': { words: ['snabbkoppling', 'thru', 'genomgående axel'], needsSide: 'fram' },
-  'front-brake': { words: ['broms', 'bromsbelägg', 'bromsklossar', 'bromsskiva'], needsSide: 'fram' },
+  'front-tire': { words: ['däck', 'punktering', 'punka', 'slang', 'ringen'], needsSide: 'front' },
+  'front-rim': { words: ['fälg', 'hjul'], needsSide: 'front' },
+  'front-hub': { words: ['nav'], needsSide: 'front' },
+  'front-axle': { words: ['snabbkoppling', 'thru', 'genomgående axel'], needsSide: 'front' },
+  'front-brake': { words: ['broms', 'bromsbelägg', 'bromsklossar', 'bromsskiva'], needsSide: 'front' },
   'extra-suspension': { words: ['framgaffel', 'bakdämpare', 'dämpare', 'fjädring'] },
   'extra-dropper': { words: ['dropper', 'teleskopstolpe'] },
 };
@@ -222,8 +222,8 @@ export function matchInspectionPhrase(
   const hits: { itemId: string; status: InspectionStatus; note: string }[] = [];
   for (const [itemId, def] of Object.entries(ITEM_KEYWORDS)) {
     if (!def.words.some(wordHit)) continue;
-    if (def.needsSide === 'fram' && !hasFront) continue;
-    if (def.needsSide === 'bak' && !hasBack) continue;
+    if (def.needsSide === 'front' && !hasFront) continue;
+    if (def.needsSide === 'back' && !hasBack) continue;
     hits.push({ itemId, status, note: isIssue ? phrase.trim() : '' });
   }
   return hits;

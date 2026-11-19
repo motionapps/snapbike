@@ -33,7 +33,7 @@ import {
   inspectionIssues,
   inspectionSummaryText,
   matchInspectionPhrase,
-} from '../lib/besiktning';
+} from '../lib/inspection';
 
 /** itemId → sektionsnyckel, för att kunna scrolla till rätt sektion live. */
 const ITEM_SECTION: Record<string, string> = {};
@@ -54,7 +54,7 @@ const MIC_LABELS: Partial<Record<MicPhase, string>> = {
  * sammanfattning i botten som uppdateras löpande – tänkt att visas för
  * kunden på en telefon eller skärm medan cykeln gås igenom.
  */
-export function BesiktningScreen() {
+export function InspectionScreen() {
   const insets = useSafeAreaInsets();
   const { setJobs, goToOrder } = useOrderContext();
   const [results, setResults] = useState<InspectionState>({});

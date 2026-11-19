@@ -24,7 +24,7 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { AddJobModal } from './components/AddJobModal';
-import { BesiktningScreen } from './components/BesiktningScreen';
+import { InspectionScreen } from './components/InspectionScreen';
 import { InspectionGuide } from './components/InspectionGuide';
 import { JobCard } from './components/JobCard';
 import { OrderCard } from './components/OrderCard';
@@ -47,7 +47,7 @@ import {
   uid,
 } from './lib/types';
 
-function formatKr(value: number): string {
+function formatPrice(value: number): string {
   return `${value.toLocaleString('sv-SE')} kr`;
 }
 
@@ -412,9 +412,9 @@ function Screen() {
                 </Text>
                 <View style={styles.totalValues}>
                   {hasRejected ? (
-                    <Text style={styles.totalStruck}>{formatKr(total)}</Text>
+                    <Text style={styles.totalStruck}>{formatPrice(total)}</Text>
                   ) : null}
-                  <Text style={styles.totalValue}>{formatKr(approved)}</Text>
+                  <Text style={styles.totalValue}>{formatPrice(approved)}</Text>
                 </View>
               </View>
               <Pressable
@@ -483,7 +483,7 @@ function Root() {
         <Screen />
       </View>
       <View style={[styles.page, tab !== 'inspect' && styles.pageHidden]}>
-        <BesiktningScreen />
+        <InspectionScreen />
       </View>
       <View style={[styles.page, tab !== 'jobs' && styles.pageHidden]}>
         <JobsScreen active={tab === 'jobs'} />

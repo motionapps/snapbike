@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { INSPECTION_TEMPLATE } from '../lib/besiktning';
+import { INSPECTION_TEMPLATE } from '../lib/inspection';
 import { colors, radius } from '../lib/theme';
 
 /**

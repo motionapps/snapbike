@@ -86,12 +86,12 @@ const SYNONYMS: Record<string, string[]> = {
 };
 
 /**
- * Laddar lagerlistan (cykel_o_natur_alla_artiklar.json, ~67 000 artiklar)
+ * Laddar lagerlistan (stock-catalog.json, ~67 000 artiklar)
  * först när den behövs – JSON:en är stor och ska inte parsas vid appstart.
  */
 function loadStock(): StockItem[] {
   if (!items) {
-    const raw = require('../cykel_o_natur_alla_artiklar.json') as {
+    const raw = require('../stock-catalog.json') as {
       mappedItems: RawItem[];
     };
     items = raw.mappedItems
