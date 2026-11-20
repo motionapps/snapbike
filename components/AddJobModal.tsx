@@ -10,27 +10,32 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { PRICE_LIST } from '../lib/prices';
 import { colors, radius } from '../lib/theme';
 import { PriceItem } from '../lib/types';
 
-const CATEGORIES = [...new Set(PRICE_LIST.map((item) => item.category))].sort(
-  (a, b) => a.localeCompare(b, 'sv')
-);
-
 type Props = {
   visible: boolean;
+  /** The price rows that apply to the current item (see pricesFor). */
+  prices: PriceItem[];
   onClose: () => void;
   onPick: (item: PriceItem) => void;
 };
 
-export function AddJobModal({ visible, onClose, onPick }: Props) {
+export function AddJobModal({ visible, prices, onClose, onPick }: Props) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string | null>(null);
 
+  const categories = useMemo(
+    () =>
+      [...new Set(prices.map((item) => item.category))].sort((a, b) =>
+        a.localeCompare(b, 'sv')
+      ),
+    [prices]
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return PRICE_LIST.filter((item) => {
+    return prices.filter((item) => {
       if (category && item.category !== category) return false;
       if (!q) return true;
       return (
@@ -38,7 +43,7 @@ export function AddJobModal({ visible, onClose, onPick }: Props) {
         item.category.toLowerCase().includes(q)
       );
     });
-  }, [query, category]);
+  }, [query, category, prices]);
 
   return (
     <Modal
@@ -82,7 +87,7 @@ export function AddJobModal({ visible, onClose, onPick }: Props) {
               Alla
             </Text>
           </Pressable>
-          {CATEGORIES.map((item) => {
+          {categories.map((item) => {
             const isActive = category === item;
             return (
               <Pressable

@@ -39,28 +39,17 @@ Projektet **cykelnatur** (`diwlgaiijdclojyeuvle`, eu-north-1) används:
 
 ## Prislistan
 
-`lib/prices.ts` är genererad från `assets/prices.csv`. Om CSV:n ändras,
-regenerera med:
+`lib/priceCsv.ts` är genererad från `assets/snapbike_prices.csv`. Kolumnen
+`bikeType` styr vilka rader som visas (se `pricesFor` i `lib/prices.ts`):
+`all_bikes`, `electric`, `racer`, `cargo`, `hub`, `external` för cyklar,
+`part` för lösa delar, `trolley` för barnvagnar, `other` för övrigt.
+Om CSV:n ändras, regenerera med:
 
 ```bash
 node -e "
 const fs = require('fs');
-const csv = fs.readFileSync('assets/prices.csv', 'utf8').trim();
-fs.writeFileSync('lib/prices.ts', \`// Auto-generated from assets/prices.csv
-import { PriceItem } from './types';
-
-export const PRICE_CSV = \\\`\${csv}\\\`;
-
-export const PRICE_LIST: PriceItem[] = PRICE_CSV.split('\\\\n')
-  .slice(1)
-  .map((line) => line.split(';'))
-  .filter((parts) => parts.length === 3 && !Number.isNaN(Number(parts[2])))
-  .map(([category, title, price]) => ({
-    category: category.trim(),
-    title: title.trim(),
-    price: Number(price),
-  }));
-\`);
+const csv = fs.readFileSync('assets/snapbike_prices.csv', 'utf8').trim();
+fs.writeFileSync('lib/priceCsv.ts', '// Auto-generated from assets/snapbike_prices.csv — regenerate with the snippet in README\\nexport const PRICE_CSV = \\\`' + csv + '\\\`;\\n');
 "
 ```
 

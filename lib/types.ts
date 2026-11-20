@@ -1,3 +1,5 @@
+import { BikeData } from './bikeAnalysis';
+
 export type Product = {
   id: string;
   name: string;
@@ -29,20 +31,46 @@ export type Job = {
 export type OrderInfo = {
   /** Verkstadens cykelnummer 1–100. "Ledigt" avgörs av backend senare. */
   bikeNumber: string;
-  customerName: string;
-  customerPhone: string;
+  customer: Customer | null;
+  /** Id of the imported booking; Spara then updates that row instead of inserting. */
+  bookingId: string | null;
 };
+
+/** First name and phone are required; last name and email may be empty. */
+export type Customer = {
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+};
+
+export const EMPTY_CUSTOMER: Customer = {
+  firstName: '',
+  lastName: '',
+  phone: '',
+  email: '',
+};
+
+export function isCustomerValid(customer: Customer): boolean {
+  return customer.firstName.trim() !== '' && customer.phone.trim() !== '';
+}
 
 export const EMPTY_ORDER: OrderInfo = {
   bikeNumber: '',
-  customerName: '',
-  customerPhone: '',
+  customer: null,
+  bookingId: null,
 };
+
+/** What the photo shows: a whole bike, a loose part, a trolley/pram, or anything else. */
+export const ITEM_KINDS = ['bike', 'part', 'trolley', 'other'] as const;
+export type ItemKind = (typeof ITEM_KINDS)[number];
 
 export type PriceItem = {
   category: string;
   title: string;
   price: number;
+  /** The price list's bikeType column: all_bikes, electric, racer, cargo, hub, external, part, trolley, other. */
+  bikeType: string;
 };
 
 /** Workshop lifecycle, mirrors the snapbike_job_status enum on Supabase. */
@@ -72,6 +100,8 @@ export type Estimate = {
   imagePath: string | null;
   total: number;
   status: JobStatus;
+  customer: Customer | null;
+  bike: BikeData | null;
 };
 
 export function uid(): string {

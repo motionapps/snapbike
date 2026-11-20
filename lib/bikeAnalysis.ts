@@ -12,7 +12,6 @@ export const BIKE_TYPE_OPTIONS = [
   'hybrid bike',
   'city bike',
   'kids bike',
-  'trolley',
   'cargo bike',
 ] as const;
 export const COMMON_COLORS = [

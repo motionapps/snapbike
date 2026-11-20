@@ -3,7 +3,8 @@ import { Platform } from 'react-native';
 import { createClient } from '@supabase/supabase-js';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
-import { Estimate, Job, JobStatus, jobsTotal } from './types';
+import { BikeData } from './bikeAnalysis';
+import { Customer, Estimate, Job, JobStatus, jobsTotal } from './types';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -12,15 +13,29 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: false, autoRefreshToken: false },
 });
 
+export type EstimateInput = {
+  imageUri: string | null;
+  transcript: string;
+  jobs: Job[];
+  customer: Customer | null;
+  bike: BikeData | null;
+  /** Existing booking row to update; null inserts a new row. */
+  bookingId: string | null;
+};
+
 /**
- * Uploads the photo (if any) to the snapbike bucket and stores the estimate
- * row. Returns the new row id.
+ * Uploads the photo (if any) to the snapbike bucket and stores the estimate.
+ * An imported booking is updated in place and moved to checked_in; otherwise
+ * a new row is inserted. Returns the row id.
  */
-export async function saveEstimate(
-  imageUri: string | null,
-  transcript: string,
-  jobs: Job[]
-): Promise<string> {
+export async function saveEstimate({
+  imageUri,
+  transcript,
+  jobs,
+  customer,
+  bike,
+  bookingId,
+}: EstimateInput): Promise<string> {
   let imagePath: string | null = null;
 
   if (imageUri) {
@@ -44,16 +59,28 @@ export async function saveEstimate(
     }
   }
 
-  const { data, error } = await supabase
-    .from('snapbike_estimates')
-    .insert({
-      transcript,
-      jobs,
-      image_path: imagePath,
-      total: jobsTotal(jobs),
-    })
-    .select('id')
-    .single();
+  const fields = {
+    transcript,
+    jobs,
+    total: jobsTotal(jobs),
+    customer,
+    bike,
+    // Keep the booking's existing photo when no new one was taken.
+    ...(imagePath ? { image_path: imagePath } : {}),
+  };
+
+  const { data, error } = bookingId
+    ? await supabase
+        .from('snapbike_estimates')
+        .update({ ...fields, status: 'checked_in' })
+        .eq('id', bookingId)
+        .select('id')
+        .single()
+    : await supabase
+        .from('snapbike_estimates')
+        .insert(fields)
+        .select('id')
+        .single();
 
   if (error) {
     throw new Error(`Kunde inte spara: ${error.message}`);
@@ -69,14 +96,18 @@ type EstimateRow = {
   image_path: string | null;
   total: number;
   status: JobStatus;
+  customer: Customer | null;
+  bike: BikeData | null;
 };
 
-/** Fetches all saved estimates, newest first. */
-export async function fetchEstimates(): Promise<Estimate[]> {
-  const { data, error } = await supabase
+/** Fetches saved estimates, newest first, optionally only one status. */
+export async function fetchEstimates(status?: JobStatus): Promise<Estimate[]> {
+  let query = supabase
     .from('snapbike_estimates')
-    .select('id, created_at, transcript, jobs, image_path, total, status')
+    .select('id, created_at, transcript, jobs, image_path, total, status, customer, bike')
     .order('created_at', { ascending: false });
+  if (status) query = query.eq('status', status);
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Kunde inte hämta jobb: ${error.message}`);
@@ -90,6 +121,8 @@ export async function fetchEstimates(): Promise<Estimate[]> {
     imagePath: row.image_path,
     total: Number(row.total),
     status: row.status,
+    customer: row.customer,
+    bike: row.bike,
   }));
 }
 

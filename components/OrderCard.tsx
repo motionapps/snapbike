@@ -9,8 +9,8 @@ type Props = {
 };
 
 /**
- * Arbetsorderns huvud: cykelnummer (1–100) och kunduppgifter. Lokalt i appen
- * tills vidare – "ledigt nummer" och kundhämtning kopplas till backend senare.
+ * Arbetsorderns huvud: cykelnummer (1–100). Kunden väljs i CustomerSection.
+ * "Ledigt nummer" kopplas till backend senare.
  */
 export function OrderCard({ order, onChange }: Props) {
   const bikeNum = Number(order.bikeNumber);
@@ -39,28 +39,6 @@ export function OrderCard({ order, onChange }: Props) {
             maxLength={3}
           />
         </View>
-        <View style={styles.nameField}>
-          <Text style={styles.label}>Kund</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="Namn"
-            placeholderTextColor={colors.textFaint}
-            value={order.customerName}
-            onChangeText={(text) => onChange({ customerName: text })}
-          />
-        </View>
-      </View>
-
-      <View>
-        <Text style={styles.label}>Telefon</Text>
-        <TextInput
-          style={styles.input}
-          placeholder="07x-xxx xx xx"
-          placeholderTextColor={colors.textFaint}
-          value={order.customerPhone}
-          onChangeText={(text) => onChange({ customerPhone: text })}
-          keyboardType="phone-pad"
-        />
       </View>
 
       {bikeInvalid ? (
@@ -97,10 +75,6 @@ const styles = StyleSheet.create({
   },
   numberField: {
     width: 90,
-    gap: 4,
-  },
-  nameField: {
-    flex: 1,
     gap: 4,
   },
   label: {

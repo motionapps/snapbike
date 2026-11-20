@@ -1,5 +1,5 @@
 import { BikeData } from './bikeAnalysis';
-import { Job, OrderInfo } from './types';
+import { ItemKind, Job, OrderInfo } from './types';
 
 /**
  * Lokal autospar av den pågående ordern. Tills Supabase-sparandet är
@@ -13,6 +13,8 @@ const KEY = 'snapbike_draft_v1';
 
 export type Draft = {
   photoUri: string | null;
+  /** What the photo shows; missing in drafts saved before it existed. */
+  itemKind?: ItemKind | null;
   /** Photo analysis; missing in drafts saved before it existed. */
   bike?: BikeData | null;
   transcript: string;

@@ -7,7 +7,7 @@ import {
   setAudioModeAsync,
   useAudioRecorder,
 } from 'expo-audio';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -24,6 +24,9 @@ import {
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
 import { AddJobModal } from './components/AddJobModal';
+import { BookingPickerModal } from './components/BookingPickerModal';
+import { CustomerModal } from './components/CustomerModal';
+import { CustomerSection } from './components/CustomerSection';
 import { InspectionScreen } from './components/InspectionScreen';
 import { InspectionGuide } from './components/InspectionGuide';
 import { JobCard } from './components/JobCard';
@@ -34,13 +37,18 @@ import { JobsScreen } from './components/JobsScreen';
 import { MicButton, MicPhase } from './components/MicButton';
 import { PhotoCard } from './components/PhotoCard';
 import { analyzeBikePhoto } from './lib/bikeAnalysis';
+import { classifyItemKind } from './lib/itemKind';
+import { pricesFor } from './lib/prices';
 import { BikeAnalysisState, BikeDetails } from './components/BikeDetails';
 import { analyzeTranscript, hasOpenAiKey, refineJob, transcribeAudio } from './lib/api';
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from './lib/speech';
 import { saveEstimate } from './lib/supabase';
 import { colors, radius, shadow } from './lib/theme';
 import {
+  Customer,
   EMPTY_ORDER,
+  Estimate,
+  ItemKind,
   Job,
   OrderInfo,
   PriceItem,
@@ -49,6 +57,13 @@ import {
   uid,
 } from './lib/types';
 
+const ITEM_KIND_LABELS: Record<ItemKind, string> = {
+  bike: 'Cykel',
+  part: 'Lös del',
+  trolley: 'Barnvagn',
+  other: 'Övrigt',
+};
+
 function formatPrice(value: number): string {
   return `${value.toLocaleString('sv-SE')} kr`;
 }
@@ -56,13 +71,21 @@ function formatPrice(value: number): string {
 function Screen() {
   const insets = useSafeAreaInsets();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const { jobs, setJobs, order, setOrder, savedId, setSavedId } =
-    useOrderContext();
+  const {
+    jobs,
+    setJobs,
+    order,
+    setOrder,
+    savedId,
+    setSavedId,
+    itemKind,
+    setItemKind,
+    bikeAnalysis,
+    setBikeAnalysis,
+    prices,
+  } = useOrderContext();
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
-  const [bikeAnalysis, setBikeAnalysis] = useState<BikeAnalysisState>({
-    status: 'idle',
-  });
   const photoBase64 = useRef<string | null>(null);
   // Bumped per photo so a slow analysis of an old photo can't overwrite a newer one.
   const analysisRun = useRef(0);
@@ -70,6 +93,8 @@ function Screen() {
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState('');
   const [showAddJob, setShowAddJob] = useState(false);
+  const [showDropIn, setShowDropIn] = useState(false);
+  const [showBookings, setShowBookings] = useState(false);
   const [saving, setSaving] = useState(false);
   const [voiceEditId, setVoiceEditId] = useState<string | null>(null);
   const [voiceEditRecording, setVoiceEditRecording] = useState(false);
@@ -80,10 +105,16 @@ function Screen() {
     const draft = loadDraft();
     if (draft) {
       setPhotoUri(draft.photoUri);
+      setItemKind(draft.itemKind ?? null);
       if (draft.bike) setBikeAnalysis({ status: 'ready', bike: draft.bike });
       setTranscript(draft.transcript);
       setJobs(draft.jobs);
-      setOrder(draft.order);
+      // Older drafts stored customerName/customerPhone; drop those.
+      setOrder({
+        bikeNumber: draft.order?.bikeNumber ?? '',
+        customer: draft.order?.customer ?? null,
+        bookingId: draft.order?.bookingId ?? null,
+      });
     }
     restored.current = true;
   }, []);
@@ -92,11 +123,36 @@ function Screen() {
   useEffect(() => {
     if (!restored.current) return;
     const bike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike : null;
-    saveDraft({ photoUri, bike, transcript, jobs, order });
-  }, [photoUri, bikeAnalysis, transcript, jobs, order]);
+    saveDraft({ photoUri, itemKind, bike, transcript, jobs, order });
+  }, [photoUri, itemKind, bikeAnalysis, transcript, jobs, order]);
 
   const patchOrder = useCallback((patch: Partial<OrderInfo>) => {
     setOrder((current) => ({ ...current, ...patch }));
+  }, []);
+
+  const setCustomer = useCallback((customer: Customer | null) => {
+    setOrder((current) => ({ ...current, customer }));
+    setShowDropIn(false);
+    setSavedId(null);
+  }, []);
+
+  // Import a booking: its customer, its jobs (before any already noted) and,
+  // if the photo hasn't produced bike data, the booking's bike.
+  const importBooking = useCallback((booking: Estimate) => {
+    setOrder((current) => ({
+      ...current,
+      customer: booking.customer,
+      bookingId: booking.id,
+    }));
+    setJobs((current) => [...booking.jobs, ...current]);
+    if (booking.bike) {
+      setItemKind((current) => current ?? 'bike');
+      setBikeAnalysis((current) =>
+        current.status === 'ready' ? current : { status: 'ready', bike: booking.bike! }
+      );
+    }
+    setShowBookings(false);
+    setSavedId(null);
   }, []);
 
   const newOrder = useCallback(() => {
@@ -104,6 +160,7 @@ function Screen() {
     setPhotoUri(null);
     analysisRun.current += 1;
     photoBase64.current = null;
+    setItemKind(null);
     setBikeAnalysis({ status: 'idle' });
     setTranscript('');
     setJobs([]);
@@ -140,8 +197,30 @@ function Screen() {
       photoBase64.current =
         asset.base64 ??
         (asset.uri.startsWith('data:') ? asset.uri.split(',')[1] : null);
-      void runBikeAnalysis();
+      void runPhotoAnalysis(asset.uri);
     }
+  }, []);
+
+  // Jev decides what the photo shows; only a bike gets the detailed bike analysis.
+  const runPhotoAnalysis = useCallback(async (uri: string) => {
+    const run = ++analysisRun.current;
+    setItemKind(null);
+    setBikeAnalysis({ status: 'analyzing' });
+    let kind: ItemKind | null = null;
+    try {
+      kind = await classifyItemKind(uri);
+    } catch (err) {
+      if (run === analysisRun.current) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    }
+    if (run !== analysisRun.current) return;
+    setItemKind(kind);
+    if (kind && kind !== 'bike') {
+      setBikeAnalysis({ status: 'idle' });
+      return;
+    }
+    void runBikeAnalysis();
   }, []);
 
   const runBikeAnalysis = useCallback(async () => {
@@ -209,7 +288,7 @@ function Screen() {
       setTranscript(text);
 
       setPhase('analyzing');
-      const newJobs = await analyzeTranscript(text);
+      const newJobs = await analyzeTranscript(text, prices);
       setJobs((current) => [...current, ...newJobs]);
       setSavedId(null);
     } catch (err) {
@@ -217,7 +296,7 @@ function Screen() {
     } finally {
       setPhase('idle');
     }
-  }, [recorder, useWebSpeech]);
+  }, [recorder, useWebSpeech, prices]);
 
   const handleToggle = useCallback(() => {
     if (phase === 'recording') {
@@ -249,7 +328,7 @@ function Screen() {
           }
           if (!text) throw new Error('Ingen text uppfattades – försök igen.');
 
-          const updated = await refineJob(job, text);
+          const updated = await refineJob(job, text, prices);
           setJobs((current) =>
             current.map((item) => (item.id === jobId ? updated : item))
           );
@@ -283,7 +362,7 @@ function Screen() {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [jobs, phase, recorder, useWebSpeech, voiceEditId, voiceEditRecording]
+    [jobs, phase, recorder, useWebSpeech, voiceEditId, voiceEditRecording, prices]
   );
 
   const removeJob = useCallback((jobId: string) => {
@@ -348,14 +427,23 @@ function Screen() {
     try {
       setSaving(true);
       setError('');
-      const id = await saveEstimate(photoUri, transcript, jobs);
+      const id = await saveEstimate({
+        imageUri: photoUri,
+        transcript,
+        jobs,
+        customer: order.customer,
+        bike: bikeAnalysis.status === 'ready' ? bikeAnalysis.bike : null,
+        bookingId: order.bookingId,
+      });
       setSavedId(id);
+      // Later saves update this row instead of creating a duplicate.
+      setOrder((current) => ({ ...current, bookingId: id }));
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
     }
-  }, [photoUri, transcript, jobs]);
+  }, [photoUri, transcript, jobs, order.customer, order.bookingId, bikeAnalysis]);
 
   const total = jobsTotal(jobs);
   const approved = approvedTotal(jobs);
@@ -391,6 +479,11 @@ function Screen() {
 
           <View style={styles.photoSection}>
             <PhotoCard uri={photoUri} onTakePhoto={takePhoto} />
+            {photoUri && itemKind && itemKind !== 'bike' ? (
+              <View style={styles.bikeDetailsCard}>
+                <Text style={styles.itemKindText}>{ITEM_KIND_LABELS[itemKind]}</Text>
+              </View>
+            ) : null}
             {photoUri && bikeAnalysis.status !== 'idle' ? (
               <View style={styles.bikeDetailsCard}>
                 <BikeDetails
@@ -401,6 +494,12 @@ function Screen() {
                 />
               </View>
             ) : null}
+            <CustomerSection
+              customer={order.customer}
+              onImportBooking={() => setShowBookings(true)}
+              onDropIn={() => setShowDropIn(true)}
+              onClear={() => setCustomer(null)}
+            />
           </View>
 
           <InspectionGuide />
@@ -505,8 +604,20 @@ function Screen() {
 
       <AddJobModal
         visible={showAddJob}
+        prices={prices}
         onClose={() => setShowAddJob(false)}
         onPick={pickJob}
+      />
+      <CustomerModal
+        visible={showDropIn}
+        initial={order.customer}
+        onClose={() => setShowDropIn(false)}
+        onSave={setCustomer}
+      />
+      <BookingPickerModal
+        visible={showBookings}
+        onClose={() => setShowBookings(false)}
+        onPick={importBooking}
       />
     </View>
   );
@@ -526,12 +637,33 @@ function Root() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [order, setOrder] = useState<OrderInfo>(EMPTY_ORDER);
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [itemKind, setItemKind] = useState<ItemKind | null>(null);
+  const [bikeAnalysis, setBikeAnalysis] = useState<BikeAnalysisState>({
+    status: 'idle',
+  });
+  const prices = useMemo(
+    () => pricesFor(itemKind, bikeAnalysis.status === 'ready' ? bikeAnalysis.bike.bike : null),
+    [itemKind, bikeAnalysis]
+  );
 
   const goToOrder = useCallback(() => setTab('note'), []);
 
   return (
     <OrderContext.Provider
-      value={{ jobs, setJobs, order, setOrder, savedId, setSavedId, goToOrder }}
+      value={{
+        jobs,
+        setJobs,
+        order,
+        setOrder,
+        savedId,
+        setSavedId,
+        goToOrder,
+        itemKind,
+        setItemKind,
+        bikeAnalysis,
+        setBikeAnalysis,
+        prices,
+      }}
     >
     <View style={styles.root}>
       <StatusBar style="light" />
@@ -620,6 +752,12 @@ const styles = StyleSheet.create({
   },
   photoSection: {
     gap: 8,
+  },
+  itemKindText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '600',
+    padding: 14,
   },
   bikeDetailsCard: {
     backgroundColor: colors.card,

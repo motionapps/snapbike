@@ -41,7 +41,6 @@ const LABELS: Record<string, string> = {
   'hybrid bike': 'Hybridcykel',
   'city bike': 'Stadscykel',
   'kids bike': 'Barncykel',
-  trolley: 'Cykelvagn',
   'cargo bike': 'Lastcykel',
   black: 'Svart', white: 'Vit', red: 'Röd', blue: 'Blå', green: 'Grön',
   yellow: 'Gul', orange: 'Orange', purple: 'Lila', pink: 'Rosa', brown: 'Brun',

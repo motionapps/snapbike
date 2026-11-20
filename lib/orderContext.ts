@@ -1,5 +1,6 @@
 import { Dispatch, SetStateAction, createContext, useContext } from 'react';
-import { Job, OrderInfo } from './types';
+import type { BikeAnalysisState } from '../components/BikeDetails';
+import { ItemKind, Job, OrderInfo, PriceItem } from './types';
 
 /**
  * Delad arbetsorder mellan besiktnings- och offertvyn: samma jobblista och
@@ -14,6 +15,13 @@ export type OrderContextValue = {
   savedId: string | null;
   setSavedId: Dispatch<SetStateAction<string | null>>;
   goToOrder: () => void;
+  /** What the photo shows (Jev); null until a photo is classified. */
+  itemKind: ItemKind | null;
+  setItemKind: Dispatch<SetStateAction<ItemKind | null>>;
+  bikeAnalysis: BikeAnalysisState;
+  setBikeAnalysis: Dispatch<SetStateAction<BikeAnalysisState>>;
+  /** Price rows that apply to the item kind and bike. */
+  prices: PriceItem[];
 };
 
 export const OrderContext = createContext<OrderContextValue | null>(null);

@@ -56,7 +56,7 @@ const MIC_LABELS: Partial<Record<MicPhase, string>> = {
  */
 export function InspectionScreen() {
   const insets = useSafeAreaInsets();
-  const { setJobs, goToOrder } = useOrderContext();
+  const { setJobs, goToOrder, prices } = useOrderContext();
   const [results, setResults] = useState<InspectionState>({});
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [phase, setPhase] = useState<MicPhase>('idle');
@@ -198,7 +198,7 @@ export function InspectionScreen() {
     setMicError('');
     setCreatingJobs(true);
     try {
-      const newJobs = await jobsFromInspection(issues, transcriptRef.current);
+      const newJobs = await jobsFromInspection(issues, transcriptRef.current, prices);
       setJobs((current) => [...current, ...newJobs]);
       goToOrder();
     } catch (err) {
@@ -206,7 +206,7 @@ export function InspectionScreen() {
     } finally {
       setCreatingJobs(false);
     }
-  }, [issues, setJobs, goToOrder]);
+  }, [issues, setJobs, goToOrder, prices]);
 
   return (
     <View style={styles.root}>

@@ -7,10 +7,10 @@ import {
   InspectionState,
   InspectionStatus,
 } from './inspection';
-import { PRICE_CSV } from './prices';
+import { priceCsvFor } from './prices';
 import { SERVICE_GUIDE } from './servicePackage';
 import { searchStock } from './stock';
-import { Job, uid } from './types';
+import { Job, PriceItem, uid } from './types';
 
 const OPENAI_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '';
 const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY ?? '';
@@ -211,7 +211,7 @@ const WHEEL_RULES =
   'ALDRIG två arbeten för samma hjul (t.ex. både "Punktering inkl. ' +
   'standardslang" och "Däckbyte - per hjul").';
 
-const SYSTEM_PROMPT =
+const systemPrompt = (prices: PriceItem[]) =>
   'Du är assistent på en cykelverkstad. Du får en transkriberad röstanteckning ' +
   'från besiktningen av en kundcykel. Identifiera varje jobb som nämns och matcha ' +
   'det mot verkstadens prislista nedan (CSV, semikolonseparerad: ' +
@@ -233,9 +233,9 @@ const SYSTEM_PROMPT =
   '\n\nNär du är klar: anropa create_job_list exakt en gång med hela jobblistan.\n\n' +
   SERVICE_GUIDE +
   '\n\nPRISLISTA:\n' +
-  PRICE_CSV;
+  priceCsvFor(prices);
 
-const REFINE_PROMPT =
+const refinePrompt = (prices: PriceItem[]) =>
   'Du är assistent på en cykelverkstad. Personalen har talat in en ändring av ' +
   'ETT jobb på en pågående arbetsorder. Du får jobbet som JSON tillsammans med ' +
   'instruktionen. Följ instruktionen: byt ut, lägg till eller ta bort ' +
@@ -249,7 +249,7 @@ const REFINE_PROMPT =
   'uppdaterade jobbet.\n\n' +
   SERVICE_GUIDE +
   '\n\nPRISLISTA:\n' +
-  PRICE_CSV;
+  priceCsvFor(prices);
 
 const MAX_TOOL_ROUNDS = 8;
 
@@ -346,9 +346,12 @@ async function runToolLoop(
  * Analyserar besiktningstranskriptet och returnerar en prissatt jobblista
  * med lagermatchade produktförslag.
  */
-export async function analyzeTranscript(transcript: string): Promise<Job[]> {
+export async function analyzeTranscript(
+  transcript: string,
+  prices: PriceItem[]
+): Promise<Job[]> {
   const input = (await runToolLoop(
-    SYSTEM_PROMPT,
+    systemPrompt(prices),
     transcript,
     JOB_LIST_TOOL,
     'Claude returnerade ingen jobblista.'
@@ -367,7 +370,8 @@ export async function analyzeTranscript(transcript: string): Promise<Job[]> {
  */
 export async function jobsFromInspection(
   issues: { section: string; title: string; note: string }[],
-  transcript = ''
+  transcript: string,
+  prices: PriceItem[]
 ): Promise<Job[]> {
   if (issues.length === 0) return [];
   const parts = [
@@ -386,14 +390,18 @@ export async function jobsFromInspection(
       transcript.trim()
     );
   }
-  return analyzeTranscript(parts.join('\n'));
+  return analyzeTranscript(parts.join('\n'), prices);
 }
 
 /**
  * Uppdaterar ETT jobb utifrån en intalad instruktion, t.ex. "föreslå andra
  * Pirelli 28 mm däck" eller "byt till 32 mm och kolla saldot".
  */
-export async function refineJob(job: Job, instruction: string): Promise<Job> {
+export async function refineJob(
+  job: Job,
+  instruction: string,
+  prices: PriceItem[]
+): Promise<Job> {
   const payload = JSON.stringify({
     jobb: {
       title: job.title,
@@ -412,7 +420,7 @@ export async function refineJob(job: Job, instruction: string): Promise<Job> {
   });
 
   const input = (await runToolLoop(
-    REFINE_PROMPT,
+    refinePrompt(prices),
     payload,
     UPDATE_JOB_TOOL,
     'Claude returnerade inget uppdaterat jobb.'
