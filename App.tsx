@@ -33,6 +33,8 @@ import { clearDraft, loadDraft, saveDraft } from './lib/persist';
 import { JobsScreen } from './components/JobsScreen';
 import { MicButton, MicPhase } from './components/MicButton';
 import { PhotoCard } from './components/PhotoCard';
+import { analyzeBikePhoto } from './lib/bikeAnalysis';
+import { BikeAnalysisState, BikeDetails } from './components/BikeDetails';
 import { analyzeTranscript, hasOpenAiKey, refineJob, transcribeAudio } from './lib/api';
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from './lib/speech';
 import { saveEstimate } from './lib/supabase';
@@ -58,6 +60,12 @@ function Screen() {
     useOrderContext();
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
+  const [bikeAnalysis, setBikeAnalysis] = useState<BikeAnalysisState>({
+    status: 'idle',
+  });
+  const photoBase64 = useRef<string | null>(null);
+  // Bumped per photo so a slow analysis of an old photo can't overwrite a newer one.
+  const analysisRun = useRef(0);
   const [phase, setPhase] = useState<MicPhase>('idle');
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState('');
@@ -72,6 +80,7 @@ function Screen() {
     const draft = loadDraft();
     if (draft) {
       setPhotoUri(draft.photoUri);
+      if (draft.bike) setBikeAnalysis({ status: 'ready', bike: draft.bike });
       setTranscript(draft.transcript);
       setJobs(draft.jobs);
       setOrder(draft.order);
@@ -82,8 +91,9 @@ function Screen() {
   // Autospar vid varje ändring (efter att ev. utkast återställts).
   useEffect(() => {
     if (!restored.current) return;
-    saveDraft({ photoUri, transcript, jobs, order });
-  }, [photoUri, transcript, jobs, order]);
+    const bike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike : null;
+    saveDraft({ photoUri, bike, transcript, jobs, order });
+  }, [photoUri, bikeAnalysis, transcript, jobs, order]);
 
   const patchOrder = useCallback((patch: Partial<OrderInfo>) => {
     setOrder((current) => ({ ...current, ...patch }));
@@ -92,6 +102,9 @@ function Screen() {
   const newOrder = useCallback(() => {
     clearDraft();
     setPhotoUri(null);
+    analysisRun.current += 1;
+    photoBase64.current = null;
+    setBikeAnalysis({ status: 'idle' });
     setTranscript('');
     setJobs([]);
     setOrder(EMPTY_ORDER);
@@ -115,10 +128,42 @@ function Screen() {
       Alert.alert('Kamera', 'Ge appen tillgång till kameran i Inställningar.');
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.7 });
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 0.7,
+      base64: true,
+    });
     if (!result.canceled && result.assets[0]) {
-      setPhotoUri(result.assets[0].uri);
+      const asset = result.assets[0];
+      setPhotoUri(asset.uri);
       setSavedId(null);
+      // On web the uri is already a data: URI; use it if base64 is missing.
+      photoBase64.current =
+        asset.base64 ??
+        (asset.uri.startsWith('data:') ? asset.uri.split(',')[1] : null);
+      void runBikeAnalysis();
+    }
+  }, []);
+
+  const runBikeAnalysis = useCallback(async () => {
+    const base64 = photoBase64.current;
+    const run = ++analysisRun.current;
+    if (!base64) {
+      setBikeAnalysis({ status: 'idle' });
+      return;
+    }
+    setBikeAnalysis({ status: 'analyzing' });
+    try {
+      const bike = await analyzeBikePhoto(base64);
+      if (run === analysisRun.current) {
+        setBikeAnalysis({ status: 'ready', bike });
+      }
+    } catch (err) {
+      if (run === analysisRun.current) {
+        setBikeAnalysis({
+          status: 'error',
+          message: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
   }, []);
 
@@ -344,7 +389,19 @@ function Screen() {
             ) : null}
           </View>
 
-          <PhotoCard uri={photoUri} onTakePhoto={takePhoto} />
+          <View style={styles.photoSection}>
+            <PhotoCard uri={photoUri} onTakePhoto={takePhoto} />
+            {photoUri && bikeAnalysis.status !== 'idle' ? (
+              <View style={styles.bikeDetailsCard}>
+                <BikeDetails
+                  key={photoUri}
+                  state={bikeAnalysis}
+                  onRetry={runBikeAnalysis}
+                  onChange={(bike) => setBikeAnalysis({ status: 'ready', bike })}
+                />
+              </View>
+            ) : null}
+          </View>
 
           <InspectionGuide />
 
@@ -560,6 +617,17 @@ const styles = StyleSheet.create({
   content: {
     paddingHorizontal: 20,
     gap: 20,
+  },
+  photoSection: {
+    gap: 8,
+  },
+  bikeDetailsCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.lg,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
   },
   titleRow: {
     flexDirection: 'row',

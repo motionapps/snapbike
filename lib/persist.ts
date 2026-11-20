@@ -1,3 +1,4 @@
+import { BikeData } from './bikeAnalysis';
 import { Job, OrderInfo } from './types';
 
 /**
@@ -12,6 +13,8 @@ const KEY = 'snapbike_draft_v1';
 
 export type Draft = {
   photoUri: string | null;
+  /** Photo analysis; missing in drafts saved before it existed. */
+  bike?: BikeData | null;
   transcript: string;
   jobs: Job[];
   order: OrderInfo;
