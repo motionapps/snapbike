@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import {
   AudioModule,
   RecordingPresets,
@@ -24,6 +25,7 @@ import {
   jobsFromInspection,
   transcribeAudio,
 } from '../lib/api';
+import { jobImageUrl } from '../lib/jobImages';
 import { useOrderContext } from '../lib/orderContext';
 import {
   INSPECTION_ITEM_COUNT,
@@ -298,6 +300,12 @@ export function InspectionScreen() {
                 return (
                   <View key={item.id} style={styles.itemCard}>
                     <View style={styles.itemRow}>
+                      <Image
+                        source={{ uri: jobImageUrl(item.title) }}
+                        style={styles.itemImage}
+                        contentFit="contain"
+                        transition={150}
+                      />
                       <View style={styles.itemText}>
                         <Text style={styles.itemTitle}>{item.title}</Text>
                         <Text style={styles.itemHint}>{item.hint}</Text>
@@ -584,6 +592,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  itemImage: {
+    width: 44,
+    height: 44,
+    borderRadius: radius.sm,
+    backgroundColor: '#fff',
   },
   itemText: {
     flex: 1,

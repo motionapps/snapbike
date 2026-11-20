@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Image } from 'expo-image';
 import { useMemo, useState } from 'react';
 import {
   FlatList,
@@ -10,6 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { jobImageUrl } from '../lib/jobImages';
 import { colors, radius } from '../lib/theme';
 import { PriceItem } from '../lib/types';
 
@@ -115,6 +117,12 @@ export function AddJobModal({ visible, prices, onClose, onPick }: Props) {
               }}
               style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
             >
+              <Image
+                source={{ uri: jobImageUrl(item.title) }}
+                style={styles.rowImage}
+                contentFit="contain"
+                transition={150}
+              />
               <View style={styles.rowText}>
                 <Text style={styles.rowCategory}>{item.category.toUpperCase()}</Text>
                 <Text style={styles.rowTitle}>{item.title}</Text>
@@ -174,9 +182,11 @@ const styles = StyleSheet.create({
   },
   chipScroll: {
     flexGrow: 0,
+    flexShrink: 0,
     marginBottom: 12,
   },
   chipRow: {
+    alignItems: 'center',
     paddingHorizontal: 20,
     gap: 8,
   },
@@ -219,6 +229,12 @@ const styles = StyleSheet.create({
   },
   rowPressed: {
     backgroundColor: colors.cardRaised,
+  },
+  rowImage: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.sm,
+    backgroundColor: '#fff',
   },
   rowText: {
     flex: 1,
