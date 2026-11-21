@@ -14,20 +14,21 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  fetchEstimates,
-  setEstimateStatus,
-  updateEstimateJobs,
+  fetchJobs,
+  setJobStatus,
+  updateJobTasks,
 } from '../lib/supabase';
 import { colors, gutter, radius } from '../lib/theme';
-import { Estimate, Job, JobStatus, jobsTotal } from '../lib/types';
-import { EstimateCard } from './EstimateCard';
-import { EstimateDetailModal } from './EstimateDetailModal';
+import { Job, Task, JobStatus, tasksTotal } from '../lib/types';
+import { JobCard } from './JobCard';
+import { JobDetailModal } from './JobDetailModal';
 
 type Props = {
   active: boolean;
-  onStartCheckIn: (estimate: Estimate) => void;
-  onStartInspection: (estimate: Estimate) => void;
-  onSelectBike: (estimate: Estimate) => void;
+  onStartCheckIn: (job: Job) => void;
+  onStartInspection: (job: Job) => void;
+  onSelectBike: (job: Job) => void;
+  onNewJob: () => void;
 };
 
 type Filter = 'active' | 'ready' | 'all';
@@ -38,32 +39,38 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'all', label: 'Alla' },
 ];
 
-function matchesFilter(estimate: Estimate, filter: Filter): boolean {
+function matchesFilter(job: Job, filter: Filter): boolean {
   if (filter === 'active') {
-    return estimate.status !== 'ready' && estimate.status !== 'delivered';
+    return job.status !== 'ready' && job.status !== 'delivered';
   }
-  if (filter === 'ready') return estimate.status === 'ready';
+  if (filter === 'ready') return job.status === 'ready';
   return true;
 }
 
-/** Lowercased text of customer, bike and jobs, for the free-text search. */
-function searchText(estimate: Estimate): string {
+/** Lowercased text of customer, bike and tasks, for the free-text search. */
+function searchText(job: Job): string {
   const parts: string[] = [];
-  const customer = estimate.customer;
+  const customer = job.customer;
   if (customer) {
     parts.push(customer.firstName, customer.lastName, customer.phone, customer.email);
   }
-  const bike = estimate.bike?.bike;
+  const bike = job.bike?.bike;
   if (bike) {
     parts.push(bike.brand, bike.bike_type, bike.color);
   }
-  for (const job of estimate.jobs) parts.push(job.title);
+  for (const task of job.tasks) parts.push(task.title);
   return parts.join(' ').toLowerCase();
 }
 
-export function JobsScreen({ active, onStartCheckIn, onStartInspection, onSelectBike }: Props) {
+export function JobsScreen({
+  active,
+  onStartCheckIn,
+  onStartInspection,
+  onSelectBike,
+  onNewJob,
+}: Props) {
   const insets = useSafeAreaInsets();
-  const [estimates, setEstimates] = useState<Estimate[] | null>(null);
+  const [jobs, setJobs] = useState<Job[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -72,24 +79,24 @@ export function JobsScreen({ active, onStartCheckIn, onStartInspection, onSelect
   const [tagQuery, setTagQuery] = useState('');
 
   const visible = useMemo(() => {
-    if (!estimates) return [];
+    if (!jobs) return [];
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const tag = tagQuery.trim();
-    return estimates.filter((estimate) => {
-      if (!matchesFilter(estimate, filter)) return false;
-      if (tag && estimate.bikeNumber !== tag) return false;
+    return jobs.filter((job) => {
+      if (!matchesFilter(job, filter)) return false;
+      if (tag && job.bikeNumber !== tag) return false;
       if (words.length === 0) return true;
-      const text = searchText(estimate);
+      const text = searchText(job);
       // Phone numbers are matched without spaces or dashes too.
       const digits = text.replace(/[\s-]/g, '');
       return words.every((word) => text.includes(word) || digits.includes(word));
     });
-  }, [estimates, filter, query, tagQuery]);
+  }, [jobs, filter, query, tagQuery]);
 
   const load = useCallback(async () => {
     try {
       setError('');
-      setEstimates(await fetchEstimates());
+      setJobs(await fetchJobs());
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
@@ -107,12 +114,12 @@ export function JobsScreen({ active, onStartCheckIn, onStartInspection, onSelect
 
   const changeStatus = useCallback(
     (id: string, status: JobStatus) => {
-      setEstimates((current) =>
+      setJobs((current) =>
         current
           ? current.map((e) => (e.id === id ? { ...e, status } : e))
           : current
       );
-      setEstimateStatus(id, status).catch((err) => {
+      setJobStatus(id, status).catch((err) => {
         setError(err instanceof Error ? err.message : String(err));
         void load();
       });
@@ -120,16 +127,16 @@ export function JobsScreen({ active, onStartCheckIn, onStartInspection, onSelect
     [load]
   );
 
-  const updateJobs = useCallback(
-    (id: string, jobs: Job[]) => {
-      setEstimates((current) =>
+  const updateTasks = useCallback(
+    (id: string, tasks: Task[]) => {
+      setJobs((current) =>
         current
           ? current.map((e) =>
-              e.id === id ? { ...e, jobs, total: jobsTotal(jobs) } : e
+              e.id === id ? { ...e, tasks, total: tasksTotal(tasks) } : e
             )
           : current
       );
-      updateEstimateJobs(id, jobs).catch((err) => {
+      updateJobTasks(id, tasks).catch((err) => {
         setError(err instanceof Error ? err.message : String(err));
         void load();
       });
@@ -138,9 +145,9 @@ export function JobsScreen({ active, onStartCheckIn, onStartInspection, onSelect
   );
 
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<Estimate>) => (
-      <EstimateCard
-        estimate={item}
+    ({ item }: ListRenderItemInfo<Job>) => (
+      <JobCard
+        job={item}
         onChangeStatus={changeStatus}
         onPress={setOpenId}
       />
@@ -148,8 +155,8 @@ export function JobsScreen({ active, onStartCheckIn, onStartInspection, onSelect
     [changeStatus]
   );
 
-  const openEstimate =
-    estimates?.find((estimate) => estimate.id === openId) ?? null;
+  const openJob =
+    jobs?.find((job) => job.id === openId) ?? null;
 
   return (
     <View style={styles.root}>
@@ -161,8 +168,12 @@ export function JobsScreen({ active, onStartCheckIn, onStartInspection, onSelect
       >
         <Text style={styles.title}>Jobb</Text>
         <Text style={styles.subtitle}>
-          {estimates ? `${visible.length} st` : ''}
+          {jobs ? `${visible.length} st` : ''}
         </Text>
+        <Pressable onPress={onNewJob} style={styles.newJob} hitSlop={8}>
+          <Ionicons name="add" size={16} color={colors.onAccent} />
+          <Text style={styles.newJobText}>Nytt jobb</Text>
+        </Pressable>
       </View>
 
       <View style={styles.filterRow}>
@@ -219,7 +230,7 @@ export function JobsScreen({ active, onStartCheckIn, onStartInspection, onSelect
         </View>
       ) : null}
 
-      {estimates === null && !error ? (
+      {jobs === null && !error ? (
         <View style={styles.loading}>
           <ActivityIndicator color={colors.accent} />
         </View>
@@ -242,18 +253,18 @@ export function JobsScreen({ active, onStartCheckIn, onStartInspection, onSelect
             <View style={styles.empty}>
               <Ionicons name="bicycle-outline" size={36} color={colors.textFaint} />
               <Text style={styles.emptyText}>
-                {estimates?.length ? 'Inga jobb matchar' : 'Inga sparade jobb ännu'}
+                {jobs?.length ? 'Inga jobb matchar' : 'Inga sparade jobb ännu'}
               </Text>
             </View>
           }
         />
       )}
 
-      <EstimateDetailModal
-        estimate={openEstimate}
+      <JobDetailModal
+        job={openJob}
         onClose={() => setOpenId(null)}
         onChangeStatus={changeStatus}
-        onUpdateJobs={updateJobs}
+        onUpdateTasks={updateTasks}
         onStartCheckIn={onStartCheckIn}
         onStartInspection={onStartInspection}
         onSelectBike={onSelectBike}
@@ -262,7 +273,7 @@ export function JobsScreen({ active, onStartCheckIn, onStartInspection, onSelect
   );
 }
 
-function keyExtractor(item: Estimate): string {
+function keyExtractor(item: Job): string {
   return item.id;
 }
 
@@ -284,6 +295,22 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     color: colors.textFaint,
+  },
+  newJob: {
+    marginLeft: 'auto',
+    alignSelf: 'center',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: colors.accent,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+  },
+  newJobText: {
+    color: colors.onAccent,
+    fontWeight: '700',
+    fontSize: 13,
   },
   filterRow: {
     flexDirection: 'row',

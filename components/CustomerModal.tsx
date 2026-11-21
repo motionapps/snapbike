@@ -10,8 +10,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { searchCustomers } from '../lib/supabase';
 import { colors, radius } from '../lib/theme';
-import { Customer, EMPTY_CUSTOMER, isCustomerValid } from '../lib/types';
+import { Customer, EMPTY_CUSTOMER, customerHasPhone, normalizePhone } from '../lib/types';
+
+/** Fields whose text searches existing customers. */
+type SearchField = 'firstName' | 'lastName' | 'phone';
 
 type Props = {
   visible: boolean;
@@ -22,8 +26,8 @@ type Props = {
 };
 
 /**
- * Drop-in: manually enter the customer and the bike tag. First name and phone
- * are required; the tag is optional but must be 1–100 when given.
+ * Drop-in: manually enter the customer and the bike tag. Every field is
+ * optional so a job can be filled in partially; the tag must be 1–100 when given.
  */
 export function CustomerModal({
   visible,
@@ -35,26 +39,75 @@ export function CustomerModal({
   const [customer, setCustomer] = useState<Customer>(initial ?? EMPTY_CUSTOMER);
   const [bikeNumber, setBikeNumber] = useState(initialBikeNumber);
 
+  const [searchField, setSearchField] = useState<SearchField | null>(null);
+  const [matches, setMatches] = useState<Customer[]>([]);
+
   useEffect(() => {
     if (visible) {
       setCustomer(initial ?? EMPTY_CUSTOMER);
       setBikeNumber(initialBikeNumber);
+      setSearchField(null);
+      setMatches([]);
     }
   }, [visible, initial, initialBikeNumber]);
+
+  const searchText = searchField ? customer[searchField] : '';
+  useEffect(() => {
+    if (searchText.trim().length < 2) {
+      setMatches([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      searchCustomers(searchText)
+        .then((found) => {
+          if (!cancelled) setMatches(found);
+        })
+        .catch((err) => console.warn(err instanceof Error ? err.message : err));
+    }, 250);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [searchText]);
+
+  const pick = (match: Customer) => {
+    setCustomer(match);
+    setSearchField(null);
+    setMatches([]);
+  };
+
+  const suggestionsFor = (field: SearchField) =>
+    searchField === field && matches.length > 0 ? (
+      <View style={styles.suggestions}>
+        {matches.map((match, index) => (
+          <Pressable key={match.phone || index} onPress={() => pick(match)} style={styles.suggestion}>
+            <Ionicons name="person-outline" size={14} color={colors.textFaint} />
+            <Text style={styles.suggestionName} numberOfLines={1}>
+              {[match.firstName, match.lastName].filter(Boolean).join(' ')}
+            </Text>
+            <Text style={styles.suggestionPhone}>{match.phone}</Text>
+          </Pressable>
+        ))}
+      </View>
+    ) : null;
 
   const bikeNum = Number(bikeNumber);
   const bikeInvalid =
     bikeNumber !== '' && (bikeNum < 1 || bikeNum > 100 || !Number.isInteger(bikeNum));
-  const valid = isCustomerValid(customer) && !bikeInvalid;
-  const set = (key: keyof Customer) => (text: string) =>
+  const valid = !bikeInvalid;
+  const missingPhone = !customerHasPhone(customer);
+  const set = (key: keyof Customer) => (text: string) => {
     setCustomer((current) => ({ ...current, [key]: text }));
+    setSearchField(key === 'email' ? null : key);
+  };
 
   const save = () => {
     if (!valid) return;
     onSave({
       firstName: customer.firstName.trim(),
       lastName: customer.lastName.trim(),
-      phone: customer.phone.trim(),
+      phone: normalizePhone(customer.phone),
       email: customer.email.trim(),
     }, bikeNumber);
   };
@@ -77,15 +130,18 @@ export function CustomerModal({
           contentContainerStyle={styles.form}
           keyboardShouldPersistTaps="handled"
         >
-          <Field label="Förnamn *" value={customer.firstName} onChange={set('firstName')} autoFocus />
+          <Field label="Förnamn" value={customer.firstName} onChange={set('firstName')} autoFocus />
+          {suggestionsFor('firstName')}
           <Field label="Efternamn" value={customer.lastName} onChange={set('lastName')} />
+          {suggestionsFor('lastName')}
           <Field
-            label="Telefon *"
+            label="Telefon"
             value={customer.phone}
             onChange={set('phone')}
             placeholder="07x-xxx xx xx"
             keyboardType="phone-pad"
           />
+          {suggestionsFor('phone')}
           <Field
             label="E-post"
             value={customer.email}
@@ -113,10 +169,17 @@ export function CustomerModal({
           <Pressable
             onPress={save}
             disabled={!valid}
-            style={[styles.saveButton, !valid && styles.saveButtonDisabled]}
+            style={[
+              styles.saveButton,
+              missingPhone && styles.saveButtonWarning,
+              !valid && styles.saveButtonDisabled,
+            ]}
           >
             <Text style={styles.saveText}>Spara kund</Text>
           </Pressable>
+          {missingPhone ? (
+            <Text style={styles.warningText}>Inget korrekt telefonnummer har sparats</Text>
+          ) : null}
         </ScrollView>
       </View>
     </Modal>
@@ -223,6 +286,33 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
+  suggestions: {
+    marginTop: -8,
+    backgroundColor: colors.cardRaised,
+    borderRadius: radius.sm,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
+  },
+  suggestion: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
+  },
+  suggestionName: {
+    flex: 1,
+    color: colors.text,
+    fontWeight: '600',
+  },
+  suggestionPhone: {
+    color: colors.textSecondary,
+    fontSize: 13,
+  },
   saveButton: {
     alignItems: 'center',
     backgroundColor: colors.accent,
@@ -230,6 +320,15 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     paddingVertical: 15,
     marginTop: 6,
+  },
+  saveButtonWarning: {
+    backgroundColor: colors.warning,
+  },
+  warningText: {
+    color: colors.warning,
+    fontSize: 13,
+    fontWeight: '600',
+    textAlign: 'center',
   },
   saveButtonDisabled: {
     opacity: 0.4,

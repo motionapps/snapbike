@@ -11,7 +11,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { jobImageUrl } from '../lib/jobImages';
+import { taskImageUrl } from '../lib/taskImages';
 import { ImagePreviewModal } from './ImagePreviewModal';
 import { colors, radius } from '../lib/theme';
 import { PriceItem } from '../lib/types';
@@ -24,7 +24,7 @@ type Props = {
   onPick: (item: PriceItem) => void;
 };
 
-export function AddJobModal({ visible, prices, onClose, onPick }: Props) {
+export function AddTaskModal({ visible, prices, onClose, onPick }: Props) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string | null>(null);
   const [previewUri, setPreviewUri] = useState<string | null>(null);
@@ -121,11 +121,11 @@ export function AddJobModal({ visible, prices, onClose, onPick }: Props) {
               style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
             >
               <Pressable
-                onPress={() => setPreviewUri(jobImageUrl(item.title))}
+                onPress={() => setPreviewUri(taskImageUrl(item.title))}
                 style={styles.rowImageButton}
               >
                 <Image
-                  source={{ uri: jobImageUrl(item.title) }}
+                  source={{ uri: taskImageUrl(item.title) }}
                   style={styles.rowImage}
                   contentFit="contain"
                   transition={150}

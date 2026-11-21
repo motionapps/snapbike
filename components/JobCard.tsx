@@ -2,9 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { estimateImageUrl } from '../lib/supabase';
+import { jobImageUrl } from '../lib/supabase';
 import { colors, radius, shadow } from '../lib/theme';
-import { Estimate, JobStatus } from '../lib/types';
+import { Job, JobStatus } from '../lib/types';
 import { StatusPill } from './StatusPill';
 
 const dateFormat = new Intl.DateTimeFormat('sv-SE', {
@@ -15,25 +15,25 @@ const dateFormat = new Intl.DateTimeFormat('sv-SE', {
 });
 
 type Props = {
-  estimate: Estimate;
+  job: Job;
   onChangeStatus: (id: string, status: JobStatus) => void;
   onPress: (id: string) => void;
 };
 
-export const EstimateCard = memo(function EstimateCard({
-  estimate,
+export const JobCard = memo(function JobCard({
+  job,
   onChangeStatus,
   onPress,
 }: Props) {
-  const imageUrl = estimateImageUrl(estimate.imagePath);
-  const jobTitles = estimate.jobs.map((job) => job.title).join(' · ');
-  const customerName = estimate.customer
-    ? `${estimate.customer.firstName} ${estimate.customer.lastName}`.trim()
+  const imageUrl = jobImageUrl(job.imagePath);
+  const taskTitles = job.tasks.map((task) => task.title).join(' · ');
+  const customerName = job.customer
+    ? `${job.customer.firstName} ${job.customer.lastName}`.trim()
     : '';
 
   return (
     <Pressable
-      onPress={() => onPress(estimate.id)}
+      onPress={() => onPress(job.id)}
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
       <View style={styles.top}>
@@ -51,9 +51,9 @@ export const EstimateCard = memo(function EstimateCard({
         )}
         <View style={styles.info}>
           <View style={styles.nameRow}>
-            {estimate.bikeNumber ? (
+            {job.bikeNumber ? (
               <View style={styles.tag}>
-                <Text style={styles.tagText}>#{estimate.bikeNumber}</Text>
+                <Text style={styles.tagText}>#{job.bikeNumber}</Text>
               </View>
             ) : null}
             <Text style={styles.name} numberOfLines={1}>
@@ -61,20 +61,20 @@ export const EstimateCard = memo(function EstimateCard({
             </Text>
           </View>
           <Text style={styles.date}>
-            {dateFormat.format(new Date(estimate.createdAt))}
+            {dateFormat.format(new Date(job.createdAt))}
           </Text>
-          <Text style={styles.jobs} numberOfLines={2}>
-            {jobTitles || 'Inga jobb'}
+          <Text style={styles.tasks} numberOfLines={2}>
+            {taskTitles || 'Inga jobb'}
           </Text>
         </View>
         <Text style={styles.total}>
-          {estimate.total.toLocaleString('sv-SE')} kr
+          {job.total.toLocaleString('sv-SE')} kr
         </Text>
       </View>
 
       <StatusPill
-        status={estimate.status}
-        onChange={(status) => onChangeStatus(estimate.id, status)}
+        status={job.status}
+        onChange={(status) => onChangeStatus(job.id, status)}
       />
     </Pressable>
   );
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  jobs: {
+  tasks: {
     color: colors.text,
     fontWeight: '600',
     fontSize: 13,

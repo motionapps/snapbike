@@ -12,9 +12,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { estimateImageUrl } from '../lib/supabase';
+import { jobImageUrl } from '../lib/supabase';
 import { colors, gutter, radius } from '../lib/theme';
-import { Estimate, Job, JobStatus, jobsTotal } from '../lib/types';
+import { Job, Task, JobStatus, tasksTotal } from '../lib/types';
 import { StatusPill } from './StatusPill';
 
 const dateFormat = new Intl.DateTimeFormat('sv-SE', {
@@ -26,26 +26,26 @@ const dateFormat = new Intl.DateTimeFormat('sv-SE', {
 });
 
 type Props = {
-  estimate: Estimate | null;
+  job: Job | null;
   onClose: () => void;
   onChangeStatus: (id: string, status: JobStatus) => void;
-  onUpdateJobs: (id: string, jobs: Job[]) => void;
-  onStartCheckIn: (estimate: Estimate) => void;
-  onStartInspection: (estimate: Estimate) => void;
-  onSelectBike: (estimate: Estimate) => void;
+  onUpdateTasks: (id: string, tasks: Task[]) => void;
+  onStartCheckIn: (job: Job) => void;
+  onStartInspection: (job: Job) => void;
+  onSelectBike: (job: Job) => void;
 };
 
 /** The next step for each status: a label and what it does. */
 type NextAction = { label: string; icon: string; run: () => void };
 
-/** Identifies the price being edited: a job's own price or one of its products. */
-type EditTarget = { jobId: string; productId: string | null };
+/** Identifies the price being edited: a task's own price or one of its products. */
+type EditTarget = { taskId: string; productId: string | null };
 
-export function EstimateDetailModal({
-  estimate,
+export function JobDetailModal({
+  job,
   onClose,
   onChangeStatus,
-  onUpdateJobs,
+  onUpdateTasks,
   onStartCheckIn,
   onStartInspection,
   onSelectBike,
@@ -59,19 +59,19 @@ export function EstimateDetailModal({
   };
 
   const commitEdit = () => {
-    if (editing && estimate) {
+    if (editing && job) {
       const price = Number(editValue.replace(',', '.')) || 0;
-      const jobs = estimate.jobs.map((job) => {
-        if (job.id !== editing.jobId) return job;
-        if (editing.productId === null) return { ...job, price };
+      const tasks = job.tasks.map((task) => {
+        if (task.id !== editing.taskId) return task;
+        if (editing.productId === null) return { ...task, price };
         return {
-          ...job,
-          products: job.products.map((product) =>
+          ...task,
+          products: task.products.map((product) =>
             product.id === editing.productId ? { ...product, price } : product
           ),
         };
       });
-      onUpdateJobs(estimate.id, jobs);
+      onUpdateTasks(job.id, tasks);
     }
     setEditing(null);
     setEditValue('');
@@ -84,15 +84,15 @@ export function EstimateDetailModal({
   };
 
   const nextAction = ((): NextAction | null => {
-    if (!estimate) return null;
-    switch (estimate.status) {
+    if (!job) return null;
+    switch (job.status) {
       case 'booked':
         return {
           label: 'Starta mottagningen',
           icon: 'mic',
           run: () => {
             close();
-            onStartCheckIn(estimate);
+            onStartCheckIn(job);
           },
         };
       case 'checked_in':
@@ -101,20 +101,20 @@ export function EstimateDetailModal({
           icon: 'clipboard',
           run: () => {
             close();
-            onStartInspection(estimate);
+            onStartInspection(job);
           },
         };
       case 'inspected':
         return {
           label: 'Markera klar',
           icon: 'checkmark-circle',
-          run: () => onChangeStatus(estimate.id, 'ready'),
+          run: () => onChangeStatus(job.id, 'ready'),
         };
       case 'ready':
         return {
           label: 'Lämna ut',
           icon: 'exit',
-          run: () => onChangeStatus(estimate.id, 'delivered'),
+          run: () => onChangeStatus(job.id, 'delivered'),
         };
       default:
         return null;
@@ -138,12 +138,12 @@ export function EstimateDetailModal({
 
   return (
     <Modal
-      visible={estimate !== null}
+      visible={job !== null}
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={close}
     >
-      {estimate ? (
+      {job ? (
         <KeyboardAvoidingView
           style={styles.sheet}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -152,7 +152,7 @@ export function EstimateDetailModal({
             <View style={styles.headerText}>
               <Text style={styles.heading}>Jobb</Text>
               <Text style={styles.date}>
-                {dateFormat.format(new Date(estimate.createdAt))}
+                {dateFormat.format(new Date(job.createdAt))}
               </Text>
             </View>
             <Pressable onPress={close} hitSlop={8} style={styles.close}>
@@ -184,7 +184,7 @@ export function EstimateDetailModal({
             <Pressable
               onPress={() => {
                 close();
-                onSelectBike(estimate);
+                onSelectBike(job);
               }}
               style={({ pressed }) => [
                 styles.selectButton,
@@ -196,43 +196,43 @@ export function EstimateDetailModal({
             </Pressable>
 
             <StatusPill
-              status={estimate.status}
-              onChange={(status) => onChangeStatus(estimate.id, status)}
+              status={job.status}
+              onChange={(status) => onChangeStatus(job.id, status)}
             />
 
-            {estimate.imagePath ? (
+            {job.imagePath ? (
               <Image
-                source={estimateImageUrl(estimate.imagePath)}
+                source={jobImageUrl(job.imagePath)}
                 style={styles.photo}
                 contentFit="cover"
                 transition={200}
               />
             ) : null}
 
-            <View style={styles.jobList}>
-              {estimate.jobs.map((job) => (
-                <View key={job.id} style={styles.jobCard}>
-                  <View style={styles.jobRow}>
-                    <View style={styles.jobText}>
-                      <Text style={styles.jobCategory}>
-                        {job.category.toUpperCase()}
+            <View style={styles.taskList}>
+              {job.tasks.map((task) => (
+                <View key={task.id} style={styles.taskCard}>
+                  <View style={styles.taskRow}>
+                    <View style={styles.taskText}>
+                      <Text style={styles.taskCategory}>
+                        {task.category.toUpperCase()}
                       </Text>
-                      <Text style={styles.jobTitle}>{job.title}</Text>
+                      <Text style={styles.taskTitle}>{task.title}</Text>
                     </View>
-                    {editing?.jobId === job.id && editing.productId === null ? (
+                    {editing?.taskId === task.id && editing.productId === null ? (
                       priceInput
                     ) : (
                       <Pressable
                         onPress={() =>
-                          startEdit({ jobId: job.id, productId: null }, job.price)
+                          startEdit({ taskId: task.id, productId: null }, task.price)
                         }
                         hitSlop={6}
                       >
-                        <Text style={styles.jobPrice}>{job.price} kr</Text>
+                        <Text style={styles.taskPrice}>{task.price} kr</Text>
                       </Pressable>
                     )}
                   </View>
-                  {job.products.map((product) => (
+                  {task.products.map((product) => (
                     <View key={product.id} style={styles.productRow}>
                       <Ionicons
                         name="cube-outline"
@@ -240,14 +240,14 @@ export function EstimateDetailModal({
                         color={colors.textSecondary}
                       />
                       <Text style={styles.productName}>{product.name}</Text>
-                      {editing?.jobId === job.id &&
+                      {editing?.taskId === task.id &&
                       editing.productId === product.id ? (
                         priceInput
                       ) : (
                         <Pressable
                           onPress={() =>
                             startEdit(
-                              { jobId: job.id, productId: product.id },
+                              { taskId: task.id, productId: product.id },
                               product.price
                             )
                           }
@@ -273,7 +273,7 @@ export function EstimateDetailModal({
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Totalt</Text>
               <Text style={styles.totalValue}>
-                {jobsTotal(estimate.jobs).toLocaleString('sv-SE')} kr
+                {tasksTotal(job.tasks).toLocaleString('sv-SE')} kr
               </Text>
             </View>
           </ScrollView>
@@ -368,10 +368,10 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     backgroundColor: colors.cardRaised,
   },
-  jobList: {
+  taskList: {
     gap: 10,
   },
-  jobCard: {
+  taskCard: {
     backgroundColor: colors.card,
     borderRadius: radius.md,
     borderCurve: 'continuous',
@@ -380,26 +380,26 @@ const styles = StyleSheet.create({
     padding: 14,
     gap: 8,
   },
-  jobRow: {
+  taskRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
   },
-  jobText: {
+  taskText: {
     flex: 1,
     gap: 3,
   },
-  jobCategory: {
+  taskCategory: {
     color: colors.accent,
     fontWeight: '700',
     fontSize: 11,
     letterSpacing: 1,
   },
-  jobTitle: {
+  taskTitle: {
     color: colors.text,
     fontWeight: '600',
   },
-  jobPrice: {
+  taskPrice: {
     color: colors.text,
     fontWeight: '700',
   },

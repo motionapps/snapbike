@@ -12,6 +12,7 @@ export const colors = {
   accentDark: '#8FBF1F',
   onAccent: '#0B0F14',
   danger: '#FF5A5F',
+  warning: '#FFC53D',
   recording: '#FF453A',
 };
 

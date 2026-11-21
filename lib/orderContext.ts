@@ -1,7 +1,7 @@
 import { Dispatch, SetStateAction, createContext, useContext } from 'react';
 import type { BikeAnalysisState } from '../components/BikeDetails';
 import type { InspectionState } from './inspection';
-import { ItemKind, Job, OrderInfo, PriceItem } from './types';
+import { ItemKind, Task, OrderInfo, PriceItem } from './types';
 
 /**
  * Delad arbetsorder mellan besiktnings- och offertvyn: samma jobblista och
@@ -9,8 +9,8 @@ import { ItemKind, Job, OrderInfo, PriceItem } from './types';
  * anmärkningar kan bli en prissatt jobblista utan att flytta all state.
  */
 export type OrderContextValue = {
-  jobs: Job[];
-  setJobs: Dispatch<SetStateAction<Job[]>>;
+  tasks: Task[];
+  setTasks: Dispatch<SetStateAction<Task[]>>;
   order: OrderInfo;
   setOrder: Dispatch<SetStateAction<OrderInfo>>;
   savedId: string | null;

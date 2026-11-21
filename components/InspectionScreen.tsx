@@ -23,10 +23,10 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   analyzeInspection,
   hasOpenAiKey,
-  jobsFromInspection,
+  tasksFromInspection,
   transcribeAudio,
 } from '../lib/api';
-import { inspectionImageUrl } from '../lib/jobImages';
+import { inspectionImageUrl } from '../lib/taskImages';
 import { useOrderContext } from '../lib/orderContext';
 import {
   INSPECTION_ITEM_COUNT,
@@ -61,7 +61,7 @@ const MIC_LABELS: Partial<Record<MicPhase, string>> = {
 export function InspectionScreen() {
   const insets = useSafeAreaInsets();
   const {
-    setJobs,
+    setTasks,
     goToOrder,
     prices,
     order,
@@ -71,7 +71,7 @@ export function InspectionScreen() {
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [phase, setPhase] = useState<MicPhase>('idle');
   const [micError, setMicError] = useState('');
-  const [creatingJobs, setCreatingJobs] = useState(false);
+  const [creatingTasks, setCreatingTasks] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const sectionY = useRef<Record<string, number>>({});
   const transcriptRef = useRef('');
@@ -190,16 +190,13 @@ export function InspectionScreen() {
         ...current,
         [itemId]: { status, note: current[itemId]?.note ?? '' },
       }));
-      const ready = beginCapture()
-        .then((started) => {
-          // Short tick when the microphone is actually live.
-          if (started) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          return started;
-        })
-        .catch((err) => {
-          setMicError(err instanceof Error ? err.message : String(err));
-          return false;
-        });
+      // Short tick as recording starts. Fired before the mic opens, because
+      // iOS mutes haptics while the audio session is recording.
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      const ready = beginCapture().catch((err) => {
+        setMicError(err instanceof Error ? err.message : String(err));
+        return false;
+      });
       dictationRef.current = { itemId, ready };
       setDictation({ itemId, status, phase: 'recording' });
     },
@@ -280,20 +277,20 @@ export function InspectionScreen() {
   const done = checkedCount === INSPECTION_ITEM_COUNT;
 
   // Gör en prissatt jobblista av anmärkningarna och hoppa till offerten.
-  const createJobs = useCallback(async () => {
+  const createTasks = useCallback(async () => {
     if (issues.length === 0) return;
     setMicError('');
-    setCreatingJobs(true);
+    setCreatingTasks(true);
     try {
-      const newJobs = await jobsFromInspection(issues, transcriptRef.current, prices);
-      setJobs((current) => [...current, ...newJobs]);
+      const newTasks = await tasksFromInspection(issues, transcriptRef.current, prices);
+      setTasks((current) => [...current, ...newTasks]);
       goToOrder();
     } catch (err) {
       setMicError(err instanceof Error ? err.message : String(err));
     } finally {
-      setCreatingJobs(false);
+      setCreatingTasks(false);
     }
-  }, [issues, setJobs, goToOrder, prices]);
+  }, [issues, setTasks, goToOrder, prices]);
 
   return (
     <View style={styles.root}>
@@ -441,20 +438,23 @@ export function InspectionScreen() {
                         <TextInput
                           style={styles.noteInput}
                           placeholder={
-                            listening?.phase === 'recording'
-                              ? 'Lyssnar… släpp när du är klar'
-                              : listening?.phase === 'transcribing'
-                                ? ''
-                                : 'Anteckning (t.ex. kedja 0,75 % sliten)'
+                            listening ? '' : 'Anteckning (t.ex. kedja 0,75 % sliten)'
                           }
                           placeholderTextColor={colors.textFaint}
                           value={result.note}
                           onChangeText={(text) => setNote(item.id, text)}
                           multiline
                         />
-                        {listening?.phase === 'transcribing' && !result.note ? (
+                        {listening && !result.note ? (
                           <View style={styles.noteOverlay} pointerEvents="none">
-                            <WaveText text="Transkriberar…" style={styles.noteWaveText} />
+                            <WaveText
+                              text={
+                                listening.phase === 'recording'
+                                  ? 'Lyssnar… släpp när du är klar'
+                                  : 'Transkriberar…'
+                              }
+                              style={styles.noteWaveText}
+                            />
                           </View>
                         ) : null}
                       </View>
@@ -527,11 +527,11 @@ export function InspectionScreen() {
 
           {issues.length > 0 ? (
             <Pressable
-              onPress={createJobs}
-              disabled={creatingJobs}
-              style={[styles.createJobs, creatingJobs && styles.createJobsBusy]}
+              onPress={createTasks}
+              disabled={creatingTasks}
+              style={[styles.createTasks, creatingTasks && styles.createTasksBusy]}
             >
-              {creatingJobs ? (
+              {creatingTasks ? (
                 <ActivityIndicator color={colors.onAccent} />
               ) : (
                 <>
@@ -540,7 +540,7 @@ export function InspectionScreen() {
                     size={18}
                     color={colors.onAccent}
                   />
-                  <Text style={styles.createJobsText}>
+                  <Text style={styles.createTasksText}>
                     Skapa jobblista av anmärkningarna ({issues.length})
                   </Text>
                 </>
@@ -852,7 +852,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     fontSize: 13,
   },
-  createJobs: {
+  createTasks: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -862,10 +862,10 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     paddingVertical: 14,
   },
-  createJobsBusy: {
+  createTasksBusy: {
     opacity: 0.8,
   },
-  createJobsText: {
+  createTasksText: {
     color: colors.onAccent,
     fontWeight: '700',
   },

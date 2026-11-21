@@ -10,7 +10,7 @@ import {
 import { priceCsvFor } from './prices';
 import { SERVICE_GUIDE } from './servicePackage';
 import { searchStock } from './stock';
-import { Job, PriceItem, uid } from './types';
+import { Task, PriceItem, uid } from './types';
 
 const OPENAI_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '';
 const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY ?? '';
@@ -138,7 +138,7 @@ const JOB_ITEM_SCHEMA = {
 };
 
 const JOB_LIST_TOOL = {
-  name: 'create_job_list',
+  name: 'create_task_list',
   description:
     'Registrera de cykelreparationsjobb som nämns i transkriptionen, matchade ' +
     'mot verkstadens prislista (CSV). Använd exakt Beskrivning och Pris från ' +
@@ -147,26 +147,26 @@ const JOB_LIST_TOOL = {
   input_schema: {
     type: 'object' as const,
     properties: {
-      jobs: {
+      tasks: {
         type: 'array',
         description: 'Ett objekt per jobb som kunden behöver.',
         items: JOB_ITEM_SCHEMA,
       },
     },
-    required: ['jobs'],
+    required: ['tasks'],
   },
 };
 
 const UPDATE_JOB_TOOL = {
-  name: 'update_job',
+  name: 'update_task',
   description:
     'Returnera jobbet i sin uppdaterade form enligt personalens instruktion.',
   input_schema: {
     type: 'object' as const,
     properties: {
-      job: JOB_ITEM_SCHEMA,
+      task: JOB_ITEM_SCHEMA,
     },
-    required: ['job'],
+    required: ['task'],
   },
 };
 
@@ -178,7 +178,7 @@ type ToolProduct = {
   label?: 'samma' | 'likvärdig' | 'billigare';
 };
 
-type ToolJob = {
+type ToolTask = {
   title: string;
   category: string;
   price: number;
@@ -230,7 +230,7 @@ const systemPrompt = (prices: PriceItem[]) =>
   'visas som beställningsvara). Hittar du ingen rimlig produkt alls: lägg med ' +
   'delen med pris 0 och utan artikelnummer.\n\n' +
   WHEEL_RULES +
-  '\n\nNär du är klar: anropa create_job_list exakt en gång med hela jobblistan.\n\n' +
+  '\n\nNär du är klar: anropa create_task_list exakt en gång med hela jobblistan.\n\n' +
   SERVICE_GUIDE +
   '\n\nPRISLISTA:\n' +
   priceCsvFor(prices);
@@ -245,7 +245,7 @@ const refinePrompt = (prices: PriceItem[]) =>
   'search_stock och ange exakta namn, priser, artikelnummer och lagersaldon ' +
   'från sökresultaten. Behåll allt som instruktionen inte berör oförändrat.\n\n' +
   WHEEL_RULES +
-  '\n\nNär du är klar: anropa update_job exakt en gång med hela det ' +
+  '\n\nNär du är klar: anropa update_task exakt en gång med hela det ' +
   'uppdaterade jobbet.\n\n' +
   SERVICE_GUIDE +
   '\n\nPRISLISTA:\n' +
@@ -349,18 +349,18 @@ async function runToolLoop(
 export async function analyzeTranscript(
   transcript: string,
   prices: PriceItem[]
-): Promise<Job[]> {
+): Promise<Task[]> {
   const input = (await runToolLoop(
     systemPrompt(prices),
     transcript,
     JOB_LIST_TOOL,
     'Claude returnerade ingen jobblista.'
-  )) as { jobs?: ToolJob[] };
+  )) as { tasks?: ToolTask[] };
 
-  if (!input.jobs) {
+  if (!input.tasks) {
     throw new Error('Claude returnerade ingen jobblista.');
   }
-  return input.jobs.map(mapJob);
+  return input.tasks.map(mapTask);
 }
 
 /**
@@ -368,11 +368,11 @@ export async function analyzeTranscript(
  * samma matchning (prislista, servicepaket, hjulregel, lagerförslag) som den
  * intalade jobblistan – så personalen bara behöver prata igenom besiktningen.
  */
-export async function jobsFromInspection(
+export async function tasksFromInspection(
   issues: { section: string; title: string; note: string }[],
   transcript: string,
   prices: PriceItem[]
-): Promise<Job[]> {
+): Promise<Task[]> {
   if (issues.length === 0) return [];
   const parts = [
     'Skapa en prissatt jobblista som åtgärdar följande anmärkningar från ' +
@@ -397,18 +397,18 @@ export async function jobsFromInspection(
  * Uppdaterar ETT jobb utifrån en intalad instruktion, t.ex. "föreslå andra
  * Pirelli 28 mm däck" eller "byt till 32 mm och kolla saldot".
  */
-export async function refineJob(
-  job: Job,
+export async function refineTask(
+  task: Task,
   instruction: string,
   prices: PriceItem[]
-): Promise<Job> {
+): Promise<Task> {
   const payload = JSON.stringify({
     jobb: {
-      title: job.title,
-      category: job.category,
-      price: job.price,
-      severity: job.severity,
-      products: job.products.map((product) => ({
+      title: task.title,
+      category: task.category,
+      price: task.price,
+      severity: task.severity,
+      products: task.products.map((product) => ({
         name: product.name,
         price: product.price,
         articleNumber: product.articleNumber,
@@ -424,22 +424,22 @@ export async function refineJob(
     payload,
     UPDATE_JOB_TOOL,
     'Claude returnerade inget uppdaterat jobb.'
-  )) as { job?: ToolJob };
+  )) as { task?: ToolTask };
 
-  if (!input.job) {
+  if (!input.task) {
     throw new Error('Claude returnerade inget uppdaterat jobb.');
   }
-  return { ...mapJob(input.job), id: job.id };
+  return { ...mapTask(input.task), id: task.id };
 }
 
-function mapJob(job: ToolJob): Job {
+function mapTask(task: ToolTask): Task {
   return {
     id: uid(),
-    title: job.title,
-    category: job.category,
-    price: job.price,
-    severity: job.severity,
-    products: (job.products ?? []).map((product) => ({
+    title: task.title,
+    category: task.category,
+    price: task.price,
+    severity: task.severity,
+    products: (task.products ?? []).map((product) => ({
       id: uid(),
       name: product.name,
       price: product.price,

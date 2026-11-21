@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import { colors, radius, shadow, statusColors } from '../lib/theme';
-import { Job, Product } from '../lib/types';
+import { Task, Product } from '../lib/types';
 
 const PRODUCT_LABELS: Record<NonNullable<Product['label']>, string> = {
   samma: 'Samma modell',
@@ -18,20 +18,20 @@ const PRODUCT_LABELS: Record<NonNullable<Product['label']>, string> = {
 };
 
 type Props = {
-  job: Job;
-  onRemove: (jobId: string) => void;
-  onAddProduct: (jobId: string, name: string, price: number) => void;
-  onRemoveProduct: (jobId: string, productId: string) => void;
-  onUpdateProduct: (jobId: string, productId: string, price: number) => void;
+  task: Task;
+  onRemove: (taskId: string) => void;
+  onAddProduct: (taskId: string, name: string, price: number) => void;
+  onRemoveProduct: (taskId: string, productId: string) => void;
+  onUpdateProduct: (taskId: string, productId: string, price: number) => void;
   /** Röstredigering av jobbet: 'recording' = spelar in, 'processing' = AI:n jobbar. */
   voiceState?: 'recording' | 'processing';
-  onVoiceEdit?: (jobId: string) => void;
+  onVoiceEdit?: (taskId: string) => void;
   /** Visa kundens godkänn/neka-knappar (offertläge). */
-  onSetApproval?: (jobId: string, approval: 'godkänd' | 'nekad' | undefined) => void;
+  onSetApproval?: (taskId: string, approval: 'godkänd' | 'nekad' | undefined) => void;
 };
 
-export function JobCard({
-  job,
+export function TaskCard({
+  task,
   onRemove,
   onAddProduct,
   onRemoveProduct,
@@ -48,7 +48,7 @@ export function JobCard({
 
   const commitPrice = () => {
     if (editingId) {
-      onUpdateProduct(job.id, editingId, Number(editPrice.replace(',', '.')) || 0);
+      onUpdateProduct(task.id, editingId, Number(editPrice.replace(',', '.')) || 0);
     }
     setEditingId(null);
     setEditPrice('');
@@ -60,27 +60,27 @@ export function JobCard({
       setAdding(false);
       return;
     }
-    onAddProduct(job.id, trimmed, Number(price.replace(',', '.')) || 0);
+    onAddProduct(task.id, trimmed, Number(price.replace(',', '.')) || 0);
     setName('');
     setPrice('');
     setAdding(false);
   };
 
-  const rejected = job.approval === 'nekad';
+  const rejected = task.approval === 'nekad';
 
   return (
     <View style={[styles.card, rejected && styles.cardRejected]}>
       <View style={styles.header}>
         <View style={styles.headerText}>
           <View style={styles.categoryRow}>
-            <Text style={styles.category}>{job.category.toUpperCase()}</Text>
-            {job.severity === 'kritisk' ? (
+            <Text style={styles.category}>{task.category.toUpperCase()}</Text>
+            {task.severity === 'kritisk' ? (
               <View style={styles.criticalBadge}>
                 <Ionicons name="alert-circle" size={11} color={colors.danger} />
                 <Text style={styles.criticalText}>KRITISK</Text>
               </View>
             ) : null}
-            {job.approval === 'godkänd' ? (
+            {task.approval === 'godkänd' ? (
               <View style={styles.approvedBadge}>
                 <Ionicons name="checkmark" size={11} color={colors.accentDark} />
                 <Text style={styles.approvedText}>GODKÄND</Text>
@@ -92,12 +92,12 @@ export function JobCard({
               </View>
             ) : null}
           </View>
-          <Text style={styles.title}>{job.title}</Text>
+          <Text style={styles.title}>{task.title}</Text>
         </View>
-        <Text style={[styles.price, rejected && styles.priceStruck]}>{job.price} kr</Text>
+        <Text style={[styles.price, rejected && styles.priceStruck]}>{task.price} kr</Text>
         {onVoiceEdit ? (
           <Pressable
-            onPress={() => onVoiceEdit(job.id)}
+            onPress={() => onVoiceEdit(task.id)}
             hitSlop={8}
             style={[styles.voice, voiceState === 'recording' && styles.voiceActive]}
             disabled={voiceState === 'processing'}
@@ -113,7 +113,7 @@ export function JobCard({
             )}
           </Pressable>
         ) : null}
-        <Pressable onPress={() => onRemove(job.id)} hitSlop={8} style={styles.remove}>
+        <Pressable onPress={() => onRemove(task.id)} hitSlop={8} style={styles.remove}>
           <Ionicons name="close" size={16} color={colors.textFaint} />
         </Pressable>
       </View>
@@ -123,7 +123,7 @@ export function JobCard({
         </Text>
       ) : null}
 
-      {job.products.map((product) => (
+      {task.products.map((product) => (
         <View key={product.id} style={styles.productRow}>
           <Ionicons name="cube-outline" size={15} color={colors.textSecondary} />
           <View style={styles.productInfo}>
@@ -179,7 +179,7 @@ export function JobCard({
             </Pressable>
           )}
           <Pressable
-            onPress={() => onRemoveProduct(job.id, product.id)}
+            onPress={() => onRemoveProduct(task.id, product.id)}
             hitSlop={8}
             style={styles.remove}
           >
@@ -224,26 +224,26 @@ export function JobCard({
         <View style={styles.approvalRow}>
           <Pressable
             onPress={() =>
-              onSetApproval(job.id, job.approval === 'godkänd' ? undefined : 'godkänd')
+              onSetApproval(task.id, task.approval === 'godkänd' ? undefined : 'godkänd')
             }
-            style={[styles.approveBtn, job.approval === 'godkänd' && styles.approveBtnActive]}
+            style={[styles.approveBtn, task.approval === 'godkänd' && styles.approveBtnActive]}
           >
             <Ionicons
               name="checkmark"
               size={16}
-              color={job.approval === 'godkänd' ? colors.onAccent : colors.accent}
+              color={task.approval === 'godkänd' ? colors.onAccent : colors.accent}
             />
             <Text
               style={[
                 styles.approveLabel,
-                job.approval === 'godkänd' && styles.approveLabelActive,
+                task.approval === 'godkänd' && styles.approveLabelActive,
               ]}
             >
               Godkänn
             </Text>
           </Pressable>
           <Pressable
-            onPress={() => onSetApproval(job.id, rejected ? undefined : 'nekad')}
+            onPress={() => onSetApproval(task.id, rejected ? undefined : 'nekad')}
             style={[styles.rejectBtn, rejected && styles.rejectBtnActive]}
           >
             <Ionicons

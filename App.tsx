@@ -24,13 +24,13 @@ import {
   SafeAreaProvider,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
-import { AddJobModal } from './components/AddJobModal';
+import { AddTaskModal } from './components/AddTaskModal';
 import { BookingPickerModal } from './components/BookingPickerModal';
 import { CustomerModal } from './components/CustomerModal';
 import { CustomerSection } from './components/CustomerSection';
 import { InspectionScreen } from './components/InspectionScreen';
 import { InspectionGuide } from './components/InspectionGuide';
-import { JobCard } from './components/JobCard';
+import { TaskCard } from './components/TaskCard';
 import { OrderContext, useOrderContext } from './lib/orderContext';
 import { clearDraft, loadDraft, saveDraft } from './lib/persist';
 import { JobsScreen } from './components/JobsScreen';
@@ -40,22 +40,24 @@ import { analyzeBikePhoto } from './lib/bikeAnalysis';
 import { classifyItemKind } from './lib/itemKind';
 import { pricesFor } from './lib/prices';
 import { BikeAnalysisState, BikeDetails } from './components/BikeDetails';
-import { analyzeTranscript, hasOpenAiKey, refineJob, transcribeAudio } from './lib/api';
+import { analyzeTranscript, hasOpenAiKey, refineTask, transcribeAudio } from './lib/api';
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from './lib/speech';
-import { saveEstimate, updateEstimateInspection } from './lib/supabase';
+import { isStaff, saveJob, updateJobInspection } from './lib/supabase';
+import { AuthProvider, useAuth } from './lib/auth/AuthProvider';
+import { AuthView } from './components/AuthView';
 import { InspectionState } from './lib/inspection';
 import { CurrentBikeBar } from './components/CurrentBikeBar';
 import { colors, gutter, radius, shadow } from './lib/theme';
 import {
   Customer,
   EMPTY_ORDER,
-  Estimate,
-  ItemKind,
   Job,
+  ItemKind,
+  Task,
   OrderInfo,
   PriceItem,
   approvedTotal,
-  jobsTotal,
+  tasksTotal,
   uid,
 } from './lib/types';
 
@@ -70,14 +72,15 @@ function formatPrice(value: number): string {
   return `${value.toLocaleString('sv-SE')} kr`;
 }
 
-type LoadRequest = { estimate: Estimate; nonce: number };
+/** job null = start an empty job. */
+type LoadRequest = { job: Job | null; nonce: number };
 
 function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   const insets = useSafeAreaInsets();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const {
-    jobs,
-    setJobs,
+    tasks,
+    setTasks,
     order,
     setOrder,
     savedId,
@@ -98,7 +101,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   const [phase, setPhase] = useState<MicPhase>('idle');
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState('');
-  const [showAddJob, setShowAddJob] = useState(false);
+  const [showAddTask, setShowAddTask] = useState(false);
   const [showDropIn, setShowDropIn] = useState(false);
   const [showBookings, setShowBookings] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -114,7 +117,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
       setItemKind(draft.itemKind ?? null);
       if (draft.bike) setBikeAnalysis({ status: 'ready', bike: draft.bike });
       setTranscript(draft.transcript);
-      setJobs(draft.jobs);
+      setTasks(draft.tasks);
       setInspection(draft.inspection ?? {});
       // Older drafts stored customerName/customerPhone; drop those.
       setOrder({
@@ -130,8 +133,8 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   useEffect(() => {
     if (!restored.current) return;
     const bike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike : null;
-    saveDraft({ photoUri, itemKind, bike, transcript, jobs, order, inspection });
-  }, [photoUri, itemKind, bikeAnalysis, transcript, jobs, order, inspection]);
+    saveDraft({ photoUri, itemKind, bike, transcript, tasks, order, inspection });
+  }, [photoUri, itemKind, bikeAnalysis, transcript, tasks, order, inspection]);
 
   const setCustomer = useCallback((customer: Customer | null) => {
     setOrder((current) => ({ ...current, customer }));
@@ -145,16 +148,16 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     setSavedId(null);
   }, []);
 
-  // Import a booking: its customer, its jobs (before any already noted) and,
+  // Import a booking: its customer, its tasks (before any already noted) and,
   // if the photo hasn't produced bike data, the booking's bike.
-  const importBooking = useCallback((booking: Estimate) => {
+  const importBooking = useCallback((booking: Job) => {
     setOrder((current) => ({
       ...current,
       customer: booking.customer,
       bookingId: booking.id,
       bikeNumber: booking.bikeNumber || current.bikeNumber,
     }));
-    setJobs((current) => [...booking.jobs, ...current]);
+    setTasks((current) => [...booking.tasks, ...current]);
     setInspection(booking.inspection ?? {});
     if (booking.bike) {
       setItemKind((current) => current ?? 'bike');
@@ -174,7 +177,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     setItemKind(null);
     setBikeAnalysis({ status: 'idle' });
     setTranscript('');
-    setJobs([]);
+    setTasks([]);
     setInspection({});
     setOrder(EMPTY_ORDER);
     setError('');
@@ -185,13 +188,13 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   useEffect(() => {
     if (!loadRequest) return;
     newOrder();
-    importBooking(loadRequest.estimate);
+    if (loadRequest.job) importBooking(loadRequest.job);
   }, [loadRequest, newOrder, importBooking]);
 
   const setApproval = useCallback(
-    (jobId: string, approval: 'godkänd' | 'nekad' | undefined) => {
-      setJobs((current) =>
-        current.map((job) => (job.id === jobId ? { ...job, approval } : job))
+    (taskId: string, approval: 'godkänd' | 'nekad' | undefined) => {
+      setTasks((current) =>
+        current.map((task) => (task.id === taskId ? { ...task, approval } : task))
       );
       setSavedId(null);
     },
@@ -307,8 +310,8 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
       setTranscript(text);
 
       setPhase('analyzing');
-      const newJobs = await analyzeTranscript(text, prices);
-      setJobs((current) => [...current, ...newJobs]);
+      const newTasks = await analyzeTranscript(text, prices);
+      setTasks((current) => [...current, ...newTasks]);
       setSavedId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -327,12 +330,12 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
 
   // Röstredigering av ett enskilt jobb: tryck mic på kortet, prata in
   // ändringen (t.ex. "föreslå andra Pirelli 28 mm"), tryck stopp.
-  const toggleJobVoice = useCallback(
-    async (jobId: string) => {
-      const job = jobs.find((item) => item.id === jobId);
-      if (!job) return;
+  const toggleTaskVoice = useCallback(
+    async (taskId: string) => {
+      const task = tasks.find((item) => item.id === taskId);
+      if (!task) return;
 
-      if (voiceEditId === jobId && voiceEditRecording) {
+      if (voiceEditId === taskId && voiceEditRecording) {
         setVoiceEditRecording(false);
         try {
           let text: string;
@@ -347,9 +350,9 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
           }
           if (!text) throw new Error('Ingen text uppfattades – försök igen.');
 
-          const updated = await refineJob(job, text, prices);
-          setJobs((current) =>
-            current.map((item) => (item.id === jobId ? updated : item))
+          const updated = await refineTask(task, text, prices);
+          setTasks((current) =>
+            current.map((item) => (item.id === taskId ? updated : item))
           );
           setSavedId(null);
         } catch (err) {
@@ -375,41 +378,41 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
           await recorder.prepareToRecordAsync();
           recorder.record();
         }
-        setVoiceEditId(jobId);
+        setVoiceEditId(taskId);
         setVoiceEditRecording(true);
       } catch (err) {
         setError(err instanceof Error ? err.message : String(err));
       }
     },
-    [jobs, phase, recorder, useWebSpeech, voiceEditId, voiceEditRecording, prices]
+    [tasks, phase, recorder, useWebSpeech, voiceEditId, voiceEditRecording, prices]
   );
 
-  const removeJob = useCallback((jobId: string) => {
-    setJobs((current) => current.filter((job) => job.id !== jobId));
+  const removeTask = useCallback((taskId: string) => {
+    setTasks((current) => current.filter((task) => task.id !== taskId));
   }, []);
 
-  const addProduct = useCallback((jobId: string, name: string, price: number) => {
-    setJobs((current) =>
-      current.map((job) =>
-        job.id === jobId
-          ? { ...job, products: [...job.products, { id: uid(), name, price }] }
-          : job
+  const addProduct = useCallback((taskId: string, name: string, price: number) => {
+    setTasks((current) =>
+      current.map((task) =>
+        task.id === taskId
+          ? { ...task, products: [...task.products, { id: uid(), name, price }] }
+          : task
       )
     );
   }, []);
 
   const updateProduct = useCallback(
-    (jobId: string, productId: string, price: number) => {
-      setJobs((current) =>
-        current.map((job) =>
-          job.id === jobId
+    (taskId: string, productId: string, price: number) => {
+      setTasks((current) =>
+        current.map((task) =>
+          task.id === taskId
             ? {
-              ...job,
-              products: job.products.map((product) =>
+              ...task,
+              products: task.products.map((product) =>
                 product.id === productId ? { ...product, price } : product
               ),
             }
-            : job
+            : task
         )
       );
       setSavedId(null);
@@ -417,18 +420,18 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     []
   );
 
-  const removeProduct = useCallback((jobId: string, productId: string) => {
-    setJobs((current) =>
-      current.map((job) =>
-        job.id === jobId
-          ? { ...job, products: job.products.filter((p) => p.id !== productId) }
-          : job
+  const removeProduct = useCallback((taskId: string, productId: string) => {
+    setTasks((current) =>
+      current.map((task) =>
+        task.id === taskId
+          ? { ...task, products: task.products.filter((p) => p.id !== productId) }
+          : task
       )
     );
   }, []);
 
-  const pickJob = useCallback((item: PriceItem) => {
-    setJobs((current) => [
+  const pickTask = useCallback((item: PriceItem) => {
+    setTasks((current) => [
       ...current,
       {
         id: uid(),
@@ -438,7 +441,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
         products: [],
       },
     ]);
-    setShowAddJob(false);
+    setShowAddTask(false);
     setSavedId(null);
   }, []);
 
@@ -446,10 +449,10 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     try {
       setSaving(true);
       setError('');
-      const id = await saveEstimate({
+      const id = await saveJob({
         imageUri: photoUri,
         transcript,
-        jobs,
+        tasks,
         customer: order.customer,
         bike: bikeAnalysis.status === 'ready' ? bikeAnalysis.bike : null,
         bikeNumber: order.bikeNumber,
@@ -464,11 +467,11 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     } finally {
       setSaving(false);
     }
-  }, [photoUri, transcript, jobs, order.customer, order.bikeNumber, order.bookingId, bikeAnalysis, inspection]);
+  }, [photoUri, transcript, tasks, order.customer, order.bikeNumber, order.bookingId, bikeAnalysis, inspection]);
 
-  const total = jobsTotal(jobs);
-  const approved = approvedTotal(jobs);
-  const hasRejected = jobs.some((job) => job.approval === 'nekad');
+  const total = tasksTotal(tasks);
+  const approved = approvedTotal(tasks);
+  const hasRejected = tasks.some((task) => task.approval === 'nekad');
 
   return (
     <View style={styles.flex}>
@@ -490,7 +493,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
           <View style={styles.titleRow}>
             <Text style={styles.title}>SnapBike</Text>
             <Text style={styles.subtitle}>Verkstadsanteckning</Text>
-            {transcript || jobs.length > 0 || photoUri ? (
+            {transcript || tasks.length > 0 || photoUri ? (
               <Pressable onPress={newOrder} style={styles.newOrder} hitSlop={8}>
                 <Ionicons name="add" size={15} color={colors.textSecondary} />
                 <Text style={styles.newOrderText}>Ny order</Text>
@@ -550,37 +553,37 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
             </View>
           ) : null}
 
-          {jobs.length > 0 ? (
-            <View style={styles.jobsSection}>
+          {tasks.length > 0 ? (
+            <View style={styles.tasksSection}>
               <Text style={styles.sectionHeading}>Jobb</Text>
-              {jobs.map((job) => (
-                <JobCard
-                  key={job.id}
-                  job={job}
-                  onRemove={removeJob}
+              {tasks.map((task) => (
+                <TaskCard
+                  key={task.id}
+                  task={task}
+                  onRemove={removeTask}
                   onAddProduct={addProduct}
                   onRemoveProduct={removeProduct}
                   onUpdateProduct={updateProduct}
                   voiceState={
-                    voiceEditId === job.id
+                    voiceEditId === task.id
                       ? voiceEditRecording
                         ? 'recording'
                         : 'processing'
                       : undefined
                   }
-                  onVoiceEdit={toggleJobVoice}
+                  onVoiceEdit={toggleTaskVoice}
                   onSetApproval={setApproval}
                 />
               ))}
             </View>
           ) : null}
 
-          <Pressable onPress={() => setShowAddJob(true)} style={styles.addJob}>
+          <Pressable onPress={() => setShowAddTask(true)} style={styles.addTask}>
             <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
-            <Text style={styles.addJobText}>Lägg till jobb</Text>
+            <Text style={styles.addTaskText}>Lägg till jobb</Text>
           </Pressable>
 
-          {jobs.length > 0 ? (
+          {tasks.length > 0 ? (
             <View style={styles.footer}>
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>
@@ -622,11 +625,11 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
         </ScrollView>
       </KeyboardAvoidingView>
 
-      <AddJobModal
-        visible={showAddJob}
+      <AddTaskModal
+        visible={showAddTask}
         prices={prices}
-        onClose={() => setShowAddJob(false)}
-        onPick={pickJob}
+        onClose={() => setShowAddTask(false)}
+        onPick={pickTask}
       />
       <CustomerModal
         visible={showDropIn}
@@ -655,7 +658,7 @@ const TABS: { key: Tab; label: string; icon: string; iconActive: string }[] = [
 function Root() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('note');
-  const [jobs, setJobs] = useState<Job[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [order, setOrder] = useState<OrderInfo>(EMPTY_ORDER);
   const [savedId, setSavedId] = useState<string | null>(null);
   const [itemKind, setItemKind] = useState<ItemKind | null>(null);
@@ -675,7 +678,7 @@ function Root() {
     const id = order.bookingId;
     if (!id) return;
     const timer = setTimeout(() => {
-      updateEstimateInspection(id, inspection).catch((err) =>
+      updateJobInspection(id, inspection).catch((err) =>
         console.warn(err instanceof Error ? err.message : err)
       );
     }, 800);
@@ -685,19 +688,24 @@ function Root() {
   const goToOrder = useCallback(() => setTab('note'), []);
   const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(null);
 
-  const startCheckIn = useCallback((estimate: Estimate) => {
-    setLoadRequest({ estimate, nonce: Date.now() });
+  const startCheckIn = useCallback((job: Job) => {
+    setLoadRequest({ job, nonce: Date.now() });
     setTab('note');
   }, []);
 
-  const startInspection = useCallback((estimate: Estimate) => {
-    setLoadRequest({ estimate, nonce: Date.now() });
+  const startInspection = useCallback((job: Job) => {
+    setLoadRequest({ job, nonce: Date.now() });
     setTab('inspect');
   }, []);
 
+  const startNewJob = useCallback(() => {
+    setLoadRequest({ job: null, nonce: Date.now() });
+    setTab('note');
+  }, []);
+
   // Make a saved job the current bike without leaving the Jobb tab.
-  const selectBike = useCallback((estimate: Estimate) => {
-    setLoadRequest({ estimate, nonce: Date.now() });
+  const selectBike = useCallback((job: Job) => {
+    setLoadRequest({ job, nonce: Date.now() });
   }, []);
 
   const currentBike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike.bike : null;
@@ -706,8 +714,8 @@ function Root() {
   return (
     <OrderContext.Provider
       value={{
-        jobs,
-        setJobs,
+        tasks,
+        setTasks,
         order,
         setOrder,
         savedId,
@@ -751,6 +759,7 @@ function Root() {
           onStartCheckIn={startCheckIn}
           onStartInspection={startInspection}
           onSelectBike={selectBike}
+          onNewJob={startNewJob}
         />
       </View>
       </SafeAreaInsetsContext.Provider>
@@ -784,15 +793,85 @@ function Root() {
 export default function App() {
   return (
     <SafeAreaProvider>
-      <Root />
+      <AuthProvider>
+        <AuthGate />
+      </AuthProvider>
     </SafeAreaProvider>
   );
+}
+
+/** Login first; only users on the snapbike_staff allowlist reach the app. */
+function AuthGate() {
+  const { session, loading, signOut } = useAuth();
+  const userId = session?.user.id ?? null;
+  const [staff, setStaff] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    setStaff(null);
+    if (!userId) return;
+    let cancelled = false;
+    isStaff(userId)
+      .then((ok) => {
+        if (!cancelled) setStaff(ok);
+      })
+      .catch((err) => {
+        console.warn(err instanceof Error ? err.message : err);
+        if (!cancelled) setStaff(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [userId]);
+
+  if (loading || (userId && staff === null)) {
+    return (
+      <View style={[styles.root, styles.centered]}>
+        <ActivityIndicator color={colors.textSecondary} />
+      </View>
+    );
+  }
+  if (!session) return <AuthView />;
+  if (!staff) {
+    return (
+      <View style={[styles.root, styles.centered]}>
+        <StatusBar style="light" />
+        <Text style={styles.noAccessText}>
+          {`${session.user.email ?? 'Kontot'} har inte åtkomst till SnapBike.`}
+        </Text>
+        <Pressable onPress={() => void signOut()} style={styles.signOutButton}>
+          <Text style={styles.signOutText}>Logga ut</Text>
+        </Pressable>
+      </View>
+    );
+  }
+  return <Root />;
 }
 
 const styles = StyleSheet.create({
   root: {
     flex: 1,
     backgroundColor: colors.bg,
+  },
+  centered: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+    padding: 24,
+  },
+  noAccessText: {
+    color: colors.text,
+    textAlign: 'center',
+  },
+  signOutButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+  },
+  signOutText: {
+    color: colors.textSecondary,
+    fontWeight: '600',
   },
   flex: {
     flex: 1,
@@ -908,7 +987,7 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontStyle: 'italic',
   },
-  jobsSection: {
+  tasksSection: {
     gap: 12,
   },
   sectionHeading: {
@@ -916,7 +995,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontSize: 16,
   },
-  addJob: {
+  addTask: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -928,7 +1007,7 @@ const styles = StyleSheet.create({
     borderStyle: 'dashed',
     paddingVertical: 14,
   },
-  addJobText: {
+  addTaskText: {
     color: colors.accent,
     fontWeight: '600',
   },

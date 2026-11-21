@@ -1,6 +1,6 @@
 import { BikeData } from './bikeAnalysis';
 import type { InspectionState } from './inspection';
-import { ItemKind, Job, OrderInfo } from './types';
+import { ItemKind, Task, OrderInfo } from './types';
 
 /**
  * Lokal autospar av den pågående ordern. Tills Supabase-sparandet är
@@ -10,7 +10,7 @@ import { ItemKind, Job, OrderInfo } from './types';
  * Johannes kopplar in riktig lagring.
  */
 
-const KEY = 'snapbike_draft_v1';
+const KEY = 'snapbike_draft_v2';
 
 export type Draft = {
   photoUri: string | null;
@@ -19,7 +19,7 @@ export type Draft = {
   /** Photo analysis; missing in drafts saved before it existed. */
   bike?: BikeData | null;
   transcript: string;
-  jobs: Job[];
+  tasks: Task[];
   order: OrderInfo;
   /** Besiktning checklist; missing in drafts saved before it existed. */
   inspection?: InspectionState;
@@ -59,7 +59,7 @@ export function loadDraft(): Draft | null {
     // Tomt utkast är inte värt att återställa.
     if (
       !draft.transcript &&
-      (!draft.jobs || draft.jobs.length === 0) &&
+      (!draft.tasks || draft.tasks.length === 0) &&
       !draft.photoUri &&
       !draft.order?.customer &&
       Object.keys(draft.inspection ?? {}).length === 0

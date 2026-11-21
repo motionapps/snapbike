@@ -1,8 +1,8 @@
 /**
- * Illustrative product photos for workshop jobs and inspection items.
+ * Illustrative product photos for workshop tasks and inspection items.
  *
  * Each image is a real product from the Bikeoffice product search, served from
- * the supplier image host. A job title is matched against JOB_RULES in order
+ * the supplier image host. A task title is matched against JOB_RULES in order
  * (most specific first); the first hit decides the picture.
  */
 const IMAGE_HOST = 'https://techlara.se/supplier_images/';
@@ -71,7 +71,7 @@ const IMAGES = {
 
 type ImageKey = keyof typeof IMAGES;
 
-/** Swedish keywords in job titles → picture. Order matters: specific before generic. */
+/** Swedish keywords in task titles → picture. Order matters: specific before generic. */
 const JOB_RULES: [RegExp, ImageKey][] = [
   [/\blås\b/, 'lock'],
   [/dubbdäck/, 'studTyre'],
@@ -131,8 +131,8 @@ const JOB_RULES: [RegExp, ImageKey][] = [
   [/gänginsats|gänginstats/, 'threadInsert'],
 ];
 
-/** The picture for a job or inspection item title, falling back to a tool kit. */
-export function jobImageUrl(title: string): string {
+/** The picture for a task or inspection item title, falling back to a tool kit. */
+export function taskImageUrl(title: string): string {
   const text = title.toLowerCase();
   const hit = JOB_RULES.find(([pattern]) => pattern.test(text));
   return IMAGE_HOST + IMAGES[hit ? hit[1] : 'tools'];
@@ -174,5 +174,5 @@ const INSPECTION_IMAGES: Record<string, ImageKey> = {
 /** The picture for an inspection item, falling back to its title match. */
 export function inspectionImageUrl(itemId: string, title: string): string {
   const key = INSPECTION_IMAGES[itemId];
-  return key ? IMAGE_HOST + IMAGES[key] : jobImageUrl(title);
+  return key ? IMAGE_HOST + IMAGES[key] : taskImageUrl(title);
 }

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, View } from 'react-native';
 import { BikeData } from '../lib/bikeAnalysis';
 import { colors } from '../lib/theme';
-import { Customer } from '../lib/types';
+import { Customer, customerWarning } from '../lib/types';
 import { bikeLabel } from './BikeDetails';
 
 /** Bike colours light enough to need dark text on top. */
@@ -34,6 +34,7 @@ export function CurrentBikeBar({ customer, bike, bikeNumber, topInset }: Props) 
     : '';
   const background = bike ? bike.color : colors.cardRaised;
   const textColor = bike && LIGHT_COLORS.has(bike.color) ? '#0B0F14' : '#FFFFFF';
+  const warning = customerWarning(customer);
 
   return (
     <View style={[styles.bar, { backgroundColor: background, paddingTop: topInset + 6 }]}>
@@ -44,6 +45,14 @@ export function CurrentBikeBar({ customer, bike, bikeNumber, topInset }: Props) 
       <Text style={[styles.name, { color: textColor }]} numberOfLines={1}>
         {name || 'Okänd kund'}
       </Text>
+      {warning ? (
+        <View style={styles.warning}>
+          <Ionicons name="warning" size={13} color={colors.danger} />
+          <Text style={styles.warningText} numberOfLines={1}>
+            {warning}
+          </Text>
+        </View>
+      ) : null}
       {bikeText ? (
         <Text style={[styles.bike, { color: textColor }]} numberOfLines={1}>
           {bikeText}
@@ -69,6 +78,22 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     fontWeight: '700',
     fontSize: 13,
+  },
+  warning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    flexShrink: 1,
+    backgroundColor: 'rgba(11, 15, 20, 0.85)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  warningText: {
+    flexShrink: 1,
+    color: colors.danger,
+    fontWeight: '700',
+    fontSize: 12,
   },
   bike: {
     flex: 1,

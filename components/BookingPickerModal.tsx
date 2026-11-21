@@ -9,26 +9,26 @@ import {
   Text,
   View,
 } from 'react-native';
-import { fetchEstimates } from '../lib/supabase';
+import { fetchJobs } from '../lib/supabase';
 import { colors, radius } from '../lib/theme';
-import { Estimate } from '../lib/types';
+import { Job } from '../lib/types';
 
 type Props = {
   visible: boolean;
   onClose: () => void;
-  onPick: (booking: Estimate) => void;
+  onPick: (booking: Job) => void;
 };
 
 /** Lists jobs with status "Bokad" so one can be imported into the order. */
 export function BookingPickerModal({ visible, onClose, onPick }: Props) {
-  const [bookings, setBookings] = useState<Estimate[] | null>(null);
+  const [bookings, setBookings] = useState<Job[] | null>(null);
   const [error, setError] = useState('');
 
   useEffect(() => {
     if (!visible) return;
     setBookings(null);
     setError('');
-    fetchEstimates('booked')
+    fetchJobs('booked')
       .then(setBookings)
       .catch((err) => setError(err instanceof Error ? err.message : String(err)));
   }, [visible]);
@@ -76,7 +76,7 @@ export function BookingPickerModal({ visible, onClose, onPick }: Props) {
                       {[
                         c?.phone,
                         new Date(item.createdAt).toLocaleDateString('sv-SE'),
-                        `${item.jobs.length} jobb`,
+                        `${item.tasks.length} jobb`,
                       ]
                         .filter(Boolean)
                         .join(' · ')}

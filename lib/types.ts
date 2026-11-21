@@ -13,7 +13,7 @@ export type Product = {
   label?: 'samma' | 'likvärdig' | 'billigare';
 };
 
-export type Job = {
+export type Task = {
   id: string;
   title: string;
   category: string;
@@ -52,8 +52,26 @@ export const EMPTY_CUSTOMER: Customer = {
   email: '',
 };
 
-export function isCustomerValid(customer: Customer): boolean {
-  return customer.firstName.trim() !== '' && customer.phone.trim() !== '';
+/** Phone numbers are stored and matched without spaces or dashes. */
+export function normalizePhone(phone: string): string {
+  return phone.replace(/[\s-]/g, '');
+}
+
+export function customerHasName(customer: Customer | null): boolean {
+  return !!customer && (customer.firstName.trim() !== '' || customer.lastName.trim() !== '');
+}
+
+export function customerHasPhone(customer: Customer | null): boolean {
+  return !!customer && normalizePhone(customer.phone) !== '';
+}
+
+/** Swedish warning for a customer missing name and/or phone, or null if both are set. */
+export function customerWarning(customer: Customer | null): string | null {
+  const hasName = customerHasName(customer);
+  const hasPhone = customerHasPhone(customer);
+  if (hasName && hasPhone) return null;
+  if (!hasName && !hasPhone) return 'Kunden saknar namn och telefonnummer';
+  return hasName ? 'Kunden saknar telefonnummer' : 'Kunden saknar namn';
 }
 
 export const EMPTY_ORDER: OrderInfo = {
@@ -93,11 +111,11 @@ export const STATUS_LABELS: Record<JobStatus, string> = {
   delivered: 'Utlämnad',
 };
 
-export type Estimate = {
+export type Job = {
   id: string;
   createdAt: string;
   transcript: string;
-  jobs: Job[];
+  tasks: Task[];
   imagePath: string | null;
   total: number;
   status: JobStatus;
@@ -113,17 +131,17 @@ export function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
 }
 
-export function jobTotal(job: Job): number {
-  return job.price + job.products.reduce((p, prod) => p + prod.price, 0);
+export function taskTotal(task: Task): number {
+  return task.price + task.products.reduce((p, prod) => p + prod.price, 0);
 }
 
-export function jobsTotal(jobs: Job[]): number {
-  return jobs.reduce((sum, job) => sum + jobTotal(job), 0);
+export function tasksTotal(tasks: Task[]): number {
+  return tasks.reduce((sum, task) => sum + taskTotal(task), 0);
 }
 
 /** Summa för de åtgärder kunden inte har nekat (nekade räknas bort). */
-export function approvedTotal(jobs: Job[]): number {
-  return jobs
-    .filter((job) => job.approval !== 'nekad')
-    .reduce((sum, job) => sum + jobTotal(job), 0);
+export function approvedTotal(tasks: Task[]): number {
+  return tasks
+    .filter((task) => task.approval !== 'nekad')
+    .reduce((sum, task) => sum + taskTotal(task), 0);
 }

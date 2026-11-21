@@ -1,23 +1,44 @@
 import 'react-native-url-polyfill/auto';
 import { Platform } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createClient } from '@supabase/supabase-js';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { BikeData } from './bikeAnalysis';
 import { InspectionState } from './inspection';
-import { Customer, Estimate, Job, JobStatus, jobsTotal } from './types';
+import { Customer, Job, Task, JobStatus, tasksTotal, normalizePhone, customerHasName, customerHasPhone } from './types';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
+// Same setup as barcode-scanner: the session is kept on the device and the
+// access token is renewed silently, so staff sign in once.
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { persistSession: false, autoRefreshToken: false },
+  auth: {
+    storage: AsyncStorage,
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+  },
 });
 
-export type EstimateInput = {
+/** Whether the signed-in user is on the snapbike_staff allowlist. */
+export async function isStaff(userId: string): Promise<boolean> {
+  const { data, error } = await supabase
+    .from('snapbike_staff')
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+  if (error) {
+    throw new Error(`Kunde inte kontrollera behörighet: ${error.message}`);
+  }
+  return data !== null;
+}
+
+export type JobInput = {
   imageUri: string | null;
   transcript: string;
-  jobs: Job[];
+  tasks: Task[];
   customer: Customer | null;
   bike: BikeData | null;
   bikeNumber: string;
@@ -27,20 +48,24 @@ export type EstimateInput = {
 };
 
 /**
- * Uploads the photo (if any) to the snapbike bucket and stores the estimate.
+ * Uploads the photo (if any) to the snapbike bucket and stores the job.
  * An imported booking is updated in place and moved to checked_in; otherwise
  * a new row is inserted. Returns the row id.
  */
-export async function saveEstimate({
+export async function saveJob({
   imageUri,
   transcript,
-  jobs,
+  tasks,
   customer,
   bike,
   bikeNumber,
   inspection,
   bookingId,
-}: EstimateInput): Promise<string> {
+}: JobInput): Promise<string> {
+  if (!customerHasName(customer) && !customerHasPhone(customer)) {
+    throw new Error('Kunden saknar både namn och telefonnummer – jobbet kan inte sparas.');
+  }
+
   let imagePath: string | null = null;
 
   if (imageUri) {
@@ -64,11 +89,13 @@ export async function saveEstimate({
     }
   }
 
+  const customerId = customer ? await upsertCustomer(customer) : null;
+
   const fields = {
     transcript,
-    jobs,
-    total: jobsTotal(jobs),
-    customer,
+    tasks,
+    total: tasksTotal(tasks),
+    customer_id: customerId,
     bike,
     bike_number: bikeNumber.trim() || null,
     inspection,
@@ -78,13 +105,13 @@ export async function saveEstimate({
 
   const { data, error } = bookingId
     ? await supabase
-        .from('snapbike_estimates')
+        .from('snapbike_jobs')
         .update({ ...fields, status: 'checked_in' })
         .eq('id', bookingId)
         .select('id')
         .single()
     : await supabase
-        .from('snapbike_estimates')
+        .from('snapbike_jobs')
         .insert(fields)
         .select('id')
         .single();
@@ -95,25 +122,84 @@ export async function saveEstimate({
   return data.id as string;
 }
 
-type EstimateRow = {
+type CustomerRow = {
+  first_name: string;
+  last_name: string;
+  phone: string | null;
+  email: string;
+};
+
+function toCustomer(row: CustomerRow): Customer {
+  return {
+    firstName: row.first_name,
+    lastName: row.last_name,
+    phone: row.phone ?? '',
+    email: row.email,
+  };
+}
+
+/**
+ * Creates the customer, or updates the one with the same phone. Returns its id.
+ * Without a phone it is stored with phone NULL, which never conflicts, so a new row is created.
+ */
+async function upsertCustomer(customer: Customer): Promise<string> {
+  const { data, error } = await supabase
+    .from('snapbike_customer')
+    .upsert(
+      {
+        first_name: customer.firstName.trim(),
+        last_name: customer.lastName.trim(),
+        phone: normalizePhone(customer.phone) || null,
+        email: customer.email.trim(),
+      },
+      { onConflict: 'phone' }
+    )
+    .select('id')
+    .single();
+  if (error) {
+    throw new Error(`Kunde inte spara kunden: ${error.message}`);
+  }
+  return data.id as string;
+}
+
+/** Customers whose name or phone contains the text, for autofill. */
+export async function searchCustomers(text: string): Promise<Customer[]> {
+  // Characters that would break the PostgREST or() filter.
+  const term = text.trim().replace(/[,()*%\\]/g, '');
+  if (term.length < 2) return [];
+  const pattern = `%${term}%`;
+  const phonePattern = `%${normalizePhone(term)}%`;
+  const { data, error } = await supabase
+    .from('snapbike_customer')
+    .select('first_name, last_name, phone, email')
+    .or(`first_name.ilike.${pattern},last_name.ilike.${pattern},phone.ilike.${phonePattern}`)
+    .order('first_name')
+    .limit(6);
+  if (error) {
+    throw new Error(`Kunde inte söka kunder: ${error.message}`);
+  }
+  return (data as CustomerRow[]).map(toCustomer);
+}
+
+type JobRow = {
   id: string;
   created_at: string;
   transcript: string;
-  jobs: Job[];
+  tasks: Task[];
   image_path: string | null;
   total: number;
   status: JobStatus;
-  customer: Customer | null;
+  customer: CustomerRow | null;
   bike: BikeData | null;
   bike_number: string | null;
   inspection: InspectionState | null;
 };
 
-/** Fetches saved estimates, newest first, optionally only one status. */
-export async function fetchEstimates(status?: JobStatus): Promise<Estimate[]> {
+/** Fetches saved jobs, newest first, optionally only one status. */
+export async function fetchJobs(status?: JobStatus): Promise<Job[]> {
   let query = supabase
-    .from('snapbike_estimates')
-    .select('id, created_at, transcript, jobs, image_path, total, status, customer, bike, bike_number, inspection')
+    .from('snapbike_jobs')
+    .select('id, created_at, transcript, tasks, image_path, total, status, customer:snapbike_customer(first_name, last_name, phone, email), bike, bike_number, inspection')
     .order('created_at', { ascending: false });
   if (status) query = query.eq('status', status);
   const { data, error } = await query;
@@ -122,15 +208,15 @@ export async function fetchEstimates(status?: JobStatus): Promise<Estimate[]> {
     throw new Error(`Kunde inte hämta jobb: ${error.message}`);
   }
 
-  return (data as EstimateRow[]).map((row) => ({
+  return (data as unknown as JobRow[]).map((row) => ({
     id: row.id,
     createdAt: row.created_at,
     transcript: row.transcript,
-    jobs: row.jobs ?? [],
+    tasks: row.tasks ?? [],
     imagePath: row.image_path,
     total: Number(row.total),
     status: row.status,
-    customer: row.customer,
+    customer: row.customer ? toCustomer(row.customer) : null,
     bike: row.bike,
     bikeNumber: row.bike_number ?? '',
     inspection: row.inspection ?? {},
@@ -138,15 +224,15 @@ export async function fetchEstimates(status?: JobStatus): Promise<Estimate[]> {
 }
 
 /**
- * Changes an estimate's status via the snapbike_set_status RPC (the anon key
+ * Changes a job's status via the snapbike_set_status RPC (the anon key
  * has no general UPDATE access on the table).
  */
-export async function setEstimateStatus(
+export async function setJobStatus(
   id: string,
   status: JobStatus
 ): Promise<void> {
   const { error } = await supabase.rpc('snapbike_set_status', {
-    estimate_id: id,
+    job_id: id,
     new_status: status,
   });
   if (error) {
@@ -155,14 +241,14 @@ export async function setEstimateStatus(
 }
 
 /**
- * Replaces an estimate's job list (and recomputed total) via the
- * snapbike_update_jobs RPC, since the anon key cannot UPDATE the table.
+ * Replaces a job's task list (and recomputed total) via the
+ * snapbike_update_tasks RPC, since the anon key cannot UPDATE the table.
  */
-export async function updateEstimateJobs(id: string, jobs: Job[]): Promise<void> {
-  const { error } = await supabase.rpc('snapbike_update_jobs', {
-    estimate_id: id,
-    new_jobs: jobs,
-    new_total: jobsTotal(jobs),
+export async function updateJobTasks(id: string, tasks: Task[]): Promise<void> {
+  const { error } = await supabase.rpc('snapbike_update_tasks', {
+    job_id: id,
+    new_tasks: tasks,
+    new_total: tasksTotal(tasks),
   });
   if (error) {
     throw new Error(`Kunde inte spara priser: ${error.message}`);
@@ -170,12 +256,12 @@ export async function updateEstimateJobs(id: string, jobs: Job[]): Promise<void>
 }
 
 /** Auto-save of the Besiktning checklist onto an already saved row. */
-export async function updateEstimateInspection(
+export async function updateJobInspection(
   id: string,
   inspection: InspectionState
 ): Promise<void> {
   const { error } = await supabase
-    .from('snapbike_estimates')
+    .from('snapbike_jobs')
     .update({ inspection })
     .eq('id', id);
   if (error) {
@@ -184,7 +270,7 @@ export async function updateEstimateInspection(
 }
 
 /** Public URL for a photo in the snapbike bucket. */
-export function estimateImageUrl(imagePath: string | null): string | null {
+export function jobImageUrl(imagePath: string | null): string | null {
   if (!imagePath) return null;
   return supabase.storage.from('snapbike').getPublicUrl(imagePath).data
     .publicUrl;
