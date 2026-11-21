@@ -13,8 +13,6 @@ export type OrderContextValue = {
   setTasks: Dispatch<SetStateAction<Task[]>>;
   order: OrderInfo;
   setOrder: Dispatch<SetStateAction<OrderInfo>>;
-  savedId: string | null;
-  setSavedId: Dispatch<SetStateAction<string | null>>;
   goToOrder: () => void;
   /** What the photo shows (Jev); null until a photo is classified. */
   itemKind: ItemKind | null;
@@ -23,9 +21,13 @@ export type OrderContextValue = {
   setBikeAnalysis: Dispatch<SetStateAction<BikeAnalysisState>>;
   /** Price rows that apply to the item kind and bike. */
   prices: PriceItem[];
-  /** Besiktning checklist of the current bike; auto-saved to its row. */
+  /** Besiktning checklist of the current bike; auto-saved with the rest of the job. */
   inspection: InspectionState;
   setInspection: Dispatch<SetStateAction<InspectionState>>;
+  /** True while the Besiktning tab is mid-edit (typing a note, recording);
+   *  the Supabase auto-save waits until it ends. */
+  holdSave: boolean;
+  setHoldSave: Dispatch<SetStateAction<boolean>>;
 };
 
 export const OrderContext = createContext<OrderContextValue | null>(null);

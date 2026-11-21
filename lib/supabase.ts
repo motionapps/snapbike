@@ -6,7 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { BikeData } from './bikeAnalysis';
 import { InspectionState } from './inspection';
-import { Customer, Job, Task, JobStatus, tasksTotal, normalizePhone, customerHasName, customerHasPhone } from './types';
+import { Customer, Job, Task, JobStatus, tasksTotal, normalizePhone } from './types';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -36,90 +36,87 @@ export async function isStaff(userId: string): Promise<boolean> {
 }
 
 export type JobInput = {
-  imageUri: string | null;
+  /** Row to update; null inserts a new row. */
+  jobId: string | null;
+  /** Uploaded photo; null keeps the row's current photo. */
+  imagePath: string | null;
   transcript: string;
   tasks: Task[];
-  customer: Customer | null;
+  /** Customer row; undefined leaves the row's customer untouched. */
+  customerId: string | null | undefined;
   bike: BikeData | null;
   bikeNumber: string;
   inspection: InspectionState;
-  /** Existing booking row to update; null inserts a new row. */
-  bookingId: string | null;
 };
 
+/** Uploads a photo to the snapbike bucket and returns its storage path. */
+export async function uploadJobImage(imageUri: string): Promise<string> {
+  // The legacy FileSystem API is native-only; on web the picker returns a
+  // blob:/data: URL that plain fetch can read.
+  let body: Blob | ArrayBuffer;
+  if (Platform.OS === 'web') {
+    body = await (await fetch(imageUri)).blob();
+  } else {
+    const base64 = await FileSystem.readAsStringAsync(imageUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    body = decode(base64);
+  }
+  const imagePath = `photos/${Date.now()}.jpg`;
+  const { error } = await supabase.storage
+    .from('snapbike')
+    .upload(imagePath, body, { contentType: 'image/jpeg' });
+  if (error) {
+    throw new Error(`Bilduppladdning misslyckades: ${error.message}`);
+  }
+  return imagePath;
+}
+
 /**
- * Uploads the photo (if any) to the snapbike bucket and stores the job.
- * An imported booking is updated in place and moved to checked_in; otherwise
- * a new row is inserted. Returns the row id.
+ * Auto-save of the current job. A new job is inserted as checked_in (the
+ * bike is in the shop); an existing row is updated, and a booking moves from
+ * booked to checked_in. Returns the row id.
  */
 export async function saveJob({
-  imageUri,
+  jobId,
+  imagePath,
   transcript,
   tasks,
-  customer,
+  customerId,
   bike,
   bikeNumber,
   inspection,
-  bookingId,
 }: JobInput): Promise<string> {
-  if (!customerHasName(customer) && !customerHasPhone(customer)) {
-    throw new Error('Kunden saknar både namn och telefonnummer – jobbet kan inte sparas.');
-  }
-
-  let imagePath: string | null = null;
-
-  if (imageUri) {
-    // The legacy FileSystem API is native-only; on web the picker returns a
-    // blob:/data: URL that plain fetch can read.
-    let body: Blob | ArrayBuffer;
-    if (Platform.OS === 'web') {
-      body = await (await fetch(imageUri)).blob();
-    } else {
-      const base64 = await FileSystem.readAsStringAsync(imageUri, {
-        encoding: FileSystem.EncodingType.Base64,
-      });
-      body = decode(base64);
-    }
-    imagePath = `photos/${Date.now()}.jpg`;
-    const { error: uploadError } = await supabase.storage
-      .from('snapbike')
-      .upload(imagePath, body, { contentType: 'image/jpeg' });
-    if (uploadError) {
-      throw new Error(`Bilduppladdning misslyckades: ${uploadError.message}`);
-    }
-  }
-
-  const customerId = customer ? await upsertCustomer(customer) : null;
-
   const fields = {
     transcript,
     tasks,
     total: tasksTotal(tasks),
-    customer_id: customerId,
     bike,
     bike_number: bikeNumber.trim() || null,
     inspection,
-    // Keep the booking's existing photo when no new one was taken.
+    ...(customerId !== undefined ? { customer_id: customerId } : {}),
     ...(imagePath ? { image_path: imagePath } : {}),
   };
 
-  const { data, error } = bookingId
-    ? await supabase
-        .from('snapbike_jobs')
-        .update({ ...fields, status: 'checked_in' })
-        .eq('id', bookingId)
-        .select('id')
-        .single()
-    : await supabase
-        .from('snapbike_jobs')
-        .insert(fields)
-        .select('id')
-        .single();
-
-  if (error) {
-    throw new Error(`Kunde inte spara: ${error.message}`);
+  if (!jobId) {
+    const { data, error } = await supabase
+      .from('snapbike_jobs')
+      .insert({ ...fields, status: 'checked_in' })
+      .select('id')
+      .single();
+    if (error) throw new Error(`Kunde inte spara: ${error.message}`);
+    return data.id as string;
   }
-  return data.id as string;
+
+  const { error } = await supabase.from('snapbike_jobs').update(fields).eq('id', jobId);
+  if (error) throw new Error(`Kunde inte spara: ${error.message}`);
+  const { error: statusError } = await supabase
+    .from('snapbike_jobs')
+    .update({ status: 'checked_in' })
+    .eq('id', jobId)
+    .eq('status', 'booked');
+  if (statusError) throw new Error(`Kunde inte spara: ${statusError.message}`);
+  return jobId;
 }
 
 type CustomerRow = {
@@ -140,22 +137,32 @@ function toCustomer(row: CustomerRow): Customer {
 
 /**
  * Creates the customer, or updates the one with the same phone. Returns its id.
- * Without a phone it is stored with phone NULL, which never conflicts, so a new row is created.
+ * Without a phone, the job's existing customer row (existingId) is updated so
+ * repeated auto-saves don't create duplicates; with no such row a new one is created.
  */
-async function upsertCustomer(customer: Customer): Promise<string> {
-  const { data, error } = await supabase
-    .from('snapbike_customer')
-    .upsert(
-      {
-        first_name: customer.firstName.trim(),
-        last_name: customer.lastName.trim(),
-        phone: normalizePhone(customer.phone) || null,
-        email: customer.email.trim(),
-      },
-      { onConflict: 'phone' }
-    )
-    .select('id')
-    .single();
+export async function saveCustomer(
+  customer: Customer,
+  existingId: string | null | undefined
+): Promise<string> {
+  const row = {
+    first_name: customer.firstName.trim(),
+    last_name: customer.lastName.trim(),
+    phone: normalizePhone(customer.phone) || null,
+    email: customer.email.trim(),
+  };
+  const { data, error } =
+    !row.phone && existingId
+      ? await supabase
+          .from('snapbike_customer')
+          .update(row)
+          .eq('id', existingId)
+          .select('id')
+          .single()
+      : await supabase
+          .from('snapbike_customer')
+          .upsert(row, { onConflict: 'phone' })
+          .select('id')
+          .single();
   if (error) {
     throw new Error(`Kunde inte spara kunden: ${error.message}`);
   }
@@ -259,17 +266,11 @@ export async function updateJobTasks(id: string, tasks: Task[]): Promise<void> {
   }
 }
 
-/** Auto-save of the Besiktning checklist onto an already saved row. */
-export async function updateJobInspection(
-  id: string,
-  inspection: InspectionState
-): Promise<void> {
-  const { error } = await supabase
-    .from('snapbike_jobs')
-    .update({ inspection })
-    .eq('id', id);
+/** Permanently deletes a job row. */
+export async function deleteJob(id: string): Promise<void> {
+  const { error } = await supabase.from('snapbike_jobs').delete().eq('id', id);
   if (error) {
-    throw new Error(`Kunde inte spara besiktningen: ${error.message}`);
+    throw new Error(`Kunde inte ta bort jobbet: ${error.message}`);
   }
 }
 

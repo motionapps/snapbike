@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BikeData } from '../lib/bikeAnalysis';
 import { colors } from '../lib/theme';
 import { Customer, customerWarning } from '../lib/types';
@@ -24,10 +24,11 @@ type Props = {
   bike: BikeData['bike'] | null;
   bikeNumber: string;
   topInset: number;
+  onPress: () => void;
 };
 
-/** Thin bar above every tab naming the current customer and bike, tinted in the bike's colour. */
-export function CurrentBikeBar({ customer, bike, bikeNumber, topInset }: Props) {
+/** Thin bar above every tab naming the current customer and bike, tinted in the bike's colour. Tapping it opens the job. */
+export function CurrentBikeBar({ customer, bike, bikeNumber, topInset, onPress }: Props) {
   const name = customer ? `${customer.firstName} ${customer.lastName}`.trim() : '';
   const bikeText = bike
     ? [bike.brand, bikeLabel(bike.bike_type)].filter(Boolean).join(' · ')
@@ -37,7 +38,10 @@ export function CurrentBikeBar({ customer, bike, bikeNumber, topInset }: Props) 
   const warning = customerWarning(customer);
 
   return (
-    <View style={[styles.bar, { backgroundColor: background, paddingTop: topInset + 6 }]}>
+    <Pressable
+      onPress={onPress}
+      style={[styles.bar, { backgroundColor: background, paddingTop: topInset + 6 }]}
+    >
       <Ionicons name="bicycle" size={16} color={textColor} />
       {bikeNumber ? (
         <Text style={[styles.tag, { color: textColor }]}>#{bikeNumber}</Text>
@@ -58,7 +62,7 @@ export function CurrentBikeBar({ customer, bike, bikeNumber, topInset }: Props) 
           {bikeText}
         </Text>
       ) : null}
-    </View>
+    </Pressable>
   );
 }
 

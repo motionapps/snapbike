@@ -67,6 +67,7 @@ export function InspectionScreen() {
     order,
     inspection: results,
     setInspection: setResults,
+    setHoldSave,
   } = useOrderContext();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [phase, setPhase] = useState<MicPhase>('idle');
@@ -88,11 +89,21 @@ export function InspectionScreen() {
 
   const useWebSpeech = !hasOpenAiKey && webSpeechAvailable;
 
+  // Hold the Supabase auto-save while a note is being typed or speech is
+  // coming in; it saves once the field is left / the recording is done.
+  const [noteFocused, setNoteFocused] = useState(false);
+  useEffect(() => {
+    setHoldSave(noteFocused || phase !== 'idle' || dictation !== null);
+  }, [noteFocused, phase, dictation, setHoldSave]);
+
   // The spoken transcript belongs to the current bike: drop it when the bike
   // changes or the checklist is cleared.
   const isEmpty = Object.keys(results).length === 0;
+  // A new job getting its row id on first auto-save is still the same bike.
+  const previousBookingId = useRef(order.bookingId);
   useEffect(() => {
-    transcriptRef.current = '';
+    if (previousBookingId.current !== null) transcriptRef.current = '';
+    previousBookingId.current = order.bookingId;
   }, [order.bookingId]);
   useEffect(() => {
     if (isEmpty) transcriptRef.current = '';
@@ -443,6 +454,8 @@ export function InspectionScreen() {
                           placeholderTextColor={colors.textFaint}
                           value={result.note}
                           onChangeText={(text) => setNote(item.id, text)}
+                          onFocus={() => setNoteFocused(true)}
+                          onBlur={() => setNoteFocused(false)}
                           multiline
                         />
                         {listening && !result.note ? (

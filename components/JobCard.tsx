@@ -46,30 +46,28 @@ export const JobCard = memo(function JobCard({
           />
         ) : (
           <View style={[styles.thumb, styles.thumbEmpty]}>
-            <Ionicons name="bicycle" size={22} color={colors.textFaint} />
+            <Ionicons name="bicycle" size={96} color={colors.textFaint} />
           </View>
         )}
         <View style={styles.info}>
-          <View style={styles.nameRow}>
-            {job.bikeNumber ? (
-              <View style={styles.tag}>
-                <Text style={styles.tagText}>#{job.bikeNumber}</Text>
-              </View>
-            ) : null}
-            <Text style={styles.name} numberOfLines={1}>
-              {customerName || 'Okänd kund'}
-            </Text>
-          </View>
+          {job.bikeNumber ? (
+            <View style={styles.tag}>
+              <Text style={styles.tagText}>#{job.bikeNumber}</Text>
+            </View>
+          ) : null}
+          <Text style={styles.name} numberOfLines={1}>
+            {customerName || 'Okänd kund'}
+          </Text>
           <Text style={styles.date}>
             {dateFormat.format(new Date(job.createdAt))}
           </Text>
           <Text style={styles.tasks} numberOfLines={2}>
             {taskTitles || 'Inga jobb'}
           </Text>
+          <Text style={styles.total}>
+            {job.total.toLocaleString('sv-SE')} kr
+          </Text>
         </View>
-        <Text style={styles.total}>
-          {job.total.toLocaleString('sv-SE')} kr
-        </Text>
       </View>
 
       <StatusPill
@@ -87,8 +85,8 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 14,
-    gap: 12,
+    padding: 20,
+    gap: 16,
     ...shadow.card,
   },
   cardPressed: {
@@ -96,12 +94,12 @@ const styles = StyleSheet.create({
   },
   top: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
+    alignItems: 'flex-start',
+    gap: 18,
   },
   thumb: {
-    width: 52,
-    height: 52,
+    width: 300,
+    height: 300,
     borderRadius: radius.md,
     borderCurve: 'continuous',
     backgroundColor: colors.cardRaised,
@@ -112,35 +110,33 @@ const styles = StyleSheet.create({
   },
   info: {
     flex: 1,
-    gap: 3,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 6,
   },
   tag: {
+    alignSelf: 'flex-start',
     backgroundColor: colors.cardRaised,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    borderWidth: 2,
+    borderColor: colors.accent,
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    marginBottom: 4,
   },
   tagText: {
     color: colors.accent,
-    fontWeight: '700',
-    fontSize: 12,
+    fontWeight: '800',
+    fontSize: 40,
+    fontVariant: ['tabular-nums'],
   },
   name: {
-    flex: 1,
     color: colors.text,
     fontWeight: '700',
-    fontSize: 15,
+    fontSize: 19,
   },
   date: {
     color: colors.textFaint,
-    fontSize: 11,
+    fontSize: 14,
     fontWeight: '700',
     letterSpacing: 0.5,
     textTransform: 'uppercase',
@@ -148,10 +144,12 @@ const styles = StyleSheet.create({
   tasks: {
     color: colors.text,
     fontWeight: '600',
-    fontSize: 13,
+    fontSize: 16,
   },
   total: {
+    marginTop: 4,
     color: colors.text,
     fontWeight: '700',
+    fontSize: 18,
   },
 });

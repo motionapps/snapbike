@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useDeferredValue, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   FlatList,
   Modal,
   Pressable,
@@ -9,7 +10,8 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { searchProducts } from '../lib/stock';
+import { hasInStockCache, searchInStock } from '../lib/inStockCache';
+import { searchProducts, SearchProduct } from '../lib/productSearch';
 import { colors, radius } from '../lib/theme';
 
 type Props = {
@@ -22,8 +24,54 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
   const [query, setQuery] = useState('');
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
-  const deferredQuery = useDeferredValue(query);
-  const results = useMemo(() => searchProducts(deferredQuery), [deferredQuery]);
+  const [inStockOnly, setInStockOnly] = useState(true);
+  const [remoteResults, setRemoteResults] = useState<SearchProduct[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // "Bara i lager": instant search in the hourly cached stock list on the phone.
+  const localResults = useMemo(
+    () => (inStockOnly ? searchInStock(query) : []),
+    [inStockOnly, query]
+  );
+
+  // Everything else: Produktsök, 300 ms after the last keystroke; a newer search
+  // cancels the older one.
+  useEffect(() => {
+    const q = query.trim();
+    if (inStockOnly || q.length < 2) {
+      setRemoteResults([]);
+      setSearching(false);
+      setError(null);
+      return;
+    }
+    const controller = new AbortController();
+    setSearching(true);
+    const timer = setTimeout(() => {
+      searchProducts(q, controller.signal)
+        .then((products) => {
+          setRemoteResults(products);
+          setError(null);
+        })
+        .catch((err: Error) => {
+          if (controller.signal.aborted) return;
+          setRemoteResults([]);
+          setError(err.message);
+        })
+        .finally(() => {
+          if (!controller.signal.aborted) setSearching(false);
+        });
+    }, 300);
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query, inStockOnly]);
+
+  const results = inStockOnly ? localResults : remoteResults;
+  const notice =
+    error ??
+    (inStockOnly && query.trim() && !hasInStockCache() ? 'Lagerlistan laddas fortfarande…' : null);
 
   const reset = () => {
     setQuery('');
@@ -65,6 +113,20 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
             autoFocus
           />
         </View>
+        <Pressable
+          onPress={() => setInStockOnly((value) => !value)}
+          style={styles.checkRow}
+          hitSlop={6}
+        >
+          <Ionicons
+            name={inStockOnly ? 'checkbox' : 'square-outline'}
+            size={20}
+            color={inStockOnly ? colors.accent : colors.textFaint}
+          />
+          <Text style={styles.checkLabel}>Bara i lager</Text>
+          {searching ? <ActivityIndicator size="small" color={colors.accent} /> : null}
+        </Pressable>
+        {notice ? <Text style={styles.error}>{notice}</Text> : null}
         <View style={styles.form}>
           <TextInput
             style={[styles.input, styles.inputName]}
@@ -108,13 +170,13 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
                   {item.name}
                 </Text>
                 <Text style={styles.rowMeta} numberOfLines={1}>
-                  {[item.articleNumber && `Art ${item.articleNumber}`, item.ean && `EAN ${item.ean}`]
+                  {[
+                    item.supplier?.name,
+                    item.articleNumber && `Art ${item.articleNumber}`,
+                    item.ean && `EAN ${item.ean}`,
+                  ]
                     .filter(Boolean)
                     .join(' · ')}
-                  {' · '}
-                  <Text style={item.stock > 0 ? styles.inStock : styles.orderItem}>
-                    {item.stock > 0 ? `I lager (${item.stock})` : 'Beställningsvara'}
-                  </Text>
                 </Text>
               </View>
               <Text style={styles.rowPrice}>
@@ -171,6 +233,22 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.text,
     paddingVertical: 11,
+  },
+  checkRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginHorizontal: 20,
+    marginBottom: 12,
+  },
+  checkLabel: {
+    color: colors.text,
+    fontWeight: '600',
+  },
+  error: {
+    color: colors.danger,
+    marginHorizontal: 20,
+    marginBottom: 10,
   },
   form: {
     flexDirection: 'row',
@@ -241,14 +319,6 @@ const styles = StyleSheet.create({
   rowMeta: {
     color: colors.textFaint,
     fontSize: 11,
-  },
-  inStock: {
-    color: colors.accentDark,
-    fontWeight: '600',
-  },
-  orderItem: {
-    color: colors.textSecondary,
-    fontWeight: '600',
   },
   rowPrice: {
     color: colors.textSecondary,

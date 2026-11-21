@@ -200,29 +200,3 @@ export function searchStock(query: string, limit = 12): StockItem[] {
   // som beställningsvara utan att svaga lagervaror tränger undan den.
   return scoreList(all, tokens, minMatches, 5).results.slice(0, limit);
 }
-
-/**
- * Product search for the add-product modal: an article number or EAN match
- * (exact first, then prefix) comes before the name search (searchStock).
- */
-export function searchProducts(query: string, limit = 20): StockItem[] {
-  const q = query.trim();
-  if (!q) return [];
-  const codeMatches: StockItem[] = [];
-  if (!/\s/.test(q) && q.length >= 3) {
-    const lower = q.toLowerCase();
-    const exact: StockItem[] = [];
-    const prefix: StockItem[] = [];
-    for (const item of loadStock()) {
-      const article = item.articleNumber.toLowerCase();
-      if (article === lower || item.ean === q) exact.push(item);
-      else if (article.startsWith(lower) || (item.ean && item.ean.startsWith(q))) prefix.push(item);
-    }
-    codeMatches.push(...exact, ...prefix);
-  }
-  const seen = new Set(codeMatches.map((item) => `${item.articleNumber}|${item.ean}`));
-  const nameMatches = searchStock(q, limit).filter(
-    (item) => !seen.has(`${item.articleNumber}|${item.ean}`)
-  );
-  return [...codeMatches, ...nameMatches].slice(0, limit);
-}

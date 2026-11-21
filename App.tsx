@@ -36,14 +36,16 @@ import { clearDraft, loadDraft, saveDraft } from './lib/persist';
 import { JobsScreen } from './components/JobsScreen';
 import { MicButton, MicPhase } from './components/MicButton';
 import { PhotoCard } from './components/PhotoCard';
-import { analyzeBikePhoto } from './lib/bikeAnalysis';
+import { analyzeBikePhoto, BikeData } from './lib/bikeAnalysis';
 import { classifyItemKind } from './lib/itemKind';
 import { pricesFor } from './lib/prices';
 import { BikeAnalysisState, BikeDetails } from './components/BikeDetails';
 import { analyzeTranscript, hasOpenAiKey, refineTask, transcribeAudio } from './lib/api';
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from './lib/speech';
-import { isStaff, saveJob, updateJobInspection } from './lib/supabase';
+import * as FileSystem from 'expo-file-system/legacy';
+import { isStaff, jobImageUrl, saveCustomer, saveJob, uploadJobImage } from './lib/supabase';
 import { AuthProvider, useAuth } from './lib/auth/AuthProvider';
+import { startInStockSync } from './lib/inStockCache';
 import { AuthView } from './components/AuthView';
 import { InspectionState } from './lib/inspection';
 import { CurrentBikeBar } from './components/CurrentBikeBar';
@@ -72,8 +74,66 @@ function formatPrice(value: number): string {
   return `${value.toLocaleString('sv-SE')} kr`;
 }
 
-/** job null = start an empty job. */
-type LoadRequest = { job: Job | null; nonce: number };
+type SaveStatus = 'idle' | 'saving' | 'saved' | 'error';
+
+/** The parts of the current job that are saved to Supabase. */
+type JobSnapshot = {
+  photoUri: string | null;
+  transcript: string;
+  tasks: Task[];
+  customer: Customer | null;
+  bikeNumber: string;
+  bike: BikeData | null;
+  inspection: InspectionState;
+};
+
+/** What is already stored in Supabase for the current job. */
+type RemoteJob = {
+  jobId: string | null;
+  imagePath: string | null;
+  /** Local photo that imagePath was uploaded from. */
+  uploadedPhotoUri: string | null;
+  /** undefined = unknown, leave the row's customer as it is. */
+  customerId: string | null | undefined;
+  /** JSON of the customer as last saved. */
+  customerKey: string;
+};
+
+function emptyRemote(): RemoteJob {
+  return {
+    jobId: null,
+    imagePath: null,
+    uploadedPhotoUri: null,
+    customerId: null,
+    customerKey: 'null',
+  };
+}
+
+function jobSignature(s: JobSnapshot): string {
+  return JSON.stringify(s);
+}
+
+function snapshotIsEmpty(s: JobSnapshot): boolean {
+  return (
+    !s.photoUri &&
+    !s.transcript &&
+    s.tasks.length === 0 &&
+    !s.customer &&
+    !s.bikeNumber.trim() &&
+    Object.keys(s.inspection).length === 0
+  );
+}
+
+/**
+ * job null = start an empty job. focusBikeDetails opens and scrolls to Mer information;
+ * editCustomer opens the customer modal.
+ */
+type LoadRequest = {
+  job: Job | null;
+  nonce: number;
+  focusBikeDetails?: boolean;
+  editCustomer?: boolean;
+};
 
 function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   const insets = useSafeAreaInsets();
@@ -83,8 +143,6 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     setTasks,
     order,
     setOrder,
-    savedId,
-    setSavedId,
     itemKind,
     setItemKind,
     bikeAnalysis,
@@ -92,6 +150,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     prices,
     inspection,
     setInspection,
+    holdSave,
   } = useOrderContext();
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -104,16 +163,135 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   const [showAddTask, setShowAddTask] = useState(false);
   const [showDropIn, setShowDropIn] = useState(false);
   const [showBookings, setShowBookings] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [voiceEditId, setVoiceEditId] = useState<string | null>(null);
   const [voiceEditRecording, setVoiceEditRecording] = useState(false);
   const restored = useRef(false);
+  // What has been stored in Supabase for the current job. Replaced (not
+  // mutated) on Ny order, so an in-flight save of the old job can't leak in.
+  const remote = useRef<RemoteJob>(emptyRemote());
+  // Signature of the state last saved (or loaded), to skip no-op saves.
+  const lastSig = useRef('');
+  // Set when a job is loaded from the Jobb tab: loading is not an edit.
+  const skipNextSave = useRef(false);
+  const saveChain = useRef<Promise<void>>(Promise.resolve());
+  const scrollRef = useRef<ScrollView>(null);
+  // Layout y of the photo section and of the bike details card inside it.
+  const photoSectionY = useRef(0);
+  const bikeDetailsY = useRef(0);
+  // Bumped to expand Mer information and scroll its card to the top.
+  const [focusBikeNonce, setFocusBikeNonce] = useState(0);
 
-  // Återställ ev. autosparat utkast vid start (webben; native tills backend).
+  const bike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike : null;
+  const snapshot: JobSnapshot = {
+    photoUri,
+    transcript,
+    tasks,
+    customer: order.customer,
+    bikeNumber: order.bikeNumber,
+    bike,
+    inspection,
+  };
+  const latest = useRef(snapshot);
+  latest.current = snapshot;
+
+  const itemKindRef = useRef(itemKind);
+  itemKindRef.current = itemKind;
+
+  const writeDraft = useCallback(() => {
+    const s = latest.current;
+    const r = remote.current;
+    saveDraft({
+      photoUri: s.photoUri,
+      itemKind: itemKindRef.current,
+      bike: s.bike,
+      transcript: s.transcript,
+      tasks: s.tasks,
+      order: { customer: s.customer, bikeNumber: s.bikeNumber, bookingId: r.jobId },
+      inspection: s.inspection,
+      imagePath: r.imagePath,
+      uploadedPhotoUri: r.uploadedPhotoUri,
+      customerId: r.customerId,
+      customerKey: r.customerKey,
+    });
+  }, []);
+
+  // Queues a Supabase save of the snapshot; saves run one at a time so the
+  // first one's insert finishes before later ones update the same row.
+  const persistRemote = useCallback((s: JobSnapshot, r: RemoteJob) => {
+    saveChain.current = saveChain.current.then(async () => {
+      const sig = jobSignature(s);
+      const current = () => remote.current === r;
+      if (current()) setSaveStatus('saving');
+      try {
+        if (s.photoUri && s.photoUri !== r.uploadedPhotoUri && !s.photoUri.startsWith('http')) {
+          r.imagePath = await uploadJobImage(s.photoUri);
+          r.uploadedPhotoUri = s.photoUri;
+        }
+        const customerKey = JSON.stringify(s.customer);
+        if (customerKey !== r.customerKey) {
+          r.customerId = s.customer ? await saveCustomer(s.customer, r.customerId) : null;
+          r.customerKey = customerKey;
+        }
+        r.jobId = await saveJob({
+          jobId: r.jobId,
+          imagePath: r.imagePath,
+          transcript: s.transcript,
+          tasks: s.tasks,
+          customerId: r.customerId,
+          bike: s.bike,
+          bikeNumber: s.bikeNumber,
+          inspection: s.inspection,
+        });
+        if (!current()) return;
+        lastSig.current = sig;
+        const jobId = r.jobId;
+        setOrder((o) => (o.bookingId === jobId ? o : { ...o, bookingId: jobId }));
+        writeDraft();
+        setSaveStatus('saved');
+      } catch (err) {
+        if (!current()) return;
+        // Force the next attempt even if nothing changes.
+        lastSig.current = '';
+        setSaveStatus('error');
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    });
+  }, []);
+
+  // Saves changes that are still waiting (e.g. held by an open note) before
+  // switching job.
+  const flushSave = useCallback(() => {
+    const s = latest.current;
+    if (jobSignature(s) === lastSig.current || snapshotIsEmpty(s)) return;
+    persistRemote(s, remote.current);
+  }, []);
+
+  const retrySave = useCallback(() => {
+    if (snapshotIsEmpty(latest.current)) return;
+    persistRemote(latest.current, remote.current);
+  }, []);
+
+  // Restore an auto-saved draft on start.
   useEffect(() => {
-    const draft = loadDraft();
+    void (async () => {
+    const draft = await loadDraft();
     if (draft) {
-      setPhotoUri(draft.photoUri);
+      let photo = draft.photoUri;
+      // The camera photo lives in the cache folder; if the OS has cleared it,
+      // fall back to the uploaded copy.
+      if (photo && Platform.OS !== 'web' && photo.startsWith('file:')) {
+        const info = await FileSystem.getInfoAsync(photo).catch(() => null);
+        if (!info?.exists) photo = draft.imagePath ? jobImageUrl(draft.imagePath) : null;
+      }
+      remote.current = {
+        jobId: draft.order?.bookingId ?? null,
+        imagePath: draft.imagePath ?? null,
+        uploadedPhotoUri: draft.uploadedPhotoUri ?? null,
+        customerId: draft.customerId,
+        customerKey: draft.customerKey ?? 'null',
+      };
+      setPhotoUri(photo);
       setItemKind(draft.itemKind ?? null);
       if (draft.bike) setBikeAnalysis({ status: 'ready', bike: draft.bike });
       setTranscript(draft.transcript);
@@ -127,30 +305,51 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
       });
     }
     restored.current = true;
+    })();
   }, []);
 
-  // Autospar vid varje ändring (efter att ev. utkast återställts).
+  // Auto-save on every change (after any draft has been restored): to the
+  // device at once, to Supabase when the edit is done. Most edits are already
+  // whole steps (photo, closed modal, added task, tapped status); typing a
+  // note or recording holds the save until the field is left / it finishes.
   useEffect(() => {
     if (!restored.current) return;
-    const bike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike : null;
-    saveDraft({ photoUri, itemKind, bike, transcript, tasks, order, inspection });
-  }, [photoUri, itemKind, bikeAnalysis, transcript, tasks, order, inspection]);
+    writeDraft();
+    const sig = jobSignature(latest.current);
+    if (skipNextSave.current) {
+      skipNextSave.current = false;
+      lastSig.current = sig;
+      return;
+    }
+    if (holdSave || phase !== 'idle') return;
+    if (sig === lastSig.current || snapshotIsEmpty(latest.current)) return;
+    persistRemote(latest.current, remote.current);
+  }, [photoUri, itemKind, bikeAnalysis, transcript, tasks, order, inspection, holdSave, phase]);
 
   const setCustomer = useCallback((customer: Customer | null) => {
     setOrder((current) => ({ ...current, customer }));
     setShowDropIn(false);
-    setSavedId(null);
   }, []);
 
   const saveDropIn = useCallback((customer: Customer, bikeNumber: string) => {
     setOrder((current) => ({ ...current, customer, bikeNumber }));
     setShowDropIn(false);
-    setSavedId(null);
   }, []);
 
   // Import a booking: its customer, its tasks (before any already noted) and,
   // if the photo hasn't produced bike data, the booking's bike.
   const importBooking = useCallback((booking: Job) => {
+    // From now on the booking's row is the one saved. Its customer already
+    // has a row, so it is only re-saved if edited.
+    remote.current.jobId = booking.id;
+    remote.current.customerId = undefined;
+    remote.current.customerKey = JSON.stringify(booking.customer);
+    // Show the job's saved photo unless a photo has already been taken.
+    if (booking.imagePath) {
+      const bookingPhoto = jobImageUrl(booking.imagePath);
+      if (!remote.current.imagePath) remote.current.imagePath = booking.imagePath;
+      setPhotoUri((current) => current ?? bookingPhoto);
+    }
     setOrder((current) => ({
       ...current,
       customer: booking.customer,
@@ -166,10 +365,13 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
       );
     }
     setShowBookings(false);
-    setSavedId(null);
   }, []);
 
   const newOrder = useCallback(() => {
+    flushSave();
+    remote.current = emptyRemote();
+    lastSig.current = '';
+    setSaveStatus('idle');
     clearDraft();
     setPhotoUri(null);
     analysisRun.current += 1;
@@ -181,22 +383,38 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     setInspection({});
     setOrder(EMPTY_ORDER);
     setError('');
-    setSavedId(null);
   }, []);
 
   // Started from the Jobb modal: replace the current order with that job.
   useEffect(() => {
     if (!loadRequest) return;
     newOrder();
-    if (loadRequest.job) importBooking(loadRequest.job);
+    if (loadRequest.job) {
+      importBooking(loadRequest.job);
+      skipNextSave.current = true;
+    }
+    if (loadRequest.focusBikeDetails) setFocusBikeNonce(loadRequest.nonce);
+    if (loadRequest.editCustomer) setShowDropIn(true);
   }, [loadRequest, newOrder, importBooking]);
+
+  // Wait for the tab to lay out and the card to expand before scrolling.
+  useEffect(() => {
+    if (!focusBikeNonce) return;
+    const timer = setTimeout(() => {
+      scrollRef.current?.scrollTo({
+        y: photoSectionY.current + bikeDetailsY.current,
+        animated: true,
+      });
+      setFocusBikeNonce(0);
+    }, 350);
+    return () => clearTimeout(timer);
+  }, [focusBikeNonce]);
 
   const setApproval = useCallback(
     (taskId: string, approval: 'godkänd' | 'nekad' | undefined) => {
       setTasks((current) =>
         current.map((task) => (task.id === taskId ? { ...task, approval } : task))
       );
-      setSavedId(null);
     },
     []
   );
@@ -214,7 +432,6 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     if (!result.canceled && result.assets[0]) {
       const asset = result.assets[0];
       setPhotoUri(asset.uri);
-      setSavedId(null);
       // On web the uri is already a data: URI; use it if base64 is missing.
       photoBase64.current =
         asset.base64 ??
@@ -312,7 +529,6 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
       setPhase('analyzing');
       const newTasks = await analyzeTranscript(text, prices);
       setTasks((current) => [...current, ...newTasks]);
-      setSavedId(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -354,7 +570,6 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
           setTasks((current) =>
             current.map((item) => (item.id === taskId ? updated : item))
           );
-          setSavedId(null);
         } catch (err) {
           setError(err instanceof Error ? err.message : String(err));
         } finally {
@@ -415,7 +630,6 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
             : task
         )
       );
-      setSavedId(null);
     },
     []
   );
@@ -442,32 +656,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
       },
     ]);
     setShowAddTask(false);
-    setSavedId(null);
   }, []);
-
-  const save = useCallback(async () => {
-    try {
-      setSaving(true);
-      setError('');
-      const id = await saveJob({
-        imageUri: photoUri,
-        transcript,
-        tasks,
-        customer: order.customer,
-        bike: bikeAnalysis.status === 'ready' ? bikeAnalysis.bike : null,
-        bikeNumber: order.bikeNumber,
-        inspection,
-        bookingId: order.bookingId,
-      });
-      setSavedId(id);
-      // Later saves update this row instead of creating a duplicate.
-      setOrder((current) => ({ ...current, bookingId: id }));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    } finally {
-      setSaving(false);
-    }
-  }, [photoUri, transcript, tasks, order.customer, order.bikeNumber, order.bookingId, bikeAnalysis, inspection]);
 
   const total = tasksTotal(tasks);
   const approved = approvedTotal(tasks);
@@ -480,6 +669,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
+          ref={scrollRef}
           contentInsetAdjustmentBehavior="automatic"
           contentContainerStyle={[
             styles.content,
@@ -501,7 +691,10 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
             ) : null}
           </View>
 
-          <View style={styles.photoSection}>
+          <View
+            style={styles.photoSection}
+            onLayout={(e) => (photoSectionY.current = e.nativeEvent.layout.y)}
+          >
             <PhotoCard uri={photoUri} onTakePhoto={takePhoto} />
             {photoUri && itemKind && itemKind !== 'bike' ? (
               <View style={styles.bikeDetailsCard}>
@@ -509,9 +702,13 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
               </View>
             ) : null}
             {photoUri && bikeAnalysis.status !== 'idle' ? (
-              <View style={styles.bikeDetailsCard}>
+              <View
+                style={styles.bikeDetailsCard}
+                onLayout={(e) => (bikeDetailsY.current = e.nativeEvent.layout.y)}
+              >
                 <BikeDetails
                   key={photoUri}
+                  expandNonce={focusBikeNonce}
                   state={bikeAnalysis}
                   onRetry={runBikeAnalysis}
                   onChange={(bike) => setBikeAnalysis({ status: 'ready', bike })}
@@ -596,31 +793,34 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
                   <Text style={styles.totalValue}>{formatPrice(approved)}</Text>
                 </View>
               </View>
-              <Pressable
-                onPress={save}
-                disabled={saving || savedId !== null}
-                style={({ pressed }) => [
-                  styles.saveButton,
-                  (pressed || saving) && styles.saveButtonPressed,
-                  savedId !== null && styles.saveButtonDone,
-                ]}
-              >
-                {saving ? (
-                  <ActivityIndicator color={colors.onAccent} />
-                ) : (
-                  <>
-                    <Ionicons
-                      name={savedId !== null ? 'checkmark-circle' : 'cloud-upload-outline'}
-                      size={19}
-                      color={colors.onAccent}
-                    />
-                    <Text style={styles.saveText}>
-                      {savedId !== null ? 'Sparad' : 'Spara'}
-                    </Text>
-                  </>
-                )}
-              </Pressable>
             </View>
+          ) : null}
+
+          {saveStatus !== 'idle' ? (
+            <Pressable
+              onPress={retrySave}
+              disabled={saveStatus !== 'error'}
+              style={styles.saveStatus}
+            >
+              {saveStatus === 'saving' ? (
+                <ActivityIndicator size="small" color={colors.textFaint} />
+              ) : (
+                <Ionicons
+                  name={saveStatus === 'saved' ? 'checkmark-circle' : 'cloud-offline-outline'}
+                  size={16}
+                  color={saveStatus === 'saved' ? colors.textFaint : colors.danger}
+                />
+              )}
+              <Text
+                style={[styles.saveStatusText, saveStatus === 'error' && styles.saveStatusError]}
+              >
+                {saveStatus === 'saving'
+                  ? 'Sparar…'
+                  : saveStatus === 'saved'
+                    ? 'Sparad'
+                    : 'Kunde inte spara – tryck för att försöka igen'}
+              </Text>
+            </Pressable>
           ) : null}
         </ScrollView>
       </KeyboardAvoidingView>
@@ -660,7 +860,6 @@ function Root() {
   const [tab, setTab] = useState<Tab>('note');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [order, setOrder] = useState<OrderInfo>(EMPTY_ORDER);
-  const [savedId, setSavedId] = useState<string | null>(null);
   const [itemKind, setItemKind] = useState<ItemKind | null>(null);
   const [bikeAnalysis, setBikeAnalysis] = useState<BikeAnalysisState>({
     status: 'idle',
@@ -671,25 +870,25 @@ function Root() {
   );
 
   const [inspection, setInspection] = useState<InspectionState>({});
-
-  // Auto-save the checklist onto the bike's row once it has one (before the
-  // first Spara it goes along with that save instead).
-  useEffect(() => {
-    const id = order.bookingId;
-    if (!id) return;
-    const timer = setTimeout(() => {
-      updateJobInspection(id, inspection).catch((err) =>
-        console.warn(err instanceof Error ? err.message : err)
-      );
-    }, 800);
-    return () => clearTimeout(timer);
-  }, [order.bookingId, inspection]);
+  const [holdSave, setHoldSave] = useState(false);
 
   const goToOrder = useCallback(() => setTab('note'), []);
   const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(null);
 
   const startCheckIn = useCallback((job: Job) => {
     setLoadRequest({ job, nonce: Date.now() });
+    setTab('note');
+  }, []);
+
+  // Edit button on the job's bike details: Mottagning with Mer information open.
+  const editBikeDetails = useCallback((job: Job) => {
+    setLoadRequest({ job, nonce: Date.now(), focusBikeDetails: true });
+    setTab('note');
+  }, []);
+
+  // Tapping the job modal's header: Mottagning with the customer modal open.
+  const editCustomer = useCallback((job: Job) => {
+    setLoadRequest({ job, nonce: Date.now(), editCustomer: true });
     setTab('note');
   }, []);
 
@@ -708,6 +907,21 @@ function Root() {
     setLoadRequest({ job, nonce: Date.now() });
   }, []);
 
+  // Tapping the bike bar: show the current job in the Jobb tab.
+  const [openJobRequest, setOpenJobRequest] = useState<{ id: string; nonce: number } | null>(null);
+  const openCurrentJob = useCallback(() => {
+    setTab('jobs');
+    if (order.bookingId) setOpenJobRequest({ id: order.bookingId, nonce: Date.now() });
+  }, [order.bookingId]);
+
+  // A deleted job can't stay the current bike.
+  const jobDeleted = useCallback(
+    (id: string) => {
+      if (order.bookingId === id) setLoadRequest({ job: null, nonce: Date.now() });
+    },
+    [order.bookingId]
+  );
+
   const currentBike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike.bike : null;
   const hasCurrentBike = order.customer !== null || currentBike !== null;
 
@@ -718,8 +932,6 @@ function Root() {
         setTasks,
         order,
         setOrder,
-        savedId,
-        setSavedId,
         goToOrder,
         itemKind,
         setItemKind,
@@ -728,6 +940,8 @@ function Root() {
         prices,
         inspection,
         setInspection,
+        holdSave,
+        setHoldSave,
       }}
     >
     <View style={styles.root}>
@@ -739,6 +953,7 @@ function Root() {
           bike={currentBike}
           bikeNumber={order.bikeNumber}
           topInset={insets.top}
+          onPress={openCurrentJob}
         />
       ) : null}
 
@@ -757,9 +972,13 @@ function Root() {
         <JobsScreen
           active={tab === 'jobs'}
           onStartCheckIn={startCheckIn}
+          onEditBikeDetails={editBikeDetails}
+          onEditCustomer={editCustomer}
           onStartInspection={startInspection}
           onSelectBike={selectBike}
           onNewJob={startNewJob}
+          onJobDeleted={jobDeleted}
+          openRequest={openJobRequest}
         />
       </View>
       </SafeAreaInsetsContext.Provider>
@@ -822,6 +1041,12 @@ function AuthGate() {
       cancelled = true;
     };
   }, [userId]);
+
+  // Keeps the store's in-stock list cached on the phone for the product search.
+  useEffect(() => {
+    if (!userId || !staff) return;
+    return startInStockSync(userId);
+  }, [userId, staff]);
 
   if (loading || (userId && staff === null)) {
     return (
@@ -1039,25 +1264,19 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '800',
   },
-  saveButton: {
+  saveStatus: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    backgroundColor: colors.accent,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    paddingVertical: 15,
-    ...shadow.button,
+    gap: 6,
+    paddingVertical: 8,
   },
-  saveButtonPressed: {
-    opacity: 0.85,
+  saveStatusText: {
+    color: colors.textFaint,
+    fontSize: 13,
+    fontWeight: '600',
   },
-  saveButtonDone: {
-    backgroundColor: colors.accentDark,
-  },
-  saveText: {
-    color: colors.onAccent,
-    fontWeight: '700',
+  saveStatusError: {
+    color: colors.danger,
   },
 });

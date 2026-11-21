@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -31,7 +31,12 @@ export type BikeAnalysisState =
 type Props = {
   state: BikeAnalysisState;
   onRetry: () => void;
-  onChange: (data: BikeData) => void;
+  /** Omitted = read-only rows. */
+  onChange?: (data: BikeData) => void;
+  /** Shows an edit button in the header's right corner. */
+  onEdit?: () => void;
+  /** Changing it to a non-zero value expands the details. */
+  expandNonce?: number;
 };
 
 // Swedish display labels for the prototype's English option values.
@@ -156,11 +161,22 @@ const FIELDS: Field[] = [
 ];
 
 /** Footer under the bike photo: "Mer information" that expands to the analysis. */
-export function BikeDetails({ state, onRetry, onChange }: Props) {
+export function BikeDetails({ state, onRetry, onChange, onEdit, expandNonce }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
   const progress = useRef(new Animated.Value(0)).current;
   const [picker, setPicker] = useState<PickerRequest | null>(null);
+
+  useEffect(() => {
+    if (!expandNonce || state.status !== 'ready') return;
+    setExpanded(true);
+    Animated.timing(progress, {
+      toValue: 1,
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [expandNonce, state.status]);
 
   if (state.status === 'idle') return null;
 
@@ -186,7 +202,8 @@ export function BikeDetails({ state, onRetry, onChange }: Props) {
   }
 
   const { bike } = state.bike;
-  const update = (next: Bike) => onChange({ ...state.bike, bike: next });
+  const update = (next: Bike) => onChange?.({ ...state.bike, bike: next });
+  const readOnly = !onChange;
 
   const onFieldPress = (field: Field) => {
     if (field.kind === 'boolean') {
@@ -236,6 +253,11 @@ export function BikeDetails({ state, onRetry, onChange }: Props) {
       <Pressable onPress={toggle} style={styles.header} hitSlop={4}>
         <Ionicons name="sparkles" size={15} color={colors.accent} />
         <Text style={styles.headerText}>Mer information</Text>
+        {onEdit ? (
+          <Pressable onPress={onEdit} hitSlop={8} style={styles.editButton}>
+            <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
+          </Pressable>
+        ) : null}
         <Animated.View style={[styles.chevron, { transform: [{ rotate }] }]}>
           <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
         </Animated.View>
@@ -267,6 +289,7 @@ export function BikeDetails({ state, onRetry, onChange }: Props) {
               <Pressable
                 key={field.label}
                 onPress={() => onFieldPress(field)}
+                disabled={readOnly}
                 style={({ pressed }) => [
                   styles.row,
                   index > 0 && styles.rowDivider,
@@ -275,11 +298,13 @@ export function BikeDetails({ state, onRetry, onChange }: Props) {
               >
                 <Text style={styles.rowLabel}>{field.label}</Text>
                 <Text style={styles.rowValue}>{value}</Text>
-                <Ionicons
-                  name={field.kind === 'boolean' ? 'swap-horizontal' : 'chevron-forward'}
-                  size={18}
-                  color={colors.textFaint}
-                />
+                {readOnly ? null : (
+                  <Ionicons
+                    name={field.kind === 'boolean' ? 'swap-horizontal' : 'chevron-forward'}
+                    size={18}
+                    color={colors.textFaint}
+                  />
+                )}
               </Pressable>
             );
           })}
@@ -311,6 +336,9 @@ const styles = StyleSheet.create({
   errorText: {
     flex: 1,
     color: colors.danger,
+  },
+  editButton: {
+    paddingHorizontal: 4,
   },
   chevron: {
     width: 18,

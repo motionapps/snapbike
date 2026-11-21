@@ -1,13 +1,12 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BikeData } from './bikeAnalysis';
 import type { InspectionState } from './inspection';
 import { ItemKind, Task, OrderInfo } from './types';
 
 /**
- * Lokal autospar av den pågående ordern. Tills Supabase-sparandet är
- * inkopplat (kräver riktig anon-nyckel + kolumner) ligger allt man pratar
- * in kvar på enheten och överlever omladdning/krasch. På webben används
- * localStorage; på native (utan localStorage) blir det en tyst no-op tills
- * Johannes kopplar in riktig lagring.
+ * Local auto-save of the current order (AsyncStorage: device storage on
+ * native, localStorage on web). Written on every change so nothing is lost
+ * in a crash, even before the debounced Supabase save has gone out.
  */
 
 const KEY = 'snapbike_draft_v2';
@@ -23,45 +22,36 @@ export type Draft = {
   order: OrderInfo;
   /** Besiktning checklist; missing in drafts saved before it existed. */
   inspection?: InspectionState;
+  /** Storage path of the uploaded photo, and which local photo it is. */
+  imagePath?: string | null;
+  uploadedPhotoUri?: string | null;
+  /** Saved customer row; undefined = unknown (keep the row's current one). */
+  customerId?: string | null;
+  /** JSON of the customer as last saved, to skip unchanged re-saves. */
+  customerKey?: string;
   savedAt: number;
 };
 
-function store(): Storage | null {
-  try {
-    const s = (globalThis as { localStorage?: Storage }).localStorage;
-    // Verifiera att det faktiskt går att skriva (privat läge kan kasta).
-    if (!s) return null;
-    return s;
-  } catch {
-    return null;
-  }
-}
-
-export const draftPersistAvailable = store() !== null;
-
 export function saveDraft(draft: Omit<Draft, 'savedAt'>): void {
-  const s = store();
-  if (!s) return;
-  try {
-    s.setItem(KEY, JSON.stringify({ ...draft, savedAt: Date.now() }));
-  } catch {
-    // Full disk / privat läge – ignorera, hellre tyst än krasch.
-  }
+  AsyncStorage.setItem(KEY, JSON.stringify({ ...draft, savedAt: Date.now() })).catch(
+    () => {
+      // Full disk / private mode: better silent than a crash.
+    }
+  );
 }
 
-export function loadDraft(): Draft | null {
-  const s = store();
-  if (!s) return null;
+export async function loadDraft(): Promise<Draft | null> {
   try {
-    const raw = s.getItem(KEY);
+    const raw = await AsyncStorage.getItem(KEY);
     if (!raw) return null;
     const draft = JSON.parse(raw) as Draft;
-    // Tomt utkast är inte värt att återställa.
+    // An empty draft is not worth restoring.
     if (
       !draft.transcript &&
       (!draft.tasks || draft.tasks.length === 0) &&
       !draft.photoUri &&
       !draft.order?.customer &&
+      !draft.order?.bikeNumber &&
       Object.keys(draft.inspection ?? {}).length === 0
     ) {
       return null;
@@ -73,11 +63,5 @@ export function loadDraft(): Draft | null {
 }
 
 export function clearDraft(): void {
-  const s = store();
-  if (!s) return;
-  try {
-    s.removeItem(KEY);
-  } catch {
-    // ignorera
-  }
+  AsyncStorage.removeItem(KEY).catch(() => {});
 }

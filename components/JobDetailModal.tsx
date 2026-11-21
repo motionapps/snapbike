@@ -1,32 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
+  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
   Pressable,
-  Share,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
-import { shareMessage } from '../lib/customerLink';
 import { jobImageUrl } from '../lib/supabase';
 import { colors, gutter, radius } from '../lib/theme';
 import { Job, Task, JobStatus, tasksTotal } from '../lib/types';
-import { JobDataOverview } from './JobDataOverview';
+import { BikeDetails } from './BikeDetails';
+import { InspectionSummary } from './InspectionSummary';
+import { JobHeader } from './JobHeader';
 import { StatusPill } from './StatusPill';
-
-const dateFormat = new Intl.DateTimeFormat('sv-SE', {
-  weekday: 'long',
-  day: 'numeric',
-  month: 'long',
-  hour: '2-digit',
-  minute: '2-digit',
-});
+import { ZoomableImageModal } from './ZoomableImageModal';
 
 type Props = {
   job: Job | null;
@@ -34,8 +28,11 @@ type Props = {
   onChangeStatus: (id: string, status: JobStatus) => void;
   onUpdateTasks: (id: string, tasks: Task[]) => void;
   onStartCheckIn: (job: Job) => void;
+  onEditBikeDetails: (job: Job) => void;
+  onEditCustomer: (job: Job) => void;
   onStartInspection: (job: Job) => void;
   onSelectBike: (job: Job) => void;
+  onDelete: (id: string) => void;
 };
 
 /** The next step for each status: a label and what it does. */
@@ -50,11 +47,15 @@ export function JobDetailModal({
   onChangeStatus,
   onUpdateTasks,
   onStartCheckIn,
+  onEditBikeDetails,
+  onEditCustomer,
   onStartInspection,
   onSelectBike,
+  onDelete,
 }: Props) {
   const [editing, setEditing] = useState<EditTarget | null>(null);
   const [editValue, setEditValue] = useState('');
+  const [zoomUri, setZoomUri] = useState<string | null>(null);
 
   const startEdit = (target: EditTarget, price: number) => {
     setEditing(target);
@@ -80,10 +81,49 @@ export function JobDetailModal({
     setEditValue('');
   };
 
+  // Navigation that switches tab waits until the modal is fully dismissed:
+  // on iOS, hiding the Jobb tab mid-dismiss leaves an invisible modal that
+  // blocks every touch on the tab.
+  const afterDismiss = useRef<(() => void) | null>(null);
+
+  const runAfterDismiss = () => {
+    const action = afterDismiss.current;
+    afterDismiss.current = null;
+    action?.();
+  };
+
+  const closeThen = (action: () => void) => {
+    if (Platform.OS === 'ios') {
+      afterDismiss.current = action;
+      close();
+    } else {
+      close();
+      action();
+    }
+  };
+
   const close = () => {
+    setZoomUri(null);
     setEditing(null);
     setEditValue('');
     onClose();
+  };
+
+  const confirmDelete = () => {
+    if (!job) return;
+    const remove = () => {
+      close();
+      onDelete(job.id);
+    };
+    const message = 'Jobbet tas bort permanent.';
+    if (Platform.OS === 'web') {
+      if (window.confirm(`Ta bort jobbet? ${message}`)) remove();
+      return;
+    }
+    Alert.alert('Ta bort jobbet?', message, [
+      { text: 'Avbryt', style: 'cancel' },
+      { text: 'Ta bort', style: 'destructive', onPress: remove },
+    ]);
   };
 
   const nextAction = ((): NextAction | null => {
@@ -94,8 +134,7 @@ export function JobDetailModal({
           label: 'Starta mottagningen',
           icon: 'mic',
           run: () => {
-            close();
-            onStartCheckIn(job);
+            closeThen(() => onStartCheckIn(job));
           },
         };
       case 'checked_in':
@@ -103,8 +142,7 @@ export function JobDetailModal({
           label: 'Starta besiktningen',
           icon: 'clipboard',
           run: () => {
-            close();
-            onStartInspection(job);
+            closeThen(() => onStartInspection(job));
           },
         };
       case 'inspected':
@@ -152,28 +190,46 @@ export function JobDetailModal({
       animationType="slide"
       presentationStyle="pageSheet"
       onRequestClose={close}
+      onDismiss={runAfterDismiss}
     >
       {job ? (
         <KeyboardAvoidingView
           style={styles.sheet}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
-          <View style={styles.header}>
-            <View style={styles.headerText}>
-              <Text style={styles.heading}>Jobb</Text>
-              <Text style={styles.date}>
-                {dateFormat.format(new Date(job.createdAt))}
-              </Text>
-            </View>
-            <Pressable onPress={close} hitSlop={8} style={styles.close}>
-              <Ionicons name="close" size={20} color={colors.textSecondary} />
-            </Pressable>
-          </View>
+          <JobHeader
+            job={job}
+            onClose={close}
+            onPress={() => closeThen(() => onEditCustomer(job))}
+          />
 
           <ScrollView
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
           >
+            {job.imagePath ? (
+              <Pressable onPress={() => setZoomUri(jobImageUrl(job.imagePath))}>
+                <Image
+                  source={jobImageUrl(job.imagePath)}
+                  style={styles.photo}
+                  contentFit="cover"
+                  transition={200}
+                />
+              </Pressable>
+            ) : null}
+
+            {job.bike ? (
+              <View style={styles.bikeDetailsCard}>
+                <BikeDetails
+                  state={{ status: 'ready', bike: job.bike }}
+                  onRetry={() => {}}
+                  onEdit={() => {
+                    closeThen(() => onEditBikeDetails(job));
+                  }}
+                />
+              </View>
+            ) : null}
+
             {nextAction ? (
               <Pressable
                 onPress={nextAction.run}
@@ -188,25 +244,6 @@ export function JobDetailModal({
                   color={colors.onAccent}
                 />
                 <Text style={styles.actionButtonText}>{nextAction.label}</Text>
-              </Pressable>
-            ) : null}
-
-            {job.tasks.length > 0 ? (
-              <Pressable
-                onPress={() =>
-                  Share.share({
-                    message: shareMessage(job.customer?.firstName ?? '', job.shareToken),
-                  })
-                }
-                style={({ pressed }) => [
-                  styles.selectButton,
-                  pressed && styles.selectButtonPressed,
-                ]}
-              >
-                <Ionicons name="share-outline" size={18} color={colors.text} />
-                <Text style={styles.selectButtonText}>
-                  {job.customerRespondedAt ? 'Dela med kund igen' : 'Dela med kund'}
-                </Text>
               </Pressable>
             ) : null}
 
@@ -228,15 +265,6 @@ export function JobDetailModal({
               status={job.status}
               onChange={(status) => onChangeStatus(job.id, status)}
             />
-
-            {job.imagePath ? (
-              <Image
-                source={jobImageUrl(job.imagePath)}
-                style={styles.photo}
-                contentFit="cover"
-                transition={200}
-              />
-            ) : null}
 
             <View style={styles.taskList}>
               {job.tasks.map((task) => (
@@ -306,8 +334,25 @@ export function JobDetailModal({
               </Text>
             </View>
 
-            <JobDataOverview job={job} />
+            <InspectionSummary
+              job={job}
+              onContinue={() => {
+                closeThen(() => onStartInspection(job));
+              }}
+            />
+
+            <Pressable
+              onPress={confirmDelete}
+              style={({ pressed }) => [
+                styles.deleteButton,
+                pressed && styles.selectButtonPressed,
+              ]}
+            >
+              <Ionicons name="trash-outline" size={18} color={colors.danger} />
+              <Text style={styles.deleteButtonText}>Ta bort jobb</Text>
+            </Pressable>
           </ScrollView>
+          <ZoomableImageModal uri={zoomUri} onClose={() => setZoomUri(null)} />
         </KeyboardAvoidingView>
       ) : (
         <View style={styles.sheet} />
@@ -320,36 +365,17 @@ const styles = StyleSheet.create({
   sheet: {
     flex: 1,
     backgroundColor: colors.bg,
-    paddingTop: 20,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: gutter,
-    marginBottom: 16,
-  },
-  headerText: {
-    flex: 1,
-    gap: 2,
-  },
-  heading: {
-    color: colors.text,
-    fontWeight: '700',
-    fontSize: 18,
-  },
-  date: {
-    color: colors.textFaint,
-    fontSize: 13,
-  },
-  close: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.cardRaised,
+  bikeDetailsCard: {
+    backgroundColor: colors.card,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.border,
+    overflow: 'hidden',
   },
   content: {
+    paddingTop: 16,
     paddingHorizontal: gutter,
     paddingBottom: 40,
     gap: 16,
@@ -384,6 +410,23 @@ const styles = StyleSheet.create({
   },
   selectButtonText: {
     color: colors.text,
+    fontWeight: '600',
+    fontSize: 15,
+  },
+  deleteButton: {
+    marginTop: 48,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.danger,
+    paddingVertical: 12,
+  },
+  deleteButtonText: {
+    color: colors.danger,
     fontWeight: '600',
     fontSize: 15,
   },

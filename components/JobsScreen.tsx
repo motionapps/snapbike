@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
+  deleteJob,
   fetchJobs,
   setJobStatus,
   updateJobTasks,
@@ -26,9 +27,14 @@ import { JobDetailModal } from './JobDetailModal';
 type Props = {
   active: boolean;
   onStartCheckIn: (job: Job) => void;
+  onEditBikeDetails: (job: Job) => void;
+  onEditCustomer: (job: Job) => void;
   onStartInspection: (job: Job) => void;
   onSelectBike: (job: Job) => void;
   onNewJob: () => void;
+  onJobDeleted: (id: string) => void;
+  /** Opens that job's modal; the nonce lets the same job be opened again. */
+  openRequest: { id: string; nonce: number } | null;
 };
 
 type Filter = 'active' | 'ready' | 'all';
@@ -65,9 +71,13 @@ function searchText(job: Job): string {
 export function JobsScreen({
   active,
   onStartCheckIn,
+  onEditBikeDetails,
+  onEditCustomer,
   onStartInspection,
   onSelectBike,
   onNewJob,
+  onJobDeleted,
+  openRequest,
 }: Props) {
   const insets = useSafeAreaInsets();
   const [jobs, setJobs] = useState<Job[] | null>(null);
@@ -106,6 +116,10 @@ export function JobsScreen({
     if (active) void load();
   }, [active, load]);
 
+  useEffect(() => {
+    if (openRequest) setOpenId(openRequest.id);
+  }, [openRequest]);
+
   const refresh = useCallback(async () => {
     setRefreshing(true);
     await load();
@@ -142,6 +156,19 @@ export function JobsScreen({
       });
     },
     [load]
+  );
+
+  const removeJob = useCallback(
+    (id: string) => {
+      setJobs((current) => (current ? current.filter((e) => e.id !== id) : current));
+      deleteJob(id)
+        .then(() => onJobDeleted(id))
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : String(err));
+          void load();
+        });
+    },
+    [load, onJobDeleted]
   );
 
   const renderItem = useCallback(
@@ -266,8 +293,11 @@ export function JobsScreen({
         onChangeStatus={changeStatus}
         onUpdateTasks={updateTasks}
         onStartCheckIn={onStartCheckIn}
+        onEditBikeDetails={onEditBikeDetails}
+        onEditCustomer={onEditCustomer}
         onStartInspection={onStartInspection}
         onSelectBike={onSelectBike}
+        onDelete={removeJob}
       />
     </View>
   );
