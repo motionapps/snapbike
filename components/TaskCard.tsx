@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { colors, radius, shadow, statusColors } from '../lib/theme';
 import { Task, Product } from '../lib/types';
+import { AddProductModal } from './AddProductModal';
 
 const PRODUCT_LABELS: Record<NonNullable<Product['label']>, string> = {
   samma: 'Samma modell',
@@ -41,8 +42,6 @@ export function TaskCard({
   onSetApproval,
 }: Props) {
   const [adding, setAdding] = useState(false);
-  const [name, setName] = useState('');
-  const [price, setPrice] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState('');
 
@@ -52,18 +51,6 @@ export function TaskCard({
     }
     setEditingId(null);
     setEditPrice('');
-  };
-
-  const submitProduct = () => {
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setAdding(false);
-      return;
-    }
-    onAddProduct(task.id, trimmed, Number(price.replace(',', '.')) || 0);
-    setName('');
-    setPrice('');
-    setAdding(false);
   };
 
   const rejected = task.approval === 'nekad';
@@ -188,37 +175,18 @@ export function TaskCard({
         </View>
       ))}
 
-      {adding ? (
-        <View style={styles.addForm}>
-          <TextInput
-            style={[styles.input, styles.inputName]}
-            placeholder="Produkt"
-            placeholderTextColor={colors.textFaint}
-            value={name}
-            onChangeText={setName}
-            autoFocus
-            returnKeyType="next"
-          />
-          <TextInput
-            style={[styles.input, styles.inputPrice]}
-            placeholder="kr"
-            placeholderTextColor={colors.textFaint}
-            value={price}
-            onChangeText={setPrice}
-            keyboardType="numeric"
-            returnKeyType="done"
-            onSubmitEditing={submitProduct}
-          />
-          <Pressable onPress={submitProduct} style={styles.confirm}>
-            <Ionicons name="checkmark" size={18} color={colors.onAccent} />
-          </Pressable>
-        </View>
-      ) : (
-        <Pressable onPress={() => setAdding(true)} style={styles.addProduct}>
-          <Ionicons name="add" size={16} color={colors.accent} />
-          <Text style={styles.addProductText}>Lägg till produkt</Text>
-        </Pressable>
-      )}
+      <Pressable onPress={() => setAdding(true)} style={styles.addProduct}>
+        <Ionicons name="add" size={16} color={colors.accent} />
+        <Text style={styles.addProductText}>Lägg till produkt</Text>
+      </Pressable>
+      <AddProductModal
+        visible={adding}
+        onClose={() => setAdding(false)}
+        onAdd={(name, price) => {
+          onAddProduct(task.id, name, price);
+          setAdding(false);
+        }}
+      />
 
       {onSetApproval ? (
         <View style={styles.approvalRow}>
@@ -483,11 +451,6 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontWeight: '600',
   },
-  addForm: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-  },
   input: {
     backgroundColor: colors.cardRaised,
     borderRadius: radius.sm,
@@ -497,20 +460,5 @@ const styles = StyleSheet.create({
     color: colors.text,
     paddingHorizontal: 12,
     paddingVertical: 8,
-  },
-  inputName: {
-    flex: 1,
-  },
-  inputPrice: {
-    width: 76,
-    textAlign: 'right',
-  },
-  confirm: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent,
   },
 });
