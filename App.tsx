@@ -695,6 +695,11 @@ function Root() {
     setTab('inspect');
   }, []);
 
+  // Make a saved job the current bike without leaving the Jobb tab.
+  const selectBike = useCallback((estimate: Estimate) => {
+    setLoadRequest({ estimate, nonce: Date.now() });
+  }, []);
+
   const currentBike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike.bike : null;
   const hasCurrentBike = order.customer !== null || currentBike !== null;
 
@@ -745,6 +750,7 @@ function Root() {
           active={tab === 'jobs'}
           onStartCheckIn={startCheckIn}
           onStartInspection={startInspection}
+          onSelectBike={selectBike}
         />
       </View>
       </SafeAreaInsetsContext.Provider>

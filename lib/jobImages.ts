@@ -13,19 +13,25 @@ const IMAGES = {
   chain: 'bosch_images/2123490_1.webp',
   pedals: 'duell_images/47-143_1.webp',
   tyre: 'shimano_images/11A00671_1.webp',
+  rearTyre: 'csn_images/3528707664242_1.webp',
   studTyre: 'duell_images/0150091_1.webp',
   tube: 'duell_images/0182171_1.webp',
   tubeless: 'unicykel_images/FL2082501_1.webp',
   rim: 'unicykel_images/EL101910ROF_1.webp',
+  rearRim: 'unicykel_images/W10224_1.webp',
   wheel: 'duell_images/59295_1.webp',
   spoke: 'duell_images/GNLE1427200ZOI_1.webp',
   hub: 'csn_images/710845884597_1.webp',
+  rearHub: 'shimano_images/EFHM8110BC_1.webp',
+  quickRelease: 'csn_images/840840013033_1.webp',
+  thruAxle: 'shimano_images/EAXMT70014812_1.webp',
   hubGear: 'hartje_images/03455169_1.webp',
   discPads: 'hartje_images/03171824_1.webp',
   rimPads: 'hartje_images/07172596_1.webp',
   brakeCable: 'hartje_images/03079043_1.webp',
   bleed: 'boove_images/BK-80010_1.webp',
   caliper: 'hartje_images/08171910_1.webp',
+  rearCaliper: 'shimano_images/EBRMT410MPRXL_1.webp',
   rotor: 'shimano_images/ESMRT66SSP_1.webp',
   cassette: 'hartje_images/07370778_1.webp',
   derailleur: 'sportimport_images/406100194_1.webp',
@@ -58,6 +64,7 @@ const IMAGES = {
   skirtGuard: 'hoj24_images/18-621-09_1.webp',
   chainLube: 'shimano_images/MOT310216_1.webp',
   fork: 'hartje_images/08052938_1.webp',
+  frame: 'trek_images/5321427_1.webp',
   threadInsert: 'csn_images/3838909165516_1.webp',
   tools: 'duell_images/62467_1.webp',
 } as const;
@@ -107,7 +114,10 @@ const JOB_RULES: [RegExp, ImageKey][] = [
   [/framväxel/, 'frontDerailleur'],
   [/växel/, 'derailleur'],
   [/ekrar/, 'spoke'],
-  [/hjullager|body|\bnav\b|framnav|baknav|snabbkoppling|thru-axel/, 'hub'],
+  [/snabbkoppling/, 'quickRelease'],
+  [/thru-axel/, 'thruAxle'],
+  [/baknav/, 'rearHub'],
+  [/hjullager|body|\bnav\b|framnav/, 'hub'],
   [/gaffel|bakdämpare|\bram\b/, 'fork'],
   [/hjul/, 'wheel'],
   [/fälg/, 'rim'],
@@ -126,4 +136,43 @@ export function jobImageUrl(title: string): string {
   const text = title.toLowerCase();
   const hit = JOB_RULES.find(([pattern]) => pattern.test(text));
   return IMAGE_HOST + IMAGES[hit ? hit[1] : 'tools'];
+}
+
+/**
+ * One picture per inspection item, keyed by item id. Every item has its own
+ * picture (front and rear parts included), so no two cards look the same.
+ */
+const INSPECTION_IMAGES: Record<string, ImageKey> = {
+  'ground-headset': 'headset',
+  'rear-tire': 'rearTyre',
+  'rear-rim': 'rearRim',
+  'rear-hub': 'rearHub',
+  'rear-axle': 'thruAxle',
+  'rear-brake': 'rearCaliper',
+  'drive-cassette': 'cassette',
+  'drive-chain': 'chain',
+  'drive-derailleur': 'derailleur',
+  'drive-bb': 'bottomBracket',
+  'drive-chainrings': 'chainring',
+  'drive-pedals': 'pedals',
+  'mid-cables': 'shiftCable',
+  'mid-hoses': 'bleed',
+  'mid-frame': 'frame',
+  'mid-stem': 'stem',
+  'mid-saddle': 'saddle',
+  'mid-accessories': 'rack',
+  'mid-kickstand': 'kickstand',
+  'front-tire': 'tyre',
+  'front-rim': 'rim',
+  'front-hub': 'hub',
+  'front-axle': 'quickRelease',
+  'front-brake': 'caliper',
+  'extra-suspension': 'fork',
+  'extra-dropper': 'dropperPost',
+};
+
+/** The picture for an inspection item, falling back to its title match. */
+export function inspectionImageUrl(itemId: string, title: string): string {
+  const key = INSPECTION_IMAGES[itemId];
+  return key ? IMAGE_HOST + IMAGES[key] : jobImageUrl(title);
 }

@@ -12,6 +12,7 @@ import {
   View,
 } from 'react-native';
 import { jobImageUrl } from '../lib/jobImages';
+import { ImagePreviewModal } from './ImagePreviewModal';
 import { colors, radius } from '../lib/theme';
 import { PriceItem } from '../lib/types';
 
@@ -26,6 +27,7 @@ type Props = {
 export function AddJobModal({ visible, prices, onClose, onPick }: Props) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string | null>(null);
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
 
   const categories = useMemo(
     () =>
@@ -108,6 +110,7 @@ export function AddJobModal({ visible, prices, onClose, onPick }: Props) {
           data={filtered}
           keyExtractor={(item) => `${item.category}-${item.title}`}
           keyboardShouldPersistTaps="handled"
+          keyboardDismissMode="on-drag"
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
             <Pressable
@@ -117,24 +120,37 @@ export function AddJobModal({ visible, prices, onClose, onPick }: Props) {
               }}
               style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
             >
-              <Image
-                source={{ uri: jobImageUrl(item.title) }}
-                style={styles.rowImage}
-                contentFit="contain"
-                transition={150}
-              />
+              <Pressable
+                onPress={() => setPreviewUri(jobImageUrl(item.title))}
+                style={styles.rowImageButton}
+              >
+                <Image
+                  source={{ uri: jobImageUrl(item.title) }}
+                  style={styles.rowImage}
+                  contentFit="contain"
+                  transition={150}
+                />
+              </Pressable>
               <View style={styles.rowText}>
-                <Text style={styles.rowCategory}>{item.category.toUpperCase()}</Text>
-                <Text style={styles.rowTitle}>{item.title}</Text>
+                <Text style={styles.rowCategory} numberOfLines={1}>
+                  {item.category.toUpperCase()}
+                </Text>
+                <Text style={styles.rowTitle} numberOfLines={2}>
+                  {item.title}
+                </Text>
               </View>
               <Text style={styles.rowPrice}>{item.price} kr</Text>
             </Pressable>
           )}
         />
       </View>
+      <ImagePreviewModal uri={previewUri} onClose={() => setPreviewUri(null)} />
     </Modal>
   );
 }
+
+/** Fixed card height, so the square image always matches it. */
+const ROW_HEIGHT = 76;
 
 const styles = StyleSheet.create({
   sheet: {
@@ -224,17 +240,21 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    overflow: 'hidden',
+    height: ROW_HEIGHT,
+    paddingRight: 14,
   },
   rowPressed: {
     backgroundColor: colors.cardRaised,
   },
-  rowImage: {
-    width: 48,
-    height: 48,
-    borderRadius: radius.sm,
+  // The image fills the full card height, square, flush with the card edge.
+  rowImageButton: {
+    width: ROW_HEIGHT - 2, // card height minus its 1px top and bottom border
+    alignSelf: 'stretch',
     backgroundColor: '#fff',
+  },
+  rowImage: {
+    flex: 1,
   },
   rowText: {
     flex: 1,

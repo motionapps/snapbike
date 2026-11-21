@@ -27,6 +27,7 @@ type Props = {
   active: boolean;
   onStartCheckIn: (estimate: Estimate) => void;
   onStartInspection: (estimate: Estimate) => void;
+  onSelectBike: (estimate: Estimate) => void;
 };
 
 type Filter = 'active' | 'ready' | 'all';
@@ -60,7 +61,7 @@ function searchText(estimate: Estimate): string {
   return parts.join(' ').toLowerCase();
 }
 
-export function JobsScreen({ active, onStartCheckIn, onStartInspection }: Props) {
+export function JobsScreen({ active, onStartCheckIn, onStartInspection, onSelectBike }: Props) {
   const insets = useSafeAreaInsets();
   const [estimates, setEstimates] = useState<Estimate[] | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -255,6 +256,7 @@ export function JobsScreen({ active, onStartCheckIn, onStartInspection }: Props)
         onUpdateJobs={updateJobs}
         onStartCheckIn={onStartCheckIn}
         onStartInspection={onStartInspection}
+        onSelectBike={onSelectBike}
       />
     </View>
   );

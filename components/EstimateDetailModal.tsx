@@ -32,6 +32,7 @@ type Props = {
   onUpdateJobs: (id: string, jobs: Job[]) => void;
   onStartCheckIn: (estimate: Estimate) => void;
   onStartInspection: (estimate: Estimate) => void;
+  onSelectBike: (estimate: Estimate) => void;
 };
 
 /** The next step for each status: a label and what it does. */
@@ -47,6 +48,7 @@ export function EstimateDetailModal({
   onUpdateJobs,
   onStartCheckIn,
   onStartInspection,
+  onSelectBike,
 }: Props) {
   const [editing, setEditing] = useState<EditTarget | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -178,6 +180,20 @@ export function EstimateDetailModal({
                 <Text style={styles.actionButtonText}>{nextAction.label}</Text>
               </Pressable>
             ) : null}
+
+            <Pressable
+              onPress={() => {
+                close();
+                onSelectBike(estimate);
+              }}
+              style={({ pressed }) => [
+                styles.selectButton,
+                pressed && styles.selectButtonPressed,
+              ]}
+            >
+              <Ionicons name="bicycle" size={18} color={colors.text} />
+              <Text style={styles.selectButtonText}>Välj den här cykeln</Text>
+            </Pressable>
 
             <StatusPill
               status={estimate.status}
@@ -319,6 +335,26 @@ const styles = StyleSheet.create({
   },
   actionButtonPressed: {
     backgroundColor: colors.accentDark,
+  },
+  selectButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    paddingVertical: 12,
+  },
+  selectButtonPressed: {
+    backgroundColor: colors.cardRaised,
+  },
+  selectButtonText: {
+    color: colors.text,
+    fontWeight: '600',
+    fontSize: 15,
   },
   actionButtonText: {
     color: colors.onAccent,

@@ -6,6 +6,7 @@ import {
   setAudioModeAsync,
   useAudioRecorder,
 } from 'expo-audio';
+import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -25,7 +26,7 @@ import {
   jobsFromInspection,
   transcribeAudio,
 } from '../lib/api';
-import { jobImageUrl } from '../lib/jobImages';
+import { inspectionImageUrl } from '../lib/jobImages';
 import { useOrderContext } from '../lib/orderContext';
 import {
   INSPECTION_ITEM_COUNT,
@@ -43,7 +44,9 @@ for (const section of INSPECTION_TEMPLATE) {
 }
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from '../lib/speech';
 import { colors, gutter, radius } from '../lib/theme';
+import { ImagePreviewModal } from './ImagePreviewModal';
 import { MicButton, MicPhase } from './MicButton';
+import { WaveText } from './WaveText';
 
 const MIC_LABELS: Partial<Record<MicPhase, string>> = {
   idle: 'Prata in genomgången – tryck för att spela in',
@@ -72,6 +75,16 @@ export function InspectionScreen() {
   const scrollRef = useRef<ScrollView>(null);
   const sectionY = useRef<Record<string, number>>({});
   const transcriptRef = useRef('');
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
+  // Hold ✓ or ⚠ on an item to speak a comment into its note field.
+  const [dictation, setDictation] = useState<{
+    itemId: string;
+    status: InspectionStatus;
+    phase: 'recording' | 'transcribing';
+  } | null>(null);
+  const dictationRef = useRef<{ itemId: string; ready: Promise<boolean> } | null>(
+    null
+  );
 
   const useWebSpeech = !hasOpenAiKey && webSpeechAvailable;
 
@@ -109,41 +122,50 @@ export function InspectionScreen() {
     [scrollToItem]
   );
 
-  const startRecording = useCallback(async () => {
-    setMicError('');
-    if (useWebSpeech) {
-      try {
-        startWebSpeech(handlePhrase);
-        setPhase('recording');
-      } catch (err) {
-        setMicError(err instanceof Error ? err.message : String(err));
+  /** Starts capturing speech; false if the microphone was not allowed. */
+  const beginCapture = useCallback(
+    async (onPhrase?: (phrase: string) => void): Promise<boolean> => {
+      if (useWebSpeech) {
+        startWebSpeech(onPhrase);
+        return true;
       }
-      return;
+      const permission = await AudioModule.requestRecordingPermissionsAsync();
+      if (!permission.granted) {
+        Alert.alert('Mikrofon', 'Ge appen tillgång till mikrofonen i Inställningar.');
+        return false;
+      }
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      return true;
+    },
+    [recorder, useWebSpeech]
+  );
+
+  /** Stops capturing and returns the transcribed text. */
+  const endCapture = useCallback(async (): Promise<string> => {
+    if (useWebSpeech) return stopWebSpeech();
+    await recorder.stop();
+    await setAudioModeAsync({ allowsRecording: false });
+    const uri = recorder.uri;
+    if (!uri) throw new Error('Ingen inspelning hittades.');
+    return transcribeAudio(uri);
+  }, [recorder, useWebSpeech]);
+
+  const startRecording = useCallback(async () => {
+    if (dictationRef.current) return;
+    setMicError('');
+    try {
+      if (await beginCapture(handlePhrase)) setPhase('recording');
+    } catch (err) {
+      setMicError(err instanceof Error ? err.message : String(err));
     }
-    const permission = await AudioModule.requestRecordingPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Mikrofon', 'Ge appen tillgång till mikrofonen i Inställningar.');
-      return;
-    }
-    await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
-    await recorder.prepareToRecordAsync();
-    recorder.record();
-    setPhase('recording');
-  }, [handlePhrase, recorder, useWebSpeech]);
+  }, [beginCapture, handlePhrase]);
 
   const stopRecording = useCallback(async () => {
     try {
       setPhase('transcribing');
-      let text: string;
-      if (useWebSpeech) {
-        text = await stopWebSpeech();
-      } else {
-        await recorder.stop();
-        await setAudioModeAsync({ allowsRecording: false });
-        const uri = recorder.uri;
-        if (!uri) throw new Error('Ingen inspelning hittades.');
-        text = await transcribeAudio(uri);
-      }
+      const text = await endCapture();
       if (!text) throw new Error('Ingen text uppfattades – försök igen.');
       // Spara hela inspelningen (för att kunna skapa jobblista med delar).
       transcriptRef.current = `${transcriptRef.current} ${text}`.trim();
@@ -157,7 +179,55 @@ export function InspectionScreen() {
     } finally {
       setPhase('idle');
     }
-  }, [recorder, useWebSpeech]);
+  }, [endCapture]);
+
+  /** Long press on ✓/⚠: set that status and start listening for a comment. */
+  const startDictation = useCallback(
+    (itemId: string, status: InspectionStatus) => {
+      if (phase !== 'idle' || dictationRef.current) return;
+      setMicError('');
+      setResults((current) => ({
+        ...current,
+        [itemId]: { status, note: current[itemId]?.note ?? '' },
+      }));
+      const ready = beginCapture()
+        .then((started) => {
+          // Short tick when the microphone is actually live.
+          if (started) void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          return started;
+        })
+        .catch((err) => {
+          setMicError(err instanceof Error ? err.message : String(err));
+          return false;
+        });
+      dictationRef.current = { itemId, ready };
+      setDictation({ itemId, status, phase: 'recording' });
+    },
+    [phase, beginCapture]
+  );
+
+  /** Release after a long press: transcribe and append to the item's note. */
+  const stopDictation = useCallback(async () => {
+    const current = dictationRef.current;
+    if (!current) return;
+    try {
+      if (!(await current.ready)) return;
+      setDictation((d) => (d ? { ...d, phase: 'transcribing' } : d));
+      const text = (await endCapture()).trim();
+      if (!text) throw new Error('Ingen text uppfattades – försök igen.');
+      setResults((state) => {
+        const existing = state[current.itemId];
+        if (!existing) return state;
+        const note = existing.note.trim() ? `${existing.note.trim()} ${text}` : text;
+        return { ...state, [current.itemId]: { ...existing, note } };
+      });
+    } catch (err) {
+      setMicError(err instanceof Error ? err.message : String(err));
+    } finally {
+      dictationRef.current = null;
+      setDictation(null);
+    }
+  }, [endCapture]);
 
   const handleMic = useCallback(() => {
     if (phase === 'recording') void stopRecording();
@@ -261,6 +331,7 @@ export function InspectionScreen() {
           { paddingBottom: insets.bottom + 24 },
         ]}
         keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
       >
         <View style={styles.micCard}>
           <MicButton
@@ -277,7 +348,8 @@ export function InspectionScreen() {
           <Text style={styles.micHint}>
             Prata dig igenom cykeln bak → fram. Punkterna bockas av och listan
             scrollar med medan du pratar; när du stoppar finjusteras allt. Du
-            kan alltid ändra manuellt.
+            kan alltid ändra manuellt. Håll in ✓ eller ⚠ på en punkt för att
+            prata in en kommentar.
           </Text>
         </View>
 
@@ -312,49 +384,80 @@ export function InspectionScreen() {
 
               {section.items.map((item) => {
                 const result = results[item.id];
+                const imageUri = inspectionImageUrl(item.id, item.title);
+                const listening =
+                  dictation?.itemId === item.id ? dictation : null;
+                const statusButton = (
+                  icon: string,
+                  status: InspectionStatus,
+                  activeColor: string,
+                  canDictate: boolean
+                ) => (
+                  <StatusButton
+                    icon={
+                      listening?.status === status && listening.phase === 'recording'
+                        ? 'mic'
+                        : icon
+                    }
+                    active={result?.status === status}
+                    activeColor={activeColor}
+                    onPress={() => setStatus(item.id, status)}
+                    onLongPress={
+                      canDictate ? () => startDictation(item.id, status) : undefined
+                    }
+                    onPressOut={canDictate ? () => void stopDictation() : undefined}
+                  />
+                );
                 return (
                   <View key={item.id} style={styles.itemCard}>
                     <View style={styles.itemRow}>
-                      <Image
-                        source={{ uri: jobImageUrl(item.title) }}
-                        style={styles.itemImage}
-                        contentFit="contain"
-                        transition={150}
-                      />
+                      <Pressable
+                        onPress={() => setPreviewUri(imageUri)}
+                        style={styles.itemImageButton}
+                      >
+                        <Image
+                          source={{ uri: imageUri }}
+                          style={styles.itemImage}
+                          contentFit="contain"
+                          transition={150}
+                        />
+                      </Pressable>
                       <View style={styles.itemText}>
-                        <Text style={styles.itemTitle}>{item.title}</Text>
-                        <Text style={styles.itemHint}>{item.hint}</Text>
+                        <Text style={styles.itemTitle} numberOfLines={2}>
+                          {item.title}
+                        </Text>
+                        <Text style={styles.itemHint} numberOfLines={2}>
+                          {item.hint}
+                        </Text>
                       </View>
                       <View style={styles.statusRow}>
-                        <StatusButton
-                          icon="checkmark"
-                          active={result?.status === 'ok'}
-                          activeColor={colors.accent}
-                          onPress={() => setStatus(item.id, 'ok')}
-                        />
-                        <StatusButton
-                          icon="warning"
-                          active={result?.status === 'issue'}
-                          activeColor={colors.danger}
-                          onPress={() => setStatus(item.id, 'issue')}
-                        />
-                        <StatusButton
-                          icon="remove"
-                          active={result?.status === 'skip'}
-                          activeColor={colors.textSecondary}
-                          onPress={() => setStatus(item.id, 'skip')}
-                        />
+                        {statusButton('checkmark', 'ok', colors.accent, true)}
+                        {statusButton('warning', 'issue', colors.danger, true)}
+                        {statusButton('remove', 'skip', colors.textSecondary, false)}
                       </View>
                     </View>
-                    {result?.status === 'issue' ? (
-                      <TextInput
-                        style={styles.noteInput}
-                        placeholder="Anteckning (t.ex. kedja 0,75 % sliten)"
-                        placeholderTextColor={colors.textFaint}
-                        value={result.note}
-                        onChangeText={(text) => setNote(item.id, text)}
-                        multiline
-                      />
+                    {result && result.status !== 'skip' ? (
+                      <View style={styles.noteWrap}>
+                        <TextInput
+                          style={styles.noteInput}
+                          placeholder={
+                            listening?.phase === 'recording'
+                              ? 'Lyssnar… släpp när du är klar'
+                              : listening?.phase === 'transcribing'
+                                ? ''
+                                : 'Anteckning (t.ex. kedja 0,75 % sliten)'
+                          }
+                          placeholderTextColor={colors.textFaint}
+                          value={result.note}
+                          onChangeText={(text) => setNote(item.id, text)}
+                          multiline
+                        />
+                        {listening?.phase === 'transcribing' && !result.note ? (
+                          <View style={styles.noteOverlay} pointerEvents="none">
+                            <WaveText text="Transkriberar…" style={styles.noteWaveText} />
+                          </View>
+                        ) : null}
+                      </View>
                     ) : null}
                   </View>
                 );
@@ -462,6 +565,7 @@ export function InspectionScreen() {
           ) : null}
         </View>
       </ScrollView>
+      <ImagePreviewModal uri={previewUri} onClose={() => setPreviewUri(null)} />
     </View>
   );
 }
@@ -471,12 +575,24 @@ type StatusButtonProps = {
   active: boolean;
   activeColor: string;
   onPress: () => void;
+  onLongPress?: () => void;
+  onPressOut?: () => void;
 };
 
-function StatusButton({ icon, active, activeColor, onPress }: StatusButtonProps) {
+function StatusButton({
+  icon,
+  active,
+  activeColor,
+  onPress,
+  onLongPress,
+  onPressOut,
+}: StatusButtonProps) {
   return (
     <Pressable
       onPress={onPress}
+      onLongPress={onLongPress}
+      onPressOut={onPressOut}
+      delayLongPress={350}
       style={[
         styles.statusButton,
         active && { backgroundColor: activeColor, borderColor: activeColor },
@@ -484,12 +600,15 @@ function StatusButton({ icon, active, activeColor, onPress }: StatusButtonProps)
     >
       <Ionicons
         name={icon as never}
-        size={18}
+        size={23}
         color={active ? colors.bg : colors.textFaint}
       />
     </Pressable>
   );
 }
+
+/** Fixed item row height, so the square image always matches it. */
+const ITEM_ROW_HEIGHT = 76;
 
 const styles = StyleSheet.create({
   root: {
@@ -600,19 +719,23 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.border,
-    padding: 12,
-    gap: 10,
+    overflow: 'hidden',
   },
   itemRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    height: ITEM_ROW_HEIGHT,
+    paddingRight: 12,
+  },
+  // The image fills the full row height, square, flush with the card edge.
+  itemImageButton: {
+    width: ITEM_ROW_HEIGHT,
+    height: ITEM_ROW_HEIGHT,
+    backgroundColor: '#fff',
   },
   itemImage: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.sm,
-    backgroundColor: '#fff',
+    flex: 1,
   },
   itemText: {
     flex: 1,
@@ -628,12 +751,12 @@ const styles = StyleSheet.create({
   },
   statusRow: {
     flexDirection: 'row',
-    gap: 6,
+    gap: 12,
   },
   statusButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 41,
+    height: 41,
+    borderRadius: 20.5,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cardRaised,
@@ -649,6 +772,21 @@ const styles = StyleSheet.create({
     color: colors.text,
     padding: 10,
     minHeight: 40,
+  },
+  noteWrap: {
+    margin: 12,
+    marginTop: 0,
+  },
+  noteOverlay: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    left: 11,
+    justifyContent: 'center',
+  },
+  noteWaveText: {
+    color: colors.text,
+    fontSize: 15,
   },
   allOk: {
     flexDirection: 'row',
