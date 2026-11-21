@@ -23,6 +23,8 @@ export type Task = {
   severity?: 'kritisk' | 'normal';
   /** Kundens beslut per åtgärd; undefined = ej beslutat än. */
   approval?: 'godkänd' | 'nekad';
+  /** Inspection checklist item ids this task fixes; places it on the customer's bike silhouette. */
+  inspectionItemIds?: string[];
 };
 
 /**
@@ -97,6 +99,8 @@ export const JOB_STATUSES = [
   'booked',
   'checked_in',
   'inspected',
+  'customer_approved',
+  'in_progress',
   'ready',
   'delivered',
 ] as const;
@@ -107,6 +111,8 @@ export const STATUS_LABELS: Record<JobStatus, string> = {
   booked: 'Bokad',
   checked_in: 'Inlämnad',
   inspected: 'Besiktigad',
+  customer_approved: 'Godkänd av kund',
+  in_progress: 'Under arbete',
   ready: 'Klar',
   delivered: 'Utlämnad',
 };
@@ -125,6 +131,10 @@ export type Job = {
   bikeNumber: string;
   /** Saved Besiktning checklist for this bike. */
   inspection: InspectionState;
+  /** Secret token in the customer link. */
+  shareToken: string;
+  /** When the customer first answered via the link; null if not yet. */
+  customerRespondedAt: string | null;
 };
 
 export function uid(): string {

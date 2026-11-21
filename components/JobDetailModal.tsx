@@ -6,15 +6,18 @@ import {
   Modal,
   Platform,
   Pressable,
+  Share,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from 'react-native';
+import { shareMessage } from '../lib/customerLink';
 import { jobImageUrl } from '../lib/supabase';
 import { colors, gutter, radius } from '../lib/theme';
 import { Job, Task, JobStatus, tasksTotal } from '../lib/types';
+import { JobDataOverview } from './JobDataOverview';
 import { StatusPill } from './StatusPill';
 
 const dateFormat = new Intl.DateTimeFormat('sv-SE', {
@@ -105,6 +108,13 @@ export function JobDetailModal({
           },
         };
       case 'inspected':
+      case 'customer_approved':
+        return {
+          label: 'Starta arbetet',
+          icon: 'construct',
+          run: () => onChangeStatus(job.id, 'in_progress'),
+        };
+      case 'in_progress':
         return {
           label: 'Markera klar',
           icon: 'checkmark-circle',
@@ -178,6 +188,25 @@ export function JobDetailModal({
                   color={colors.onAccent}
                 />
                 <Text style={styles.actionButtonText}>{nextAction.label}</Text>
+              </Pressable>
+            ) : null}
+
+            {job.tasks.length > 0 ? (
+              <Pressable
+                onPress={() =>
+                  Share.share({
+                    message: shareMessage(job.customer?.firstName ?? '', job.shareToken),
+                  })
+                }
+                style={({ pressed }) => [
+                  styles.selectButton,
+                  pressed && styles.selectButtonPressed,
+                ]}
+              >
+                <Ionicons name="share-outline" size={18} color={colors.text} />
+                <Text style={styles.selectButtonText}>
+                  {job.customerRespondedAt ? 'Dela med kund igen' : 'Dela med kund'}
+                </Text>
               </Pressable>
             ) : null}
 
@@ -276,6 +305,8 @@ export function JobDetailModal({
                 {tasksTotal(job.tasks).toLocaleString('sv-SE')} kr
               </Text>
             </View>
+
+            <JobDataOverview job={job} />
           </ScrollView>
         </KeyboardAvoidingView>
       ) : (

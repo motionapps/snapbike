@@ -193,13 +193,15 @@ type JobRow = {
   bike: BikeData | null;
   bike_number: string | null;
   inspection: InspectionState | null;
+  share_token: string;
+  customer_responded_at: string | null;
 };
 
 /** Fetches saved jobs, newest first, optionally only one status. */
 export async function fetchJobs(status?: JobStatus): Promise<Job[]> {
   let query = supabase
     .from('snapbike_jobs')
-    .select('id, created_at, transcript, tasks, image_path, total, status, customer:snapbike_customer(first_name, last_name, phone, email), bike, bike_number, inspection')
+    .select('id, created_at, transcript, tasks, image_path, total, status, customer:snapbike_customer(first_name, last_name, phone, email), bike, bike_number, inspection, share_token, customer_responded_at')
     .order('created_at', { ascending: false });
   if (status) query = query.eq('status', status);
   const { data, error } = await query;
@@ -220,6 +222,8 @@ export async function fetchJobs(status?: JobStatus): Promise<Job[]> {
     bike: row.bike,
     bikeNumber: row.bike_number ?? '',
     inspection: row.inspection ?? {},
+    shareToken: row.share_token,
+    customerRespondedAt: row.customer_responded_at,
   }));
 }
 

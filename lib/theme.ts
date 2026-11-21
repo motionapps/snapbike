@@ -20,6 +20,8 @@ export const statusColors = {
   booked: '#8A96A3',
   checked_in: '#5AC8FA',
   inspected: '#FFB340',
+  customer_approved: '#BF5AF2',
+  in_progress: '#FF9F0A',
   ready: '#B9F13C',
   delivered: '#8FBF1F',
 };

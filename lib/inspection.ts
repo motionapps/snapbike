@@ -132,13 +132,14 @@ export const INSPECTION_ITEM_COUNT = INSPECTION_TEMPLATE.reduce(
 /** All issues in template order, with section/item titles for display. */
 export function inspectionIssues(
   state: InspectionState
-): { section: string; title: string; note: string }[] {
-  const issues: { section: string; title: string; note: string }[] = [];
+): { itemId: string; section: string; title: string; note: string }[] {
+  const issues: { itemId: string; section: string; title: string; note: string }[] = [];
   for (const section of INSPECTION_TEMPLATE) {
     for (const item of section.items) {
       const result = state[item.id];
       if (result?.status === 'issue') {
         issues.push({
+          itemId: item.id,
           section: section.title,
           title: item.title,
           note: result.note.trim(),

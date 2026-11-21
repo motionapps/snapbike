@@ -19,7 +19,7 @@ const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY ?? '';
 export const hasOpenAiKey = OPENAI_KEY.startsWith('sk-');
 
 /**
- * Sends a recorded audio file to OpenAI Whisper and returns the Swedish
+ * Sends a recorded audio file to OpenAI gpt-transcribe and returns the Swedish
  * transcript.
  */
 export async function transcribeAudio(audioUri: string): Promise<string> {
@@ -37,8 +37,9 @@ export async function transcribeAudio(audioUri: string): Promise<string> {
   } else {
     form.append('file', new File(audioUri) as unknown as Blob, 'recording.m4a');
   }
-  form.append('model', 'whisper-1');
-  form.append('language', 'sv');
+  form.append('model', 'gpt-transcribe');
+  // gpt-transcribe takes a `languages` array instead of whisper-1's `language`.
+  form.append('languages[]', 'sv');
 
   const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method: 'POST',
@@ -48,7 +49,7 @@ export async function transcribeAudio(audioUri: string): Promise<string> {
 
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`Whisper-fel (${res.status}): ${body.slice(0, 200)}`);
+    throw new Error(`Transkriberingsfel (${res.status}): ${body.slice(0, 200)}`);
   }
 
   const json = (await res.json()) as { text: string };
@@ -133,6 +134,13 @@ const JOB_ITEM_SCHEMA = {
         required: ['name', 'price'],
       },
     },
+    inspectionItemIds: {
+      type: 'array',
+      items: { type: 'string' },
+      description:
+        'Id:n (inom hakparentes, t.ex. "drive-cassette") för de ' +
+        'besiktningsanmärkningar som jobbet åtgärdar. Tom lista om inga.',
+    },
   },
   required: ['title', 'category', 'price', 'products'],
 };
@@ -184,6 +192,7 @@ type ToolTask = {
   price: number;
   severity?: 'kritisk' | 'normal';
   products: ToolProduct[];
+  inspectionItemIds?: string[];
 };
 
 type ContentBlock = {
@@ -271,7 +280,7 @@ async function runToolLoop(
   const messages: MessageParam[] = [{ role: 'user', content: userContent }];
 
   for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-    const forceFinal = round === MAX_TOOL_ROUNDS;
+    const lastRoundNext = round + 1 === MAX_TOOL_ROUNDS;
     const res = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -281,7 +290,7 @@ async function runToolLoop(
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: 'claude-sonnet-5',
+        model: 'claude-sonnet-5-5',
         max_tokens: 4096,
         // Promptcache på den statiska systemprompten (prislista + regler):
         // sökrundorna och efterföljande analyser återanvänder cachen, vilket
@@ -291,12 +300,13 @@ async function runToolLoop(
         ],
         // Strukturerad matchning behöver inget "tänkande" – att stänga av det
         // halverar nästan svarstiden utan kvalitetstapp (benchmarkat).
-        thinking: { type: 'disabled' },
+        // Sonnet 5.5 avvisar 'disabled'; 'between_tools' är dess avstängda läge.
+        thinking: { type: 'between_tools' },
         messages,
         tools: [SEARCH_STOCK_TOOL, finalTool],
-        tool_choice: forceFinal
-          ? { type: 'tool', name: finalTool.name }
-          : { type: 'auto' },
+        // Sonnet 5.5 tillåter inte tvingad tool_choice; sista rundan styrs
+        // i stället med en instruktion i föregående meddelande.
+        tool_choice: { type: 'auto' },
       }),
     });
 
@@ -320,15 +330,18 @@ async function runToolLoop(
     messages.push({ role: 'assistant', content: json.content });
 
     if (searches.length > 0) {
+      const results = searches.map((block) => ({
+        type: 'tool_result' as const,
+        tool_use_id: block.id ?? '',
+        content: JSON.stringify(
+          searchStock(String((block.input as { query?: string })?.query ?? ''))
+        ),
+      }));
       messages.push({
         role: 'user',
-        content: searches.map((block) => ({
-          type: 'tool_result' as const,
-          tool_use_id: block.id ?? '',
-          content: JSON.stringify(
-            searchStock(String((block.input as { query?: string })?.query ?? ''))
-          ),
-        })),
+        content: lastRoundNext
+          ? [...results, { type: 'text' as const, text: `Inga fler sökningar. Anropa ${finalTool.name} nu.` }]
+          : results,
       });
     } else {
       // Inget verktygsanrop alls – be om svaret explicit.
@@ -369,7 +382,7 @@ export async function analyzeTranscript(
  * intalade jobblistan – så personalen bara behöver prata igenom besiktningen.
  */
 export async function tasksFromInspection(
-  issues: { section: string; title: string; note: string }[],
+  issues: { itemId: string; section: string; title: string; note: string }[],
   transcript: string,
   prices: PriceItem[]
 ): Promise<Task[]> {
@@ -379,7 +392,7 @@ export async function tasksFromInspection(
       'besiktningen:',
     ...issues.map(
       (issue) =>
-        `- ${issue.title} (${issue.section})${issue.note ? `: ${issue.note}` : ''}`
+        `- [${issue.itemId}] ${issue.title} (${issue.section})${issue.note ? `: ${issue.note}` : ''}`
     ),
   ];
   if (transcript.trim()) {
@@ -429,7 +442,11 @@ export async function refineTask(
   if (!input.task) {
     throw new Error('Claude returnerade inget uppdaterat jobb.');
   }
-  return { ...mapTask(input.task), id: task.id };
+  return {
+    ...mapTask(input.task),
+    id: task.id,
+    inspectionItemIds: task.inspectionItemIds,
+  };
 }
 
 function mapTask(task: ToolTask): Task {
@@ -439,6 +456,9 @@ function mapTask(task: ToolTask): Task {
     category: task.category,
     price: task.price,
     severity: task.severity,
+    inspectionItemIds: (task.inspectionItemIds ?? []).filter((id) =>
+      VALID_ITEM_IDS.has(id)
+    ),
     products: (task.products ?? []).map((product) => ({
       id: uid(),
       name: product.name,
@@ -531,41 +551,51 @@ export async function analyzeInspection(
     throw new Error('EXPO_PUBLIC_ANTHROPIC_API_KEY saknas i .env');
   }
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-5',
-      max_tokens: 1024,
-      thinking: { type: 'disabled' },
-      system: [
-        {
-          type: 'text',
-          text: INSPECTION_PROMPT,
-          cache_control: { type: 'ephemeral' },
-        },
-      ],
-      messages: [{ role: 'user', content: transcript }],
-      tools: [SET_INSPECTION_TOOL],
-      tool_choice: { type: 'tool', name: 'set_inspection' },
-    }),
-  });
+  // Sonnet 5.5 tillåter inte tvingad tool_choice: be om verktyget i prompten
+  // och försök en gång till om modellen svarade utan att anropa det.
+  const messages: MessageParam[] = [{ role: 'user', content: transcript }];
+  let items: ToolInspection['items'];
+  for (let attempt = 0; attempt < 2 && !items; attempt++) {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': ANTHROPIC_KEY,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-5-5',
+        max_tokens: 1024,
+        thinking: { type: 'between_tools' },
+        system: [
+          {
+            type: 'text',
+            text: INSPECTION_PROMPT,
+            cache_control: { type: 'ephemeral' },
+          },
+        ],
+        messages,
+        tools: [SET_INSPECTION_TOOL],
+        tool_choice: { type: 'auto' },
+      }),
+    });
 
-  if (!res.ok) {
-    const body = await res.text();
-    throw new Error(`Claude-fel (${res.status}): ${body.slice(0, 200)}`);
+    if (!res.ok) {
+      const body = await res.text();
+      throw new Error(`Claude-fel (${res.status}): ${body.slice(0, 200)}`);
+    }
+
+    const json = (await res.json()) as { content: ContentBlock[] };
+    const toolUse = json.content.find(
+      (block) => block.type === 'tool_use' && block.name === 'set_inspection'
+    );
+    items = (toolUse?.input as ToolInspection | undefined)?.items;
+    messages.push(
+      { role: 'assistant', content: json.content },
+      { role: 'user', content: 'Anropa set_inspection nu.' }
+    );
   }
-
-  const json = (await res.json()) as { content: ContentBlock[] };
-  const toolUse = json.content.find(
-    (block) => block.type === 'tool_use' && block.name === 'set_inspection'
-  );
-  const items = (toolUse?.input as ToolInspection | undefined)?.items;
   if (!items) {
     throw new Error('Claude returnerade ingen besiktning.');
   }
