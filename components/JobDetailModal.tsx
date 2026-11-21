@@ -19,6 +19,7 @@ import { Job, Task, JobStatus, tasksTotal } from '../lib/types';
 import { BikeDetails } from './BikeDetails';
 import { InspectionSummary } from './InspectionSummary';
 import { JobHeader } from './JobHeader';
+import { CommentField, JobNotesModal, NoteEntry } from './JobNotesModal';
 import { StatusPill } from './StatusPill';
 import { ZoomableImageModal } from './ZoomableImageModal';
 
@@ -27,6 +28,7 @@ type Props = {
   onClose: () => void;
   onChangeStatus: (id: string, status: JobStatus) => void;
   onUpdateTasks: (id: string, tasks: Task[]) => void;
+  onUpdateComment: (id: string, field: CommentField, text: string) => void;
   onStartCheckIn: (job: Job) => void;
   onEditBikeDetails: (job: Job) => void;
   onEditCustomer: (job: Job) => void;
@@ -46,6 +48,7 @@ export function JobDetailModal({
   onClose,
   onChangeStatus,
   onUpdateTasks,
+  onUpdateComment,
   onStartCheckIn,
   onEditBikeDetails,
   onEditCustomer,
@@ -56,6 +59,15 @@ export function JobDetailModal({
   const [editing, setEditing] = useState<EditTarget | null>(null);
   const [editValue, setEditValue] = useState('');
   const [zoomUri, setZoomUri] = useState<string | null>(null);
+  // Snapshot of what the notes modal shows; null when it is closed.
+  const [notes, setNotes] = useState<NoteEntry[] | null>(null);
+
+  const transcripts: NoteEntry[] = job
+    ? [
+        { title: 'Mottagningstranskribering', text: job.transcript },
+        { title: 'Besiktningstranskribering', text: job.inspectionTranscript },
+      ].filter((entry) => entry.text.trim() !== '')
+    : [];
 
   const startEdit = (target: EditTarget, price: number) => {
     setEditing(target);
@@ -104,6 +116,7 @@ export function JobDetailModal({
 
   const close = () => {
     setZoomUri(null);
+    setNotes(null);
     setEditing(null);
     setEditValue('');
     onClose();
@@ -207,6 +220,41 @@ export function JobDetailModal({
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
           >
+            <StatusPill
+              status={job.status}
+              onChange={(status) => onChangeStatus(job.id, status)}
+            />
+
+            <View style={styles.buttonRow}>
+              <NoteButton
+                label="Kundkommentar"
+                icon="chatbubble"
+                filled={job.customerComment.trim() !== ''}
+                onPress={() =>
+                  setNotes([
+                    { title: 'Kundkommentar', text: job.customerComment, field: 'customerComment' },
+                  ])
+                }
+              />
+              <NoteButton
+                label="Verkstadskommentar"
+                icon="construct"
+                filled={job.mechanicComment.trim() !== ''}
+                onPress={() =>
+                  setNotes([
+                    { title: 'Verkstadskommentar', text: job.mechanicComment, field: 'mechanicComment' },
+                  ])
+                }
+              />
+              <NoteButton
+                label="Transkribering"
+                icon="document-text"
+                filled={transcripts.length > 0}
+                disabled={transcripts.length === 0}
+                onPress={() => setNotes(transcripts)}
+              />
+            </View>
+
             {job.imagePath ? (
               <Pressable onPress={() => setZoomUri(jobImageUrl(job.imagePath))}>
                 <Image
@@ -230,41 +278,42 @@ export function JobDetailModal({
               </View>
             ) : null}
 
-            {nextAction ? (
+            <View style={styles.buttonRow}>
+              {nextAction ? (
+                <Pressable
+                  onPress={nextAction.run}
+                  style={({ pressed }) => [
+                    styles.actionButton,
+                    pressed && styles.actionButtonPressed,
+                  ]}
+                >
+                  <Ionicons
+                    name={nextAction.icon as never}
+                    size={18}
+                    color={colors.onAccent}
+                  />
+                  <Text style={styles.actionButtonText} numberOfLines={1}>
+                    {nextAction.label}
+                  </Text>
+                </Pressable>
+              ) : null}
+
               <Pressable
-                onPress={nextAction.run}
+                onPress={() => {
+                  close();
+                  onSelectBike(job);
+                }}
                 style={({ pressed }) => [
-                  styles.actionButton,
-                  pressed && styles.actionButtonPressed,
+                  styles.selectButton,
+                  pressed && styles.selectButtonPressed,
                 ]}
               >
-                <Ionicons
-                  name={nextAction.icon as never}
-                  size={18}
-                  color={colors.onAccent}
-                />
-                <Text style={styles.actionButtonText}>{nextAction.label}</Text>
+                <Ionicons name="bicycle" size={18} color={colors.text} />
+                <Text style={styles.selectButtonText} numberOfLines={1}>
+                  Välj den här cykeln
+                </Text>
               </Pressable>
-            ) : null}
-
-            <Pressable
-              onPress={() => {
-                close();
-                onSelectBike(job);
-              }}
-              style={({ pressed }) => [
-                styles.selectButton,
-                pressed && styles.selectButtonPressed,
-              ]}
-            >
-              <Ionicons name="bicycle" size={18} color={colors.text} />
-              <Text style={styles.selectButtonText}>Välj den här cykeln</Text>
-            </Pressable>
-
-            <StatusPill
-              status={job.status}
-              onChange={(status) => onChangeStatus(job.id, status)}
-            />
+            </View>
 
             <View style={styles.taskList}>
               {job.tasks.map((task) => (
@@ -353,6 +402,12 @@ export function JobDetailModal({
             </Pressable>
           </ScrollView>
           <ZoomableImageModal uri={zoomUri} onClose={() => setZoomUri(null)} />
+          <JobNotesModal
+            entries={notes}
+            listTitle="Transkribering"
+            onSave={(field, text) => onUpdateComment(job.id, field, text)}
+            onClose={() => setNotes(null)}
+          />
         </KeyboardAvoidingView>
       ) : (
         <View style={styles.sheet} />
@@ -361,7 +416,63 @@ export function JobDetailModal({
   );
 }
 
+type NoteButtonProps = {
+  label: string;
+  icon: string;
+  /** Has content: shows the filled icon. */
+  filled: boolean;
+  disabled?: boolean;
+  onPress: () => void;
+};
+
+function NoteButton({ label, icon, filled, disabled, onPress }: NoteButtonProps) {
+  return (
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.noteButton,
+        pressed && styles.selectButtonPressed,
+        disabled && styles.noteButtonDisabled,
+      ]}
+    >
+      <Ionicons
+        name={(filled ? icon : `${icon}-outline`) as never}
+        size={18}
+        color={filled ? colors.accent : colors.textSecondary}
+      />
+      <Text style={styles.noteButtonText} numberOfLines={1} adjustsFontSizeToFit>
+        {label}
+      </Text>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
+  buttonRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  noteButton: {
+    flex: 1,
+    alignItems: 'center',
+    gap: 4,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    paddingVertical: 10,
+    paddingHorizontal: 6,
+  },
+  noteButtonDisabled: {
+    opacity: 0.4,
+  },
+  noteButtonText: {
+    color: colors.text,
+    fontWeight: '600',
+    fontSize: 12,
+  },
   sheet: {
     flex: 1,
     backgroundColor: colors.bg,
@@ -381,6 +492,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   actionButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -389,11 +501,13 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderCurve: 'continuous',
     paddingVertical: 14,
+    paddingHorizontal: 8,
   },
   actionButtonPressed: {
     backgroundColor: colors.accentDark,
   },
   selectButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -403,7 +517,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.card,
-    paddingVertical: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
   },
   selectButtonPressed: {
     backgroundColor: colors.cardRaised,

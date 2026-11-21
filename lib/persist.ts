@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BikeData } from './bikeAnalysis';
 import type { InspectionState } from './inspection';
-import { ItemKind, Task, OrderInfo } from './types';
+import { ItemKind, JobComments, Task, OrderInfo } from './types';
 
 /**
  * Local auto-save of the current order (AsyncStorage: device storage on
@@ -18,6 +18,10 @@ export type Draft = {
   /** Photo analysis; missing in drafts saved before it existed. */
   bike?: BikeData | null;
   transcript: string;
+  /** Besiktning transcript; missing in drafts saved before it existed. */
+  inspectionTranscript?: string;
+  /** Kundkommentar and Verkstadskommentar; missing in drafts saved before they existed. */
+  comments?: JobComments;
   tasks: Task[];
   order: OrderInfo;
   /** Besiktning checklist; missing in drafts saved before it existed. */

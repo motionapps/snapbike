@@ -1,7 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { memo, useRef, useState } from 'react';
+import {
+  Animated,
+  Easing,
+  LayoutChangeEvent,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 import { jobImageUrl } from '../lib/supabase';
 import { colors, radius, shadow } from '../lib/theme';
 import { Job, JobStatus } from '../lib/types';
@@ -26,43 +34,70 @@ export const JobCard = memo(function JobCard({
   onPress,
 }: Props) {
   const imageUrl = jobImageUrl(job.imagePath);
-  const taskTitles = job.tasks.map((task) => task.title).join(' · ');
+  const [expanded, setExpanded] = useState(false);
+  const [contentHeight, setContentHeight] = useState(0);
+  const progress = useRef(new Animated.Value(0)).current;
   const customerName = job.customer
     ? `${job.customer.firstName} ${job.customer.lastName}`.trim()
     : '';
+
+  // Same expand/collapse animation as Mer information in BikeDetails.
+  const toggle = () => {
+    const next = !expanded;
+    setExpanded(next);
+    Animated.timing(progress, {
+      toValue: next ? 1 : 0,
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  };
+
+  const onContentLayout = (event: LayoutChangeEvent) => {
+    setContentHeight(event.nativeEvent.layout.height);
+  };
+
+  const rotate = progress.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
 
   return (
     <Pressable
       onPress={() => onPress(job.id)}
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
+      <StatusPill
+        status={job.status}
+        onChange={(status) => onChangeStatus(job.id, status)}
+      />
+
       <View style={styles.top}>
-        {imageUrl ? (
-          <Image
-            source={imageUrl}
-            style={styles.thumb}
-            contentFit="cover"
-            transition={150}
-          />
-        ) : (
-          <View style={[styles.thumb, styles.thumbEmpty]}>
-            <Ionicons name="bicycle" size={96} color={colors.textFaint} />
-          </View>
-        )}
+        <View style={styles.imageColumn}>
+          {imageUrl ? (
+            <Image
+              source={imageUrl}
+              style={styles.thumb}
+              contentFit="cover"
+              transition={150}
+            />
+          ) : (
+            <View style={[styles.thumb, styles.thumbEmpty]}>
+              <Ionicons name="bicycle" size={96} color={colors.textFaint} />
+            </View>
+          )}
+          <Text style={styles.name} numberOfLines={1}>
+            {customerName || 'Okänd kund'}
+          </Text>
+        </View>
         <View style={styles.info}>
           {job.bikeNumber ? (
             <View style={styles.tag}>
               <Text style={styles.tagText}>#{job.bikeNumber}</Text>
             </View>
           ) : null}
-          <Text style={styles.name} numberOfLines={1}>
-            {customerName || 'Okänd kund'}
-          </Text>
           <Text style={styles.date}>
             {dateFormat.format(new Date(job.createdAt))}
-          </Text>
-          <Text style={styles.tasks} numberOfLines={2}>
-            {taskTitles || 'Inga jobb'}
           </Text>
           <Text style={styles.total}>
             {job.total.toLocaleString('sv-SE')} kr
@@ -70,10 +105,44 @@ export const JobCard = memo(function JobCard({
         </View>
       </View>
 
-      <StatusPill
-        status={job.status}
-        onChange={(status) => onChangeStatus(job.id, status)}
-      />
+      <View>
+        <Pressable onPress={toggle} style={styles.tasksHeader} hitSlop={4}>
+          <Text style={styles.tasksHeaderText}>
+            {job.tasks.length ? `Att göra (${job.tasks.length})` : 'Inga jobb'}
+          </Text>
+          {job.tasks.length ? (
+            <Animated.View style={[styles.chevron, { transform: [{ rotate }] }]}>
+              <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
+            </Animated.View>
+          ) : null}
+        </Pressable>
+        <Animated.View
+          style={[
+            styles.tasksBody,
+            {
+              height: progress.interpolate({
+                inputRange: [0, 1],
+                outputRange: [0, contentHeight],
+              }),
+              opacity: progress,
+            },
+          ]}
+          pointerEvents="none"
+        >
+          {/* Absolutely positioned so it lays out at its natural height. */}
+          <View style={styles.tasksContent} onLayout={onContentLayout}>
+            {job.tasks.map((task, index) => (
+              <Text
+                key={task.id}
+                style={[styles.task, index > 0 && styles.taskDivider]}
+              >
+                {task.title}
+              </Text>
+            ))}
+          </View>
+        </Animated.View>
+      </View>
+
     </Pressable>
   );
 });
@@ -97,9 +166,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     gap: 18,
   },
+  imageColumn: {
+    width: 200,
+    gap: 10,
+  },
   thumb: {
-    width: 240,
-    height: 240,
+    width: 200,
+    height: 200,
     borderRadius: radius.md,
     borderCurve: 'continuous',
     backgroundColor: colors.cardRaised,
@@ -141,10 +214,39 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
-  tasks: {
+  tasksHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+  },
+  tasksHeaderText: {
+    flex: 1,
     color: colors.text,
     fontWeight: '600',
     fontSize: 16,
+  },
+  chevron: {
+    width: 18,
+    height: 18,
+  },
+  tasksBody: {
+    overflow: 'hidden',
+  },
+  tasksContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+  },
+  task: {
+    color: colors.text,
+    fontSize: 16,
+    paddingVertical: 10,
+  },
+  taskDivider: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
   },
   total: {
     marginTop: 4,

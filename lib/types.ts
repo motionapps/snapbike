@@ -120,7 +120,14 @@ export const STATUS_LABELS: Record<JobStatus, string> = {
 export type Job = {
   id: string;
   createdAt: string;
+  /** Spoken text from Mottagning. */
   transcript: string;
+  /** Spoken text from Besiktning. */
+  inspectionTranscript: string;
+  /** Kundkommentar, edited in the job modal. */
+  customerComment: string;
+  /** Verkstadskommentar, edited in the job modal. */
+  mechanicComment: string;
   tasks: Task[];
   imagePath: string | null;
   total: number;
@@ -136,6 +143,11 @@ export type Job = {
   /** When the customer first answered via the link; null if not yet. */
   customerRespondedAt: string | null;
 };
+
+/** Kundkommentar and Verkstadskommentar of a job. */
+export type JobComments = { customerComment: string; mechanicComment: string };
+
+export const EMPTY_COMMENTS: JobComments = { customerComment: '', mechanicComment: '' };
 
 export function uid(): string {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);

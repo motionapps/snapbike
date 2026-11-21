@@ -1,7 +1,7 @@
 import { Dispatch, SetStateAction, createContext, useContext } from 'react';
 import type { BikeAnalysisState } from '../components/BikeDetails';
 import type { InspectionState } from './inspection';
-import { ItemKind, Task, OrderInfo, PriceItem } from './types';
+import { ItemKind, JobComments, Task, OrderInfo, PriceItem } from './types';
 
 /**
  * Delad arbetsorder mellan besiktnings- och offertvyn: samma jobblista och
@@ -24,6 +24,12 @@ export type OrderContextValue = {
   /** Besiktning checklist of the current bike; auto-saved with the rest of the job. */
   inspection: InspectionState;
   setInspection: Dispatch<SetStateAction<InspectionState>>;
+  /** Spoken text from Besiktning; auto-saved with the job. */
+  inspectionTranscript: string;
+  setInspectionTranscript: Dispatch<SetStateAction<string>>;
+  /** Kundkommentar and Verkstadskommentar; auto-saved with the job. */
+  comments: JobComments;
+  setComments: Dispatch<SetStateAction<JobComments>>;
   /** True while the Besiktning tab is mid-edit (typing a note, recording);
    *  the Supabase auto-save waits until it ends. */
   holdSave: boolean;

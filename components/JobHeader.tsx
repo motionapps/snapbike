@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, gutter, radius } from '../lib/theme';
 import { Job, customerWarning } from '../lib/types';
 import { bikeLabel } from './BikeDetails';
+import { textColorOnBike } from './CurrentBikeBar';
 
 type Props = {
   job: Job;
@@ -20,9 +21,12 @@ export function JobHeader({ job, onClose, onPress }: Props) {
     ? [bikeLabel(bike.bike_type), bike.brand, bikeLabel(bike.color)].filter(Boolean).join(' · ')
     : '';
   const warning = customerWarning(customer);
+  // Tinted in the bike's colour, like the bar above the tabs.
+  const background = bike ? bike.color : colors.bg;
+  const textColor = bike ? textColorOnBike(bike.color) : colors.text;
 
   return (
-    <View style={styles.header}>
+    <View style={[styles.header, { backgroundColor: background }]}>
       <Pressable
         onPress={onPress}
         style={({ pressed }) => [styles.edit, pressed && styles.editPressed]}
@@ -33,20 +37,22 @@ export function JobHeader({ job, onClose, onPress }: Props) {
           </View>
         ) : null}
         <View style={styles.info}>
-          <Text style={styles.name} numberOfLines={1}>
+          <Text style={[styles.name, { color: textColor }]} numberOfLines={1}>
             {name || 'Okänd kund'}
           </Text>
-          {customer?.phone ? <Text style={styles.detail}>{customer.phone}</Text> : null}
+          {customer?.phone ? (
+            <Text style={[styles.detail, { color: textColor }]}>{customer.phone}</Text>
+          ) : null}
           {bikeText ? (
             <View style={styles.bikeRow}>
               {bike ? <View style={[styles.colorDot, { backgroundColor: bike.color }]} /> : null}
-              <Text style={styles.detail} numberOfLines={1}>
+              <Text style={[styles.detail, { color: textColor }]} numberOfLines={1}>
                 {bikeText}
               </Text>
             </View>
           ) : null}
           {warning ? (
-            <View style={styles.bikeRow}>
+            <View style={styles.warningPill}>
               <Ionicons name="warning" size={13} color={colors.danger} />
               <Text style={styles.warning} numberOfLines={1}>
                 {warning}
@@ -116,18 +122,29 @@ const styles = StyleSheet.create({
     height: 10,
     borderRadius: 5,
     borderWidth: 1,
-    borderColor: colors.border,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
   },
   detail: {
     flexShrink: 1,
-    color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: 15,
+    opacity: 0.85,
+  },
+  warningPill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 2,
+    backgroundColor: 'rgba(11, 15, 20, 0.85)',
+    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
   },
   warning: {
     flexShrink: 1,
     color: colors.danger,
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: 14,
   },
   close: {
     alignSelf: 'flex-start',

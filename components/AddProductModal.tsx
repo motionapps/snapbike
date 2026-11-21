@@ -5,6 +5,7 @@ import {
   FlatList,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -13,6 +14,14 @@ import {
 import { hasInStockCache, searchInStock } from '../lib/inStockCache';
 import { searchProducts, SearchProduct } from '../lib/productSearch';
 import { colors, radius } from '../lib/theme';
+
+/** Most used products, one tap to add. Placeholders until the real list is decided. */
+const COMMON_PRODUCTS: { name: string; price: number }[] = [
+  { name: 'Marathon Plus däck', price: 0 },
+  { name: 'Marathon däck', price: 0 },
+  { name: 'Road Cruiser däck', price: 0 },
+  { name: 'Slang', price: 0 },
+];
 
 type Props = {
   visible: boolean;
@@ -84,11 +93,18 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
     onClose();
   };
 
-  const add = () => {
-    const trimmed = name.trim();
-    if (!trimmed) return;
-    onAdd(trimmed, Number(price.replace(',', '.')) || 0);
+  const addProduct = (productName: string, productPrice: number) => {
+    onAdd(productName, productPrice);
     reset();
+  };
+
+  // Manual entry: the name field, or the search text if no name was typed.
+  const manualName = name.trim() || query.trim();
+  const showAddButton = Boolean(query.trim() || name.trim() || price.trim());
+
+  const add = () => {
+    if (!manualName) return;
+    addProduct(manualName, Number(price.replace(',', '.')) || 0);
   };
 
   return (
@@ -100,6 +116,23 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
             <Ionicons name="close" size={20} color={colors.textSecondary} />
           </Pressable>
         </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          style={styles.commonScroll}
+          contentContainerStyle={styles.commonContent}
+        >
+          {COMMON_PRODUCTS.map((product) => (
+            <Pressable
+              key={product.name}
+              onPress={() => addProduct(product.name, product.price)}
+              style={({ pressed }) => [styles.chip, pressed && styles.rowPressed]}
+            >
+              <Text style={styles.chipText}>{product.name}</Text>
+            </Pressable>
+          ))}
+        </ScrollView>
         <View style={styles.searchRow}>
           <Ionicons name="search" size={17} color={colors.textFaint} />
           <TextInput
@@ -144,13 +177,15 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
             keyboardType="numeric"
           />
         </View>
-        <Pressable
-          onPress={add}
-          disabled={!name.trim()}
-          style={[styles.addButton, !name.trim() && styles.addButtonDisabled]}
-        >
-          <Text style={styles.addButtonText}>Lägg till</Text>
-        </Pressable>
+        {showAddButton ? (
+          <Pressable
+            onPress={add}
+            disabled={!manualName}
+            style={[styles.addButton, !manualName && styles.addButtonDisabled]}
+          >
+            <Text style={styles.addButtonText}>Lägg till</Text>
+          </Pressable>
+        ) : null}
         <FlatList
           data={results}
           keyExtractor={(item, index) => `${item.articleNumber}-${item.ean}-${index}`}
@@ -159,10 +194,7 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
           contentContainerStyle={styles.listContent}
           renderItem={({ item }) => (
             <Pressable
-              onPress={() => {
-                setName(item.name);
-                setPrice(item.sellPrice > 0 ? String(item.sellPrice) : '');
-              }}
+              onPress={() => addProduct(item.name, item.sellPrice > 0 ? item.sellPrice : 0)}
               style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
             >
               <View style={styles.rowText}>
@@ -215,6 +247,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cardRaised,
+  },
+  commonScroll: {
+    flexGrow: 0,
+    marginBottom: 12,
+  },
+  commonContent: {
+    paddingHorizontal: 20,
+    gap: 8,
+  },
+  chip: {
+    backgroundColor: colors.card,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+  },
+  chipText: {
+    color: colors.text,
+    fontWeight: '600',
   },
   searchRow: {
     flexDirection: 'row',

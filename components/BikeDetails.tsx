@@ -252,7 +252,7 @@ export function BikeDetails({ state, onRetry, onChange, onEdit, expandNonce }: P
     <View>
       <Pressable onPress={toggle} style={styles.header} hitSlop={4}>
         <Ionicons name="sparkles" size={15} color={colors.accent} />
-        <Text style={styles.headerText}>Mer information</Text>
+        <Text style={styles.headerText}>Information om cykeln</Text>
         {onEdit ? (
           <Pressable onPress={onEdit} hitSlop={8} style={styles.editButton}>
             <Ionicons name="create-outline" size={18} color={colors.textSecondary} />

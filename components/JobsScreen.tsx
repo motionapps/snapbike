@@ -17,11 +17,14 @@ import {
   deleteJob,
   fetchJobs,
   setJobStatus,
+  updateJobComments,
   updateJobTasks,
 } from '../lib/supabase';
 import { colors, gutter, radius } from '../lib/theme';
 import { Job, Task, JobStatus, tasksTotal } from '../lib/types';
 import { JobCard } from './JobCard';
+import { useOrderContext } from '../lib/orderContext';
+import { CommentField } from './JobNotesModal';
 import { JobDetailModal } from './JobDetailModal';
 
 type Props = {
@@ -158,6 +161,32 @@ export function JobsScreen({
     [load]
   );
 
+  const { order, setComments } = useOrderContext();
+
+  const updateComment = useCallback(
+    (id: string, field: CommentField, text: string) => {
+      const job = jobs?.find((e) => e.id === id);
+      if (!job) return;
+      const updated = { ...job, [field]: text };
+      // The current job auto-saves its own comments: keep them in step so the
+      // next auto-save doesn't write the old text back.
+      if (order.bookingId === id) {
+        setComments((current) => ({ ...current, [field]: text }));
+      }
+      setJobs((current) =>
+        current ? current.map((e) => (e.id === id ? updated : e)) : current
+      );
+      updateJobComments(id, {
+        customerComment: updated.customerComment,
+        mechanicComment: updated.mechanicComment,
+      }).catch((err) => {
+        setError(err instanceof Error ? err.message : String(err));
+        void load();
+      });
+    },
+    [jobs, load, order.bookingId, setComments]
+  );
+
   const removeJob = useCallback(
     (id: string) => {
       setJobs((current) => (current ? current.filter((e) => e.id !== id) : current));
@@ -292,6 +321,7 @@ export function JobsScreen({
         onClose={() => setOpenId(null)}
         onChangeStatus={changeStatus}
         onUpdateTasks={updateTasks}
+        onUpdateComment={updateComment}
         onStartCheckIn={onStartCheckIn}
         onEditBikeDetails={onEditBikeDetails}
         onEditCustomer={onEditCustomer}

@@ -64,9 +64,10 @@ export function InspectionScreen() {
     setTasks,
     goToOrder,
     prices,
-    order,
     inspection: results,
     setInspection: setResults,
+    inspectionTranscript,
+    setInspectionTranscript,
     setHoldSave,
   } = useOrderContext();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -75,7 +76,6 @@ export function InspectionScreen() {
   const [creatingTasks, setCreatingTasks] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const sectionY = useRef<Record<string, number>>({});
-  const transcriptRef = useRef('');
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   // Hold ✓ or ⚠ on an item to speak a comment into its note field.
   const [dictation, setDictation] = useState<{
@@ -95,19 +95,6 @@ export function InspectionScreen() {
   useEffect(() => {
     setHoldSave(noteFocused || phase !== 'idle' || dictation !== null);
   }, [noteFocused, phase, dictation, setHoldSave]);
-
-  // The spoken transcript belongs to the current bike: drop it when the bike
-  // changes or the checklist is cleared.
-  const isEmpty = Object.keys(results).length === 0;
-  // A new job getting its row id on first auto-save is still the same bike.
-  const previousBookingId = useRef(order.bookingId);
-  useEffect(() => {
-    if (previousBookingId.current !== null) transcriptRef.current = '';
-    previousBookingId.current = order.bookingId;
-  }, [order.bookingId]);
-  useEffect(() => {
-    if (isEmpty) transcriptRef.current = '';
-  }, [isEmpty]);
 
   const scrollToItem = useCallback((itemId: string) => {
     const y = sectionY.current[ITEM_SECTION[itemId]];
@@ -178,8 +165,8 @@ export function InspectionScreen() {
       setPhase('transcribing');
       const text = await endCapture();
       if (!text) throw new Error('Ingen text uppfattades – försök igen.');
-      // Spara hela inspelningen (för att kunna skapa jobblista med delar).
-      transcriptRef.current = `${transcriptRef.current} ${text}`.trim();
+      // Save the whole recording with the job (also used to create tasks with parts).
+      setInspectionTranscript((current) => `${current} ${text}`.trim());
 
       setPhase('analyzing');
       const found = await analyzeInspection(text);
@@ -190,7 +177,7 @@ export function InspectionScreen() {
     } finally {
       setPhase('idle');
     }
-  }, [endCapture]);
+  }, [endCapture, setInspectionTranscript]);
 
   /** Long press on ✓/⚠: set that status and start listening for a comment. */
   const startDictation = useCallback(
@@ -280,8 +267,8 @@ export function InspectionScreen() {
 
   const reset = useCallback(() => {
     setResults({});
-    transcriptRef.current = '';
-  }, []);
+    setInspectionTranscript('');
+  }, [setResults, setInspectionTranscript]);
 
   const checkedCount = useMemo(() => Object.keys(results).length, [results]);
   const issues = useMemo(() => inspectionIssues(results), [results]);
@@ -293,7 +280,7 @@ export function InspectionScreen() {
     setMicError('');
     setCreatingTasks(true);
     try {
-      const newTasks = await tasksFromInspection(issues, transcriptRef.current, prices);
+      const newTasks = await tasksFromInspection(issues, inspectionTranscript, prices);
       setTasks((current) => [...current, ...newTasks]);
       goToOrder();
     } catch (err) {
@@ -301,7 +288,7 @@ export function InspectionScreen() {
     } finally {
       setCreatingTasks(false);
     }
-  }, [issues, setTasks, goToOrder, prices]);
+  }, [issues, setTasks, goToOrder, prices, inspectionTranscript]);
 
   return (
     <View style={styles.root}>

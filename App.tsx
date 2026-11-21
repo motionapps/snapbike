@@ -49,11 +49,14 @@ import { startInStockSync } from './lib/inStockCache';
 import { AuthView } from './components/AuthView';
 import { InspectionState } from './lib/inspection';
 import { CurrentBikeBar } from './components/CurrentBikeBar';
+import { JobNotesModal, NoteEntry } from './components/JobNotesModal';
 import { colors, gutter, radius, shadow } from './lib/theme';
 import {
   Customer,
+  EMPTY_COMMENTS,
   EMPTY_ORDER,
   Job,
+  JobComments,
   ItemKind,
   Task,
   OrderInfo,
@@ -85,6 +88,8 @@ type JobSnapshot = {
   bikeNumber: string;
   bike: BikeData | null;
   inspection: InspectionState;
+  inspectionTranscript: string;
+  comments: JobComments;
 };
 
 /** What is already stored in Supabase for the current job. */
@@ -120,7 +125,10 @@ function snapshotIsEmpty(s: JobSnapshot): boolean {
     s.tasks.length === 0 &&
     !s.customer &&
     !s.bikeNumber.trim() &&
-    Object.keys(s.inspection).length === 0
+    Object.keys(s.inspection).length === 0 &&
+    !s.inspectionTranscript &&
+    !s.comments.customerComment &&
+    !s.comments.mechanicComment
   );
 }
 
@@ -150,6 +158,10 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     prices,
     inspection,
     setInspection,
+    inspectionTranscript,
+    setInspectionTranscript,
+    comments,
+    setComments,
     holdSave,
   } = useOrderContext();
 
@@ -161,6 +173,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   const [transcript, setTranscript] = useState('');
   const [error, setError] = useState('');
   const [showAddTask, setShowAddTask] = useState(false);
+  const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [showDropIn, setShowDropIn] = useState(false);
   const [showBookings, setShowBookings] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
@@ -191,6 +204,8 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     bikeNumber: order.bikeNumber,
     bike,
     inspection,
+    inspectionTranscript,
+    comments,
   };
   const latest = useRef(snapshot);
   latest.current = snapshot;
@@ -206,6 +221,8 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
       itemKind: itemKindRef.current,
       bike: s.bike,
       transcript: s.transcript,
+      inspectionTranscript: s.inspectionTranscript,
+      comments: s.comments,
       tasks: s.tasks,
       order: { customer: s.customer, bikeNumber: s.bikeNumber, bookingId: r.jobId },
       inspection: s.inspection,
@@ -237,6 +254,8 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
           jobId: r.jobId,
           imagePath: r.imagePath,
           transcript: s.transcript,
+          inspectionTranscript: s.inspectionTranscript,
+          comments: s.comments,
           tasks: s.tasks,
           customerId: r.customerId,
           bike: s.bike,
@@ -297,6 +316,8 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
       setTranscript(draft.transcript);
       setTasks(draft.tasks);
       setInspection(draft.inspection ?? {});
+      setInspectionTranscript(draft.inspectionTranscript ?? '');
+      setComments(draft.comments ?? EMPTY_COMMENTS);
       // Older drafts stored customerName/customerPhone; drop those.
       setOrder({
         bikeNumber: draft.order?.bikeNumber ?? '',
@@ -324,7 +345,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     if (holdSave || phase !== 'idle') return;
     if (sig === lastSig.current || snapshotIsEmpty(latest.current)) return;
     persistRemote(latest.current, remote.current);
-  }, [photoUri, itemKind, bikeAnalysis, transcript, tasks, order, inspection, holdSave, phase]);
+  }, [photoUri, itemKind, bikeAnalysis, transcript, tasks, order, inspection, inspectionTranscript, comments, holdSave, phase]);
 
   const saveDropIn = useCallback((customer: Customer, bikeNumber: string) => {
     setOrder((current) => ({ ...current, customer, bikeNumber }));
@@ -353,6 +374,12 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     }));
     setTasks((current) => [...booking.tasks, ...current]);
     setInspection(booking.inspection ?? {});
+    setInspectionTranscript(booking.inspectionTranscript ?? '');
+    setComments({
+      customerComment: booking.customerComment,
+      mechanicComment: booking.mechanicComment,
+    });
+    setTranscript(booking.transcript);
     if (booking.bike) {
       setItemKind((current) => current ?? 'bike');
       setBikeAnalysis((current) =>
@@ -376,6 +403,8 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     setTranscript('');
     setTasks([]);
     setInspection({});
+    setInspectionTranscript('');
+    setComments(EMPTY_COMMENTS);
     setOrder(EMPTY_ORDER);
     setError('');
   }, []);
@@ -519,7 +548,8 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
         if (!uri) throw new Error('Ingen inspelning hittades.');
         text = await transcribeAudio(uri);
       }
-      setTranscript(text);
+      // Tasks are added to the job, so the spoken text is added too.
+      setTranscript((current) => `${current} ${text}`.trim());
 
       setPhase('analyzing');
       const newTasks = await analyzeTranscript(text, prices);
@@ -739,8 +769,21 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
 
           {transcript ? (
             <View style={styles.transcriptBox}>
-              <Text style={styles.transcriptLabel}>TRANSKRIPTION</Text>
-              <Text style={styles.transcriptText}>{transcript}</Text>
+              <Pressable
+                onPress={() => setTranscriptOpen((open) => !open)}
+                style={styles.transcriptHeader}
+                hitSlop={8}
+              >
+                <Text style={styles.transcriptLabel}>TRANSKRIPTION</Text>
+                <Ionicons
+                  name={transcriptOpen ? 'chevron-up' : 'chevron-down'}
+                  size={16}
+                  color={colors.textFaint}
+                />
+              </Pressable>
+              {transcriptOpen ? (
+                <Text style={styles.transcriptText}>{transcript}</Text>
+              ) : null}
             </View>
           ) : null}
 
@@ -864,6 +907,10 @@ function Root() {
   );
 
   const [inspection, setInspection] = useState<InspectionState>({});
+  const [inspectionTranscript, setInspectionTranscript] = useState('');
+  const [comments, setComments] = useState<JobComments>(EMPTY_COMMENTS);
+  // Comment opened from the bike bar; null when closed.
+  const [barNote, setBarNote] = useState<NoteEntry[] | null>(null);
   const [holdSave, setHoldSave] = useState(false);
 
   const goToOrder = useCallback(() => setTab('note'), []);
@@ -934,6 +981,10 @@ function Root() {
         prices,
         inspection,
         setInspection,
+        inspectionTranscript,
+        setInspectionTranscript,
+        comments,
+        setComments,
         holdSave,
         setHoldSave,
       }}
@@ -948,8 +999,24 @@ function Root() {
           bikeNumber={order.bikeNumber}
           topInset={insets.top}
           onPress={openCurrentJob}
+          comments={tab === 'note' || tab === 'inspect' ? comments : null}
+          onOpenComment={(field) =>
+            setBarNote([
+              {
+                title: field === 'customerComment' ? 'Kundkommentar' : 'Verkstadskommentar',
+                text: comments[field],
+                field,
+              },
+            ])
+          }
         />
       ) : null}
+      <JobNotesModal
+        entries={barNote}
+        listTitle=""
+        onSave={(field, text) => setComments((current) => ({ ...current, [field]: text }))}
+        onClose={() => setBarNote(null)}
+      />
 
       {/* The bar already covers the status bar area, so screens skip it. */}
       <SafeAreaInsetsContext.Provider
@@ -1195,6 +1262,11 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     padding: 14,
     gap: 6,
+  },
+  transcriptHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   transcriptLabel: {
     color: colors.textFaint,

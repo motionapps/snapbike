@@ -6,7 +6,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { BikeData } from './bikeAnalysis';
 import { InspectionState } from './inspection';
-import { Customer, Job, Task, JobStatus, tasksTotal, normalizePhone } from './types';
+import { Customer, Job, Task, JobStatus, tasksTotal, normalizePhone, JobComments } from './types';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -41,6 +41,8 @@ export type JobInput = {
   /** Uploaded photo; null keeps the row's current photo. */
   imagePath: string | null;
   transcript: string;
+  inspectionTranscript: string;
+  comments: JobComments;
   tasks: Task[];
   /** Customer row; undefined leaves the row's customer untouched. */
   customerId: string | null | undefined;
@@ -81,6 +83,8 @@ export async function saveJob({
   jobId,
   imagePath,
   transcript,
+  inspectionTranscript,
+  comments,
   tasks,
   customerId,
   bike,
@@ -89,6 +93,9 @@ export async function saveJob({
 }: JobInput): Promise<string> {
   const fields = {
     transcript,
+    inspection_transcript: inspectionTranscript,
+    customer_comment: comments.customerComment,
+    mechanic_comment: comments.mechanicComment,
     tasks,
     total: tasksTotal(tasks),
     bike,
@@ -192,6 +199,9 @@ type JobRow = {
   id: string;
   created_at: string;
   transcript: string;
+  inspection_transcript: string;
+  customer_comment: string;
+  mechanic_comment: string;
   tasks: Task[];
   image_path: string | null;
   total: number;
@@ -208,7 +218,7 @@ type JobRow = {
 export async function fetchJobs(status?: JobStatus): Promise<Job[]> {
   let query = supabase
     .from('snapbike_jobs')
-    .select('id, created_at, transcript, tasks, image_path, total, status, customer:snapbike_customer(first_name, last_name, phone, email), bike, bike_number, inspection, share_token, customer_responded_at')
+    .select('id, created_at, transcript, inspection_transcript, customer_comment, mechanic_comment, tasks, image_path, total, status, customer:snapbike_customer(first_name, last_name, phone, email), bike, bike_number, inspection, share_token, customer_responded_at')
     .order('created_at', { ascending: false });
   if (status) query = query.eq('status', status);
   const { data, error } = await query;
@@ -221,6 +231,9 @@ export async function fetchJobs(status?: JobStatus): Promise<Job[]> {
     id: row.id,
     createdAt: row.created_at,
     transcript: row.transcript,
+    inspectionTranscript: row.inspection_transcript,
+    customerComment: row.customer_comment,
+    mechanicComment: row.mechanic_comment,
     tasks: row.tasks ?? [],
     imagePath: row.image_path,
     total: Number(row.total),
@@ -263,6 +276,20 @@ export async function updateJobTasks(id: string, tasks: Task[]): Promise<void> {
   });
   if (error) {
     throw new Error(`Kunde inte spara priser: ${error.message}`);
+  }
+}
+
+/** Saves the job's Kundkommentar and Verkstadskommentar. */
+export async function updateJobComments(id: string, comments: JobComments): Promise<void> {
+  const { error } = await supabase
+    .from('snapbike_jobs')
+    .update({
+      customer_comment: comments.customerComment,
+      mechanic_comment: comments.mechanicComment,
+    })
+    .eq('id', id);
+  if (error) {
+    throw new Error(`Kunde inte spara kommentaren: ${error.message}`);
   }
 }
 
