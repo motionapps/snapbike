@@ -126,7 +126,7 @@ export function TaskCard({
                     }
                   >
                     {product.stock > 0
-                      ? `I lager (${product.stock})`
+                      ? 'I lager'
                       : 'Beställningsvara'}
                   </Text>
                 ) : null}

@@ -7,7 +7,7 @@ export type Product = {
   price: number;
   /** Artikelnummer i lagerlistan, om produkten matchats mot lagret. */
   articleNumber?: string;
-  /** Lagersaldo vid matchningen; 0 = beställningsvara. */
+  /** Vid matchningen: över 0 = i lager, 0 = beställningsvara. */
   stock?: number;
   /** Typ av förslag: samma modell/märke, likvärdigt alternativ eller billigare. */
   label?: 'samma' | 'likvärdig' | 'billigare';
@@ -98,7 +98,9 @@ export type PriceItem = {
 export const JOB_STATUSES = [
   'booked',
   'checked_in',
+  'received',
   'inspected',
+  'awaiting_customer',
   'customer_approved',
   'in_progress',
   'ready',
@@ -109,8 +111,10 @@ export type JobStatus = (typeof JOB_STATUSES)[number];
 
 export const STATUS_LABELS: Record<JobStatus, string> = {
   booked: 'Bokad',
-  checked_in: 'Inlämnad',
+  checked_in: 'Drop-in',
+  received: 'Mottagen',
   inspected: 'Besiktigad',
+  awaiting_customer: 'Väntar på kund',
   customer_approved: 'Godkänd av kund',
   in_progress: 'Under arbete',
   ready: 'Klar',
@@ -128,7 +132,10 @@ export type Job = {
   customerComment: string;
   /** Verkstadskommentar, edited in the job modal. */
   mechanicComment: string;
+  /** Tasks agreed at Mottagning. */
   tasks: Task[];
+  /** Jobblista: tasks from the Besiktning remarks, sent to the customer. */
+  inspectionTasks: Task[];
   imagePath: string | null;
   total: number;
   status: JobStatus;
@@ -142,6 +149,15 @@ export type Job = {
   shareToken: string;
   /** When the customer first answered via the link; null if not yet. */
   customerRespondedAt: string | null;
+};
+
+/** Send state of the Jobblista, as stored on the job row. */
+export type JobListSendState = {
+  shareToken: string;
+  /** The Jobblista as last sent; this is what the customer page shows. */
+  sentTasks: Task[] | null;
+  sentAt: string | null;
+  verbalApprovalAt: string | null;
 };
 
 /** Kundkommentar and Verkstadskommentar of a job. */
@@ -159,6 +175,24 @@ export function taskTotal(task: Task): number {
 
 export function tasksTotal(tasks: Task[]): number {
   return tasks.reduce((sum, task) => sum + taskTotal(task), 0);
+}
+
+/** Total of a job: Mottagning tasks plus the Jobblista tasks the customer has not denied. */
+export function jobTotal(tasks: Task[], inspectionTasks: Task[]): number {
+  return tasksTotal(tasks) + approvedTotal(inspectionTasks);
+}
+
+/**
+ * Splits the Jobblista for display. With both answered and unanswered tasks it
+ * is "Tidigare godkänt" + "Tilläggsorder"; otherwise one list of all tasks.
+ */
+export function splitJobList(
+  tasks: Task[]
+): { kind: 'single'; tasks: Task[] } | { kind: 'addOn'; previous: Task[]; addOn: Task[] } {
+  const previous = tasks.filter((task) => task.approval);
+  const addOn = tasks.filter((task) => !task.approval);
+  if (previous.length === 0 || addOn.length === 0) return { kind: 'single', tasks };
+  return { kind: 'addOn', previous, addOn };
 }
 
 /** Summa för de åtgärder kunden inte har nekat (nekade räknas bort). */

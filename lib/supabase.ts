@@ -6,7 +6,16 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { BikeData } from './bikeAnalysis';
 import { InspectionState } from './inspection';
-import { Customer, Job, Task, JobStatus, tasksTotal, normalizePhone, JobComments } from './types';
+import {
+  Customer,
+  Job,
+  JobListSendState,
+  Task,
+  JobStatus,
+  jobTotal,
+  normalizePhone,
+  JobComments,
+} from './types';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -44,6 +53,7 @@ export type JobInput = {
   inspectionTranscript: string;
   comments: JobComments;
   tasks: Task[];
+  inspectionTasks: Task[];
   /** Customer row; undefined leaves the row's customer untouched. */
   customerId: string | null | undefined;
   bike: BikeData | null;
@@ -86,6 +96,7 @@ export async function saveJob({
   inspectionTranscript,
   comments,
   tasks,
+  inspectionTasks,
   customerId,
   bike,
   bikeNumber,
@@ -97,7 +108,8 @@ export async function saveJob({
     customer_comment: comments.customerComment,
     mechanic_comment: comments.mechanicComment,
     tasks,
-    total: tasksTotal(tasks),
+    inspection_tasks: inspectionTasks,
+    total: jobTotal(tasks, inspectionTasks),
     bike,
     bike_number: bikeNumber.trim() || null,
     inspection,
@@ -203,6 +215,7 @@ type JobRow = {
   customer_comment: string;
   mechanic_comment: string;
   tasks: Task[];
+  inspection_tasks: Task[] | null;
   image_path: string | null;
   total: number;
   status: JobStatus;
@@ -218,7 +231,7 @@ type JobRow = {
 export async function fetchJobs(status?: JobStatus): Promise<Job[]> {
   let query = supabase
     .from('snapbike_jobs')
-    .select('id, created_at, transcript, inspection_transcript, customer_comment, mechanic_comment, tasks, image_path, total, status, customer:snapbike_customer(first_name, last_name, phone, email), bike, bike_number, inspection, share_token, customer_responded_at')
+    .select('id, created_at, transcript, inspection_transcript, customer_comment, mechanic_comment, tasks, inspection_tasks, image_path, total, status, customer:snapbike_customer(first_name, last_name, phone, email), bike, bike_number, inspection, share_token, customer_responded_at')
     .order('created_at', { ascending: false });
   if (status) query = query.eq('status', status);
   const { data, error } = await query;
@@ -235,6 +248,7 @@ export async function fetchJobs(status?: JobStatus): Promise<Job[]> {
     customerComment: row.customer_comment,
     mechanicComment: row.mechanic_comment,
     tasks: row.tasks ?? [],
+    inspectionTasks: row.inspection_tasks ?? [],
     imagePath: row.image_path,
     total: Number(row.total),
     status: row.status,
@@ -264,19 +278,108 @@ export async function setJobStatus(
   }
 }
 
+type JobListRow = {
+  share_token: string;
+  inspection_tasks: Task[] | null;
+  sent_inspection_tasks: Task[] | null;
+  sent_to_customer_at: string | null;
+  verbal_approval_at: string | null;
+};
+
+/** The Jobblista of a job as stored, with its send state. */
+export async function fetchJobList(
+  id: string
+): Promise<{ inspectionTasks: Task[]; send: JobListSendState }> {
+  const { data, error } = await supabase
+    .from('snapbike_jobs')
+    .select('share_token, inspection_tasks, sent_inspection_tasks, sent_to_customer_at, verbal_approval_at')
+    .eq('id', id)
+    .single();
+  if (error) throw new Error(`Kunde inte hämta jobblistan: ${error.message}`);
+  const row = data as JobListRow;
+  return {
+    inspectionTasks: row.inspection_tasks ?? [],
+    send: {
+      shareToken: row.share_token,
+      sentTasks: row.sent_inspection_tasks,
+      sentAt: row.sent_to_customer_at,
+      verbalApprovalAt: row.verbal_approval_at,
+    },
+  };
+}
+
+// Statuses that may move to inspected / customer_approved; later ones (work
+// started) keep their status.
+const BEFORE_WORK: JobStatus[] = ['booked', 'checked_in', 'inspected', 'customer_approved'];
+
+async function setStatusIfBeforeWork(id: string, status: JobStatus): Promise<void> {
+  const { error } = await supabase
+    .from('snapbike_jobs')
+    .update({ status })
+    .eq('id', id)
+    .in('status', BEFORE_WORK);
+  if (error) throw new Error(error.message);
+}
+
 /**
- * Replaces a job's task list (and recomputed total) via the
- * snapbike_update_tasks RPC, since the anon key cannot UPDATE the table.
+ * "Skicka till kund": stores the Jobblista as sent, so the customer page shows
+ * it, and reopens the customer's 2 h answer window. Nothing is sent out yet.
  */
-export async function updateJobTasks(id: string, tasks: Task[]): Promise<void> {
-  const { error } = await supabase.rpc('snapbike_update_tasks', {
-    job_id: id,
-    new_tasks: tasks,
-    new_total: tasksTotal(tasks),
+export async function sendJobList(id: string, inspectionTasks: Task[]): Promise<string> {
+  const sentAt = new Date().toISOString();
+  const { error } = await supabase
+    .from('snapbike_jobs')
+    .update({
+      inspection_tasks: inspectionTasks,
+      sent_inspection_tasks: inspectionTasks,
+      sent_to_customer_at: sentAt,
+      verbal_approval_at: null,
+      customer_responded_at: null,
+    })
+    .eq('id', id);
+  if (error) throw new Error(`Kunde inte skicka jobblistan: ${error.message}`);
+  await setStatusIfBeforeWork(id, 'inspected').catch((err) => {
+    throw new Error(`Kunde inte ändra status: ${err.message}`);
   });
-  if (error) {
-    throw new Error(`Kunde inte spara priser: ${error.message}`);
-  }
+  return sentAt;
+}
+
+/**
+ * "Muntligt godkänt av kund": the given list (unanswered tasks already set to
+ * godkänd) becomes the sent version without sending it again.
+ */
+export async function approveJobListVerbally(
+  id: string,
+  inspectionTasks: Task[]
+): Promise<string> {
+  const approvedAt = new Date().toISOString();
+  const { error } = await supabase
+    .from('snapbike_jobs')
+    .update({
+      inspection_tasks: inspectionTasks,
+      sent_inspection_tasks: inspectionTasks,
+      verbal_approval_at: approvedAt,
+    })
+    .eq('id', id);
+  if (error) throw new Error(`Kunde inte spara godkännandet: ${error.message}`);
+  await setStatusIfBeforeWork(id, 'customer_approved').catch((err) => {
+    throw new Error(`Kunde inte ändra status: ${err.message}`);
+  });
+  return approvedAt;
+}
+
+/** A recreated Jobblista is unsent again; the customer page stops showing the old one. */
+export async function clearJobListSent(id: string): Promise<void> {
+  const { error } = await supabase
+    .from('snapbike_jobs')
+    .update({
+      sent_inspection_tasks: null,
+      sent_to_customer_at: null,
+      verbal_approval_at: null,
+      customer_responded_at: null,
+    })
+    .eq('id', id);
+  if (error) throw new Error(`Kunde inte nollställa jobblistan: ${error.message}`);
 }
 
 /** Saves the job's Kundkommentar and Verkstadskommentar. */

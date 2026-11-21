@@ -19,7 +19,9 @@ export const colors = {
 export const statusColors = {
   booked: '#8A96A3',
   checked_in: '#5AC8FA',
+  received: '#64D2FF',
   inspected: '#FFB340',
+  awaiting_customer: '#FF6482',
   customer_approved: '#BF5AF2',
   in_progress: '#FF9F0A',
   ready: '#B9F13C',

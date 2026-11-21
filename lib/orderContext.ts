@@ -1,7 +1,7 @@
 import { Dispatch, SetStateAction, createContext, useContext } from 'react';
 import type { BikeAnalysisState } from '../components/BikeDetails';
 import type { InspectionState } from './inspection';
-import { ItemKind, JobComments, Task, OrderInfo, PriceItem } from './types';
+import { ItemKind, JobComments, JobListSendState, JobStatus, Task, OrderInfo, PriceItem } from './types';
 
 /**
  * Delad arbetsorder mellan besiktnings- och offertvyn: samma jobblista och
@@ -13,7 +13,13 @@ export type OrderContextValue = {
   setTasks: Dispatch<SetStateAction<Task[]>>;
   order: OrderInfo;
   setOrder: Dispatch<SetStateAction<OrderInfo>>;
-  goToOrder: () => void;
+  /** Jobblista: tasks from the Besiktning remarks; auto-saved with the job. */
+  inspectionTasks: Task[];
+  setInspectionTasks: Dispatch<SetStateAction<Task[]>>;
+  /** Send state of the Jobblista; null until loaded from the saved job. */
+  jobListSend: JobListSendState | null;
+  setJobListSend: Dispatch<SetStateAction<JobListSendState | null>>;
+  goToJobList: () => void;
   /** What the photo shows (Jev); null until a photo is classified. */
   itemKind: ItemKind | null;
   setItemKind: Dispatch<SetStateAction<ItemKind | null>>;
@@ -34,6 +40,9 @@ export type OrderContextValue = {
    *  the Supabase auto-save waits until it ends. */
   holdSave: boolean;
   setHoldSave: Dispatch<SetStateAction<boolean>>;
+  /** Status of the current job; null until it is saved. Drives Klar / Lås upp. */
+  currentStatus: JobStatus | null;
+  setCurrentStatus: Dispatch<SetStateAction<JobStatus | null>>;
 };
 
 export const OrderContext = createContext<OrderContextValue | null>(null);

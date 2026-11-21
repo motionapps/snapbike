@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { jobImageUrl } from '../lib/supabase';
 import { colors, radius, shadow } from '../lib/theme';
-import { Job, JobStatus } from '../lib/types';
+import { Job, JobStatus, jobTotal } from '../lib/types';
 import { StatusPill } from './StatusPill';
 
 const dateFormat = new Intl.DateTimeFormat('sv-SE', {
@@ -40,6 +40,8 @@ export const JobCard = memo(function JobCard({
   const customerName = job.customer
     ? `${job.customer.firstName} ${job.customer.lastName}`.trim()
     : '';
+  // Mottagning plus Jobblista, without tasks the customer denied.
+  const allTasks = [...job.tasks, ...job.inspectionTasks.filter((t) => t.approval !== 'nekad')];
 
   // Same expand/collapse animation as Mer information in BikeDetails.
   const toggle = () => {
@@ -100,7 +102,7 @@ export const JobCard = memo(function JobCard({
             {dateFormat.format(new Date(job.createdAt))}
           </Text>
           <Text style={styles.total}>
-            {job.total.toLocaleString('sv-SE')} kr
+            {jobTotal(job.tasks, job.inspectionTasks).toLocaleString('sv-SE')} kr
           </Text>
         </View>
       </View>
@@ -108,9 +110,9 @@ export const JobCard = memo(function JobCard({
       <View>
         <Pressable onPress={toggle} style={styles.tasksHeader} hitSlop={4}>
           <Text style={styles.tasksHeaderText}>
-            {job.tasks.length ? `Att göra (${job.tasks.length})` : 'Inga jobb'}
+            {allTasks.length ? `Att göra (${allTasks.length})` : 'Inga jobb'}
           </Text>
-          {job.tasks.length ? (
+          {allTasks.length ? (
             <Animated.View style={[styles.chevron, { transform: [{ rotate }] }]}>
               <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
             </Animated.View>
@@ -131,7 +133,7 @@ export const JobCard = memo(function JobCard({
         >
           {/* Absolutely positioned so it lays out at its natural height. */}
           <View style={styles.tasksContent} onLayout={onContentLayout}>
-            {job.tasks.map((task, index) => (
+            {allTasks.map((task, index) => (
               <Text
                 key={task.id}
                 style={[styles.task, index > 0 && styles.taskDivider]}

@@ -9,7 +9,8 @@ import {
 } from './inspection';
 import { priceCsvFor } from './prices';
 import { SERVICE_GUIDE } from './servicePackage';
-import { searchStock } from './stock';
+import { searchInStock } from './inStockCache';
+import { searchProducts } from './productSearch';
 import { Task, PriceItem, uid } from './types';
 
 const OPENAI_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '';
@@ -59,8 +60,9 @@ export async function transcribeAudio(audioUri: string): Promise<string> {
 const SEARCH_STOCK_TOOL = {
   name: 'search_stock',
   description:
-    'Sök i butikens lagerlista (~67 000 artiklar) efter reservdelar. ' +
-    'Returnerar namn, artikelnummer, pris (kr) och lagersaldo. Sök med få, ' +
+    'Sök reservdelar: först bland butikens lagervaror, och om inget finns i ' +
+    'lager i leverantörernas katalog (beställningsvaror). Returnerar namn, ' +
+    'artikelnummer, pris (kr) och lagersaldo (1 = i lager, 0 = beställningsvara). Sök med få, ' +
     'centrala ord (t.ex. "kedja sram force", "gp5000 25", "bromsbelägg shimano"). ' +
     'Gör gärna flera sökningar med olika ord om första inte ger bra träffar.',
   input_schema: {
@@ -120,7 +122,7 @@ const JOB_ITEM_SCHEMA = {
           },
           stock: {
             type: 'number',
-            description: 'Exakt lagersaldo från lagerlistan.',
+            description: 'Lagersaldo från sökresultatet (1 = i lager, 0 = beställningsvara).',
           },
           label: {
             type: 'string',
@@ -263,8 +265,29 @@ const refinePrompt = (prices: PriceItem[]) =>
 const MAX_TOOL_ROUNDS = 8;
 
 /**
- * Runs a Claude tool loop: the model may call search_stock (answered locally
- * with the shop's stock list) any number of times before it must deliver its
+ * search_stock: the store's in-stock products (cached on the phone) first; if
+ * none match, BikeOffice product search, whose hits are order items.
+ */
+async function searchStock(query: string): Promise<string> {
+  const toResult = (stock: number) => (p: { name: string; articleNumber: string; sellPrice: number }) => ({
+    name: p.name,
+    articleNumber: p.articleNumber,
+    price: p.sellPrice > 0 ? p.sellPrice : 0,
+    stock,
+  });
+  const inStock = searchInStock(query, 12);
+  if (inStock.length > 0) return JSON.stringify(inStock.map(toResult(1)));
+  try {
+    const products = await searchProducts(query);
+    return JSON.stringify(products.slice(0, 12).map(toResult(0)));
+  } catch (err) {
+    return `Sökningen misslyckades: ${err instanceof Error ? err.message : String(err)}`;
+  }
+}
+
+/**
+ * Runs a Claude tool loop: the model may call search_stock (in-stock cache,
+ * then BikeOffice product search) any number of times before it must deliver its
  * structured answer via the given final tool.
  */
 async function runToolLoop(
@@ -330,13 +353,13 @@ async function runToolLoop(
     messages.push({ role: 'assistant', content: json.content });
 
     if (searches.length > 0) {
-      const results = searches.map((block) => ({
-        type: 'tool_result' as const,
-        tool_use_id: block.id ?? '',
-        content: JSON.stringify(
-          searchStock(String((block.input as { query?: string })?.query ?? ''))
-        ),
-      }));
+      const results = await Promise.all(
+        searches.map(async (block) => ({
+          type: 'tool_result' as const,
+          tool_use_id: block.id ?? '',
+          content: await searchStock(String((block.input as { query?: string })?.query ?? '')),
+        }))
+      );
       messages.push({
         role: 'user',
         content: lastRoundNext
@@ -384,7 +407,9 @@ export async function analyzeTranscript(
 export async function tasksFromInspection(
   issues: { itemId: string; section: string; title: string; note: string }[],
   transcript: string,
-  prices: PriceItem[]
+  prices: PriceItem[],
+  /** Tasks already agreed at Mottagning; remarks they cover are skipped. */
+  intakeTasks: Task[] = []
 ): Promise<Task[]> {
   if (issues.length === 0) return [];
   const parts = [
@@ -395,6 +420,14 @@ export async function tasksFromInspection(
         `- [${issue.itemId}] ${issue.title} (${issue.section})${issue.note ? `: ${issue.note}` : ''}`
     ),
   ];
+  if (intakeTasks.length > 0) {
+    parts.push(
+      '',
+      'Följande åtgärder är redan överenskomna med kunden vid mottagningen. ' +
+        'Ta INTE med dem igen, och hoppa över anmärkningar som de redan åtgärdar:',
+      ...intakeTasks.map((task) => `- ${task.title}`)
+    );
+  }
   if (transcript.trim()) {
     parts.push(
       '',

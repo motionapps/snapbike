@@ -18,10 +18,9 @@ import {
   fetchJobs,
   setJobStatus,
   updateJobComments,
-  updateJobTasks,
 } from '../lib/supabase';
 import { colors, gutter, radius } from '../lib/theme';
-import { Job, Task, JobStatus, tasksTotal } from '../lib/types';
+import { Job, JobStatus } from '../lib/types';
 import { JobCard } from './JobCard';
 import { useOrderContext } from '../lib/orderContext';
 import { CommentField } from './JobNotesModal';
@@ -67,7 +66,7 @@ function searchText(job: Job): string {
   if (bike) {
     parts.push(bike.brand, bike.bike_type, bike.color);
   }
-  for (const task of job.tasks) parts.push(task.title);
+  for (const task of [...job.tasks, ...job.inspectionTasks]) parts.push(task.title);
   return parts.join(' ').toLowerCase();
 }
 
@@ -129,8 +128,12 @@ export function JobsScreen({
     setRefreshing(false);
   }, [load]);
 
+  const { order, setComments, setCurrentStatus } = useOrderContext();
+
   const changeStatus = useCallback(
     (id: string, status: JobStatus) => {
+      // Keep the Klar marks of the current job in step.
+      if (id === order.bookingId) setCurrentStatus(status);
       setJobs((current) =>
         current
           ? current.map((e) => (e.id === id ? { ...e, status } : e))
@@ -141,27 +144,8 @@ export function JobsScreen({
         void load();
       });
     },
-    [load]
+    [load, order.bookingId, setCurrentStatus]
   );
-
-  const updateTasks = useCallback(
-    (id: string, tasks: Task[]) => {
-      setJobs((current) =>
-        current
-          ? current.map((e) =>
-              e.id === id ? { ...e, tasks, total: tasksTotal(tasks) } : e
-            )
-          : current
-      );
-      updateJobTasks(id, tasks).catch((err) => {
-        setError(err instanceof Error ? err.message : String(err));
-        void load();
-      });
-    },
-    [load]
-  );
-
-  const { order, setComments } = useOrderContext();
 
   const updateComment = useCallback(
     (id: string, field: CommentField, text: string) => {
@@ -320,7 +304,6 @@ export function JobsScreen({
         job={openJob}
         onClose={() => setOpenId(null)}
         onChangeStatus={changeStatus}
-        onUpdateTasks={updateTasks}
         onUpdateComment={updateComment}
         onStartCheckIn={onStartCheckIn}
         onEditBikeDetails={onEditBikeDetails}

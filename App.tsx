@@ -34,7 +34,10 @@ import { TaskCard } from './components/TaskCard';
 import { OrderContext, useOrderContext } from './lib/orderContext';
 import { clearDraft, loadDraft, saveDraft } from './lib/persist';
 import { JobsScreen } from './components/JobsScreen';
+import { JobListScreen } from './components/JobListScreen';
 import { MicButton, MicPhase } from './components/MicButton';
+import { DoneButton, StepLock } from './components/StepDone';
+import { STEP_STATUS, StepTab, stepDone } from './lib/jobSteps';
 import { PhotoCard } from './components/PhotoCard';
 import { analyzeBikePhoto, BikeData } from './lib/bikeAnalysis';
 import { classifyItemKind } from './lib/itemKind';
@@ -56,7 +59,9 @@ import {
   EMPTY_COMMENTS,
   EMPTY_ORDER,
   Job,
+  JobStatus,
   JobComments,
+  JobListSendState,
   ItemKind,
   Task,
   OrderInfo,
@@ -84,6 +89,7 @@ type JobSnapshot = {
   photoUri: string | null;
   transcript: string;
   tasks: Task[];
+  inspectionTasks: Task[];
   customer: Customer | null;
   bikeNumber: string;
   bike: BikeData | null;
@@ -123,6 +129,7 @@ function snapshotIsEmpty(s: JobSnapshot): boolean {
     !s.photoUri &&
     !s.transcript &&
     s.tasks.length === 0 &&
+    s.inspectionTasks.length === 0 &&
     !s.customer &&
     !s.bikeNumber.trim() &&
     Object.keys(s.inspection).length === 0 &&
@@ -149,6 +156,9 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   const {
     tasks,
     setTasks,
+    inspectionTasks,
+    setInspectionTasks,
+    setJobListSend,
     order,
     setOrder,
     itemKind,
@@ -163,6 +173,8 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     comments,
     setComments,
     holdSave,
+    currentStatus,
+    setCurrentStatus,
   } = useOrderContext();
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -200,6 +212,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     photoUri,
     transcript,
     tasks,
+    inspectionTasks,
     customer: order.customer,
     bikeNumber: order.bikeNumber,
     bike,
@@ -212,6 +225,8 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
 
   const itemKindRef = useRef(itemKind);
   itemKindRef.current = itemKind;
+  const statusRef = useRef(currentStatus);
+  statusRef.current = currentStatus;
 
   const writeDraft = useCallback(() => {
     const s = latest.current;
@@ -224,12 +239,14 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
       inspectionTranscript: s.inspectionTranscript,
       comments: s.comments,
       tasks: s.tasks,
+      inspectionTasks: s.inspectionTasks,
       order: { customer: s.customer, bikeNumber: s.bikeNumber, bookingId: r.jobId },
       inspection: s.inspection,
       imagePath: r.imagePath,
       uploadedPhotoUri: r.uploadedPhotoUri,
       customerId: r.customerId,
       customerKey: r.customerKey,
+      jobStatus: statusRef.current,
     });
   }, []);
 
@@ -257,6 +274,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
           inspectionTranscript: s.inspectionTranscript,
           comments: s.comments,
           tasks: s.tasks,
+          inspectionTasks: s.inspectionTasks,
           customerId: r.customerId,
           bike: s.bike,
           bikeNumber: s.bikeNumber,
@@ -266,6 +284,8 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
         lastSig.current = sig;
         const jobId = r.jobId;
         setOrder((o) => (o.bookingId === jobId ? o : { ...o, bookingId: jobId }));
+        // saveJob inserts as checked_in and moves a booking to checked_in.
+        setCurrentStatus((st) => (!st || st === 'booked' ? 'checked_in' : st));
         writeDraft();
         setSaveStatus('saved');
       } catch (err) {
@@ -315,9 +335,11 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
       if (draft.bike) setBikeAnalysis({ status: 'ready', bike: draft.bike });
       setTranscript(draft.transcript);
       setTasks(draft.tasks);
+      setInspectionTasks(draft.inspectionTasks ?? []);
       setInspection(draft.inspection ?? {});
       setInspectionTranscript(draft.inspectionTranscript ?? '');
       setComments(draft.comments ?? EMPTY_COMMENTS);
+      setCurrentStatus(draft.jobStatus ?? (draft.order?.bookingId ? 'checked_in' : null));
       // Older drafts stored customerName/customerPhone; drop those.
       setOrder({
         bikeNumber: draft.order?.bikeNumber ?? '',
@@ -345,7 +367,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     if (holdSave || phase !== 'idle') return;
     if (sig === lastSig.current || snapshotIsEmpty(latest.current)) return;
     persistRemote(latest.current, remote.current);
-  }, [photoUri, itemKind, bikeAnalysis, transcript, tasks, order, inspection, inspectionTranscript, comments, holdSave, phase]);
+  }, [photoUri, itemKind, bikeAnalysis, transcript, tasks, inspectionTasks, order, inspection, inspectionTranscript, comments, holdSave, phase, currentStatus]);
 
   const saveDropIn = useCallback((customer: Customer, bikeNumber: string) => {
     setOrder((current) => ({ ...current, customer, bikeNumber }));
@@ -373,6 +395,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
       bikeNumber: booking.bikeNumber || current.bikeNumber,
     }));
     setTasks((current) => [...booking.tasks, ...current]);
+    setInspectionTasks(booking.inspectionTasks ?? []);
     setInspection(booking.inspection ?? {});
     setInspectionTranscript(booking.inspectionTranscript ?? '');
     setComments({
@@ -380,6 +403,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
       mechanicComment: booking.mechanicComment,
     });
     setTranscript(booking.transcript);
+    setCurrentStatus(booking.status);
     if (booking.bike) {
       setItemKind((current) => current ?? 'bike');
       setBikeAnalysis((current) =>
@@ -402,10 +426,13 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     setBikeAnalysis({ status: 'idle' });
     setTranscript('');
     setTasks([]);
+    setInspectionTasks([]);
+    setJobListSend(null);
     setInspection({});
     setInspectionTranscript('');
     setComments(EMPTY_COMMENTS);
     setOrder(EMPTY_ORDER);
+    setCurrentStatus(null);
     setError('');
   }, []);
 
@@ -716,6 +743,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
             ) : null}
           </View>
 
+          <StepLock tab="note" gap={20}>
           <View
             style={styles.photoSection}
             onLayout={(e) => (photoSectionY.current = e.nativeEvent.layout.y)}
@@ -833,29 +861,15 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
             </View>
           ) : null}
 
-          {saveStatus !== 'idle' ? (
-            <Pressable
-              onPress={retrySave}
-              disabled={saveStatus !== 'error'}
-              style={styles.saveStatus}
-            >
-              {saveStatus === 'saving' ? (
-                <ActivityIndicator size="small" color={colors.textFaint} />
-              ) : (
-                <Ionicons
-                  name={saveStatus === 'saved' ? 'checkmark-circle' : 'cloud-offline-outline'}
-                  size={16}
-                  color={saveStatus === 'saved' ? colors.textFaint : colors.danger}
-                />
-              )}
-              <Text
-                style={[styles.saveStatusText, saveStatus === 'error' && styles.saveStatusError]}
-              >
-                {saveStatus === 'saving'
-                  ? 'Sparar…'
-                  : saveStatus === 'saved'
-                    ? 'Sparad'
-                    : 'Kunde inte spara – tryck för att försöka igen'}
+          </StepLock>
+
+          <DoneButton tab="note" />
+
+          {saveStatus === 'error' ? (
+            <Pressable onPress={retrySave} style={styles.saveStatus}>
+              <Ionicons name="cloud-offline-outline" size={16} color={colors.danger} />
+              <Text style={[styles.saveStatusText, styles.saveStatusError]}>
+                Kunde inte spara – tryck för att försöka igen
               </Text>
             </Pressable>
           ) : null}
@@ -884,18 +898,21 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   );
 }
 
-type Tab = 'note' | 'inspect' | 'jobs';
+type Tab = 'note' | 'inspect' | 'jobList' | 'jobs';
 
 const TABS: { key: Tab; label: string; icon: string; iconActive: string }[] = [
   { key: 'jobs', label: 'Jobb', icon: 'file-tray-full-outline', iconActive: 'file-tray-full' },
   { key: 'note', label: 'Mottagning', icon: 'mic-outline', iconActive: 'mic' },
   { key: 'inspect', label: 'Besiktning', icon: 'clipboard-outline', iconActive: 'clipboard' },
+  { key: 'jobList', label: 'Jobblista', icon: 'list-outline', iconActive: 'list' },
 ];
 
 function Root() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('note');
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [inspectionTasks, setInspectionTasks] = useState<Task[]>([]);
+  const [jobListSend, setJobListSend] = useState<JobListSendState | null>(null);
   const [order, setOrder] = useState<OrderInfo>(EMPTY_ORDER);
   const [itemKind, setItemKind] = useState<ItemKind | null>(null);
   const [bikeAnalysis, setBikeAnalysis] = useState<BikeAnalysisState>({
@@ -912,8 +929,11 @@ function Root() {
   // Comment opened from the bike bar; null when closed.
   const [barNote, setBarNote] = useState<NoteEntry[] | null>(null);
   const [holdSave, setHoldSave] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<JobStatus | null>(null);
 
-  const goToOrder = useCallback(() => setTab('note'), []);
+  const goToJobList = useCallback(() => setTab('jobList'), []);
+  // Greyed out until a Jobblista has been created from the remarks.
+  const jobListEnabled = inspectionTasks.length > 0;
   const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(null);
 
   const startCheckIn = useCallback((job: Job) => {
@@ -971,9 +991,13 @@ function Root() {
       value={{
         tasks,
         setTasks,
+        inspectionTasks,
+        setInspectionTasks,
+        jobListSend,
+        setJobListSend,
         order,
         setOrder,
-        goToOrder,
+        goToJobList,
         itemKind,
         setItemKind,
         bikeAnalysis,
@@ -987,6 +1011,8 @@ function Root() {
         setComments,
         holdSave,
         setHoldSave,
+        currentStatus,
+        setCurrentStatus,
       }}
     >
     <View style={styles.root}>
@@ -999,7 +1025,7 @@ function Root() {
           bikeNumber={order.bikeNumber}
           topInset={insets.top}
           onPress={openCurrentJob}
-          comments={tab === 'note' || tab === 'inspect' ? comments : null}
+          comments={tab === 'note' || tab === 'inspect' || tab === 'jobList' ? comments : null}
           onOpenComment={(field) =>
             setBarNote([
               {
@@ -1029,6 +1055,9 @@ function Root() {
       <View style={[styles.page, tab !== 'inspect' && styles.pageHidden]}>
         <InspectionScreen />
       </View>
+      <View style={[styles.page, tab !== 'jobList' && styles.pageHidden]}>
+        <JobListScreen active={tab === 'jobList'} />
+      </View>
       <View style={[styles.page, tab !== 'jobs' && styles.pageHidden]}>
         <JobsScreen
           active={tab === 'jobs'}
@@ -1044,20 +1073,30 @@ function Root() {
       </View>
       </SafeAreaInsetsContext.Provider>
 
-      <View style={[styles.tabBar, { paddingBottom: insets.bottom + 4 }]}>
+      <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom - 16, 8) }]}>
         {TABS.map((item) => {
           const isActive = tab === item.key;
+          const disabled = item.key === 'jobList' && !jobListEnabled;
+          const done = item.key in STEP_STATUS && stepDone(item.key as StepTab, currentStatus);
           return (
             <Pressable
               key={item.key}
               onPress={() => setTab(item.key)}
-              style={styles.tabItem}
+              disabled={disabled}
+              style={[styles.tabItem, disabled && styles.tabItemDisabled]}
             >
-              <Ionicons
-                name={(isActive ? item.iconActive : item.icon) as never}
-                size={22}
-                color={isActive ? colors.accent : colors.textFaint}
-              />
+              <View style={[styles.tabIcon, done && styles.tabIconDone]}>
+                <Ionicons
+                  name={(isActive ? item.iconActive : item.icon) as never}
+                  size={22}
+                  color={isActive ? colors.accent : colors.textFaint}
+                />
+                {done ? (
+                  <View style={styles.tabCheck}>
+                    <Ionicons name="checkmark" size={10} color={colors.onAccent} />
+                  </View>
+                ) : null}
+              </View>
               <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
                 {item.label}
               </Text>
@@ -1179,6 +1218,32 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     gap: 3,
+  },
+  // Klar: rounded square around the icon with a check badge in the corner.
+  tabIcon: {
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    borderRadius: 8,
+    borderCurve: 'continuous',
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+  },
+  tabIconDone: {
+    borderColor: colors.accent,
+  },
+  tabCheck: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 14,
+    height: 14,
+    borderRadius: 7,
+    backgroundColor: colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tabItemDisabled: {
+    opacity: 0.35,
   },
   tabLabel: {
     color: colors.textFaint,

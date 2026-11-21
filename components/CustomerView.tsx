@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Animated,
@@ -21,15 +21,16 @@ import {
   CustomerJob,
   WORKSHOP_NAME,
   WORKSHOP_PHONE,
-  canRespond,
+  canAnswerTask,
   changeDeadline,
   fetchCustomerJob,
+  isPreviewLocation,
   sendCustomerResponse,
 } from '../lib/customerLink';
 import { INSPECTION_TEMPLATE } from '../lib/inspection';
 import { jobImageUrl } from '../lib/supabase';
 import { inspectionImageUrl, taskImageUrl } from '../lib/taskImages';
-import { Task, taskTotal } from '../lib/types';
+import { Task, approvedTotal, splitJobList, taskTotal, tasksTotal } from '../lib/types';
 
 type Approval = 'godkänd' | 'nekad';
 
@@ -64,6 +65,7 @@ const timeFormat = new Intl.DateTimeFormat('sv-SE', {
 });
 
 export function CustomerView({ token }: { token: string }) {
+  const preview = isPreviewLocation();
   const [job, setJob] = useState<CustomerJob | null>(null);
   const [state, setState] = useState<'loading' | 'missing' | 'ready'>('loading');
   const [decisions, setDecisions] = useState<Record<string, Approval>>({});
@@ -79,10 +81,12 @@ export function CustomerView({ token }: { token: string }) {
         setState('missing');
         return;
       }
-      setJob(data);
+      // The staff preview shows the current draft instead of the sent list.
+      const job = preview ? { ...data, inspectionTasks: data.draftInspectionTasks } : data;
+      setJob(job);
       const initial: Record<string, Approval> = {};
       // Everything is approved unless the customer has denied it.
-      for (const task of data.tasks) initial[task.id] = task.approval ?? 'godkänd';
+      for (const task of job.inspectionTasks ?? []) initial[task.id] = task.approval ?? 'godkänd';
       setDecisions(initial);
       setState('ready');
     } catch {
@@ -94,6 +98,8 @@ export function CustomerView({ token }: { token: string }) {
     load();
   }, [token]);
 
+  const listTasks = job?.inspectionTasks ?? [];
+
   const markers = useMemo<Marker[]>(() => {
     if (!job) return [];
     const variant = silhouetteVariant(job.bike);
@@ -104,7 +110,7 @@ export function CustomerView({ token }: { token: string }) {
         if (result?.status !== 'issue') continue;
         const position = markerPosition(item.id, variant);
         if (!position) continue;
-        const tasks = job.tasks.filter((t) => t.inspectionItemIds?.includes(item.id));
+        const tasks = listTasks.filter((t) => t.inspectionItemIds?.includes(item.id));
         list.push({
           itemId: item.id,
           title: item.title,
@@ -136,16 +142,18 @@ export function CustomerView({ token }: { token: string }) {
     );
   }
 
-  const open = canRespond(job);
-  const deadline = changeDeadline(job.respondedAt);
+  const sent = job.inspectionTasks !== null;
+  const answerable = (task: Task) => !preview && canAnswerTask(job, task);
+  const open = listTasks.some(answerable);
+  const deadline = job.status === 'in_progress' ? null : changeDeadline(job.respondedAt);
   const selectedMarker = markers.find((m) => m.itemId === selected) ?? null;
   const photoUrl = jobImageUrl(job.imagePath);
-  const approvedSum = job.tasks
-    .filter((t) => decisions[t.id] !== 'nekad')
-    .reduce((sum, t) => sum + taskTotal(t), 0);
+  const split = splitJobList(listTasks);
+  const total =
+    tasksTotal(job.tasks) +
+    listTasks.filter((t) => decisions[t.id] !== 'nekad').reduce((sum, t) => sum + taskTotal(t), 0);
 
   const decide = (taskId: string, approval: Approval) => {
-    if (!open) return;
     setMessage(null);
     setDecisions((current) => ({ ...current, [taskId]: approval }));
   };
@@ -154,7 +162,9 @@ export function CustomerView({ token }: { token: string }) {
     setSending(true);
     setMessage(null);
     try {
-      await sendCustomerResponse(token, decisions);
+      const answers: Record<string, Approval> = {};
+      for (const task of listTasks) if (answerable(task)) answers[task.id] = decisions[task.id];
+      await sendCustomerResponse(token, answers);
       await load();
       setMessage('Tack! Vi har fått ditt svar.');
     } catch (err) {
@@ -164,19 +174,42 @@ export function CustomerView({ token }: { token: string }) {
     }
   };
 
+  const taskRow = (task: Task) => (
+    <TaskRow
+      key={task.id}
+      task={task}
+      note={(task.inspectionItemIds ?? [])
+        .map((id) => job.inspection?.[id]?.note?.trim())
+        .filter(Boolean)
+        .join(' ')}
+      decision={decisions[task.id]}
+      disabled={!answerable(task)}
+      onDecide={decide}
+    />
+  );
+
   return (
     <ScrollView style={styles.page} contentContainerStyle={styles.content}>
+      {preview ? (
+        <View style={styles.lockedBanner}>
+          <Ionicons name="eye" size={18} color={c.text} />
+          <Text style={styles.lockedBannerText}>
+            Förhandsgranskning – så här ser kunden jobblistan.
+          </Text>
+        </View>
+      ) : null}
       <Text style={styles.workshop}>{WORKSHOP_NAME}</Text>
       <Text style={styles.title}>
         {job.firstName ? `Hej ${job.firstName}!` : 'Hej!'}
       </Text>
       <Text style={styles.muted}>
-        Vi har gått igenom din cykel
-        {job.bikeNumber ? ` (nr ${job.bikeNumber})` : ''}. Tryck på de
-        markerade delarna för att se vad vi hittade.
+        {sent
+          ? `Vi har gått igenom din cykel${job.bikeNumber ? ` (nr ${job.bikeNumber})` : ''}. ` +
+            'Tryck på de markerade delarna för att se vad vi hittade.'
+          : 'Vi går igenom din cykel och hör av oss när besiktningen är klar.'}
       </Text>
 
-      {open ? null : (
+      {sent && !open && !preview ? (
         <View style={styles.lockedBanner}>
           <Ionicons name="lock-closed" size={18} color={c.text} />
           <Text style={styles.lockedBannerText}>
@@ -186,96 +219,110 @@ export function CustomerView({ token }: { token: string }) {
             – kontakta verkstaden för ändringar.
           </Text>
         </View>
-      )}
+      ) : null}
 
-      <View style={styles.card}>
-        <View style={styles.bikeBox}>
-          {showPhoto && photoUrl ? (
-            <Image source={photoUrl} style={StyleSheet.absoluteFill} contentFit="cover" />
-          ) : (
-            <>
-              <Image
-                source={SILHOUETTE_IMAGES[silhouetteVariant(job.bike)]}
-                style={StyleSheet.absoluteFill}
-                contentFit="contain"
-              />
-              {markers.map((marker) => (
-                <Glow
-                  key={marker.itemId}
-                  marker={marker}
-                  selected={marker.itemId === selected}
-                  onPress={() =>
-                    setSelected((s) => (s === marker.itemId ? null : marker.itemId))
-                  }
+      {sent ? (
+        <View style={styles.card}>
+          <View style={styles.bikeBox}>
+            {showPhoto && photoUrl ? (
+              <Image source={photoUrl} style={StyleSheet.absoluteFill} contentFit="cover" />
+            ) : (
+              <>
+                <Image
+                  source={SILHOUETTE_IMAGES[silhouetteVariant(job.bike)]}
+                  style={StyleSheet.absoluteFill}
+                  contentFit="contain"
+                />
+                {markers.map((marker) => (
+                  <Glow
+                    key={marker.itemId}
+                    marker={marker}
+                    selected={marker.itemId === selected}
+                    onPress={() =>
+                      setSelected((s) => (s === marker.itemId ? null : marker.itemId))
+                    }
+                  />
+                ))}
+              </>
+            )}
+            {photoUrl ? (
+              <Pressable
+                onPress={() => setShowPhoto((v) => !v)}
+                style={styles.eye}
+                hitSlop={8}
+                accessibilityLabel={showPhoto ? 'Visa markeringar' : 'Visa din cykel'}
+              >
+                <Ionicons name={showPhoto ? 'eye-off' : 'eye'} size={20} color={c.text} />
+              </Pressable>
+            ) : null}
+          </View>
+
+          {selectedMarker && !showPhoto ? (
+            <View style={styles.detail}>
+              <View style={styles.detailHead}>
+                <Image
+                  source={inspectionImageUrl(selectedMarker.itemId, selectedMarker.title)}
+                  style={styles.partImage}
+                  contentFit="contain"
+                />
+                <Text style={styles.detailTitle}>{selectedMarker.title}</Text>
+              </View>
+              {selectedMarker.note ? (
+                <Text style={styles.muted}>{selectedMarker.note}</Text>
+              ) : null}
+              {selectedMarker.tasks.map((task) => (
+                <TaskRow
+                  key={task.id}
+                  task={task}
+                  decision={decisions[task.id]}
+                  disabled={!answerable(task)}
+                  onDecide={decide}
                 />
               ))}
-            </>
-          )}
-          {photoUrl ? (
-            <Pressable
-              onPress={() => setShowPhoto((v) => !v)}
-              style={styles.eye}
-              hitSlop={8}
-              accessibilityLabel={showPhoto ? 'Visa markeringar' : 'Visa din cykel'}
-            >
-              <Ionicons name={showPhoto ? 'eye-off' : 'eye'} size={20} color={c.text} />
-            </Pressable>
+            </View>
           ) : null}
         </View>
+      ) : null}
 
-        {selectedMarker && !showPhoto ? (
-          <View style={styles.detail}>
-            <View style={styles.detailHead}>
-              <Image
-                source={inspectionImageUrl(selectedMarker.itemId, selectedMarker.title)}
-                style={styles.partImage}
-                contentFit="contain"
-              />
-              <Text style={styles.detailTitle}>{selectedMarker.title}</Text>
-            </View>
-            {selectedMarker.note ? (
-              <Text style={styles.muted}>{selectedMarker.note}</Text>
-            ) : null}
-            {selectedMarker.tasks.map((task) => (
-              <TaskRow
-                key={task.id}
-                task={task}
-                decision={decisions[task.id]}
-                disabled={!open}
-                onDecide={decide}
-              />
-            ))}
-          </View>
-        ) : null}
-      </View>
+      {job.tasks.length > 0 ? (
+        <Section title="Redan godkända vid mottagning" sum={tasksTotal(job.tasks)}>
+          {job.tasks.map((task) => (
+            <TaskRow key={task.id} task={task} />
+          ))}
+        </Section>
+      ) : null}
 
-      <Text style={styles.sectionTitle}>Det här behöver göras</Text>
-      <View style={styles.card}>
-        {job.tasks.length === 0 ? (
-          <Text style={styles.muted}>Inga åtgärder behövs.</Text>
-        ) : (
-          job.tasks.map((task) => (
-            <TaskRow
-              key={task.id}
-              task={task}
-              note={(task.inspectionItemIds ?? [])
-                .map((id) => job.inspection?.[id]?.note?.trim())
-                .filter(Boolean)
-                .join(' ')}
-              decision={decisions[task.id]}
-              disabled={!open}
-              onDecide={decide}
-            />
-          ))
-        )}
-      </View>
+      {split.kind === 'single' ? (
+        sent ? (
+          <Section
+            title="Nya besiktningsanmärkningar vid besiktning"
+            sum={approvedTotal(split.tasks)}
+            initiallyOpen
+          >
+            {split.tasks.length === 0 ? (
+              <Text style={styles.muted}>Inga åtgärder behövs.</Text>
+            ) : (
+              split.tasks.map(taskRow)
+            )}
+          </Section>
+        ) : null
+      ) : (
+        <>
+          <Section title="Tidigare godkänt" sum={approvedTotal(split.previous)}>
+            {split.previous.map(taskRow)}
+          </Section>
+          <Section title="Tilläggsorder" sum={approvedTotal(split.addOn)} initiallyOpen>
+            {split.addOn.map(taskRow)}
+          </Section>
+        </>
+      )}
 
       <View style={styles.totalRow}>
         <Text style={styles.totalLabel}>Totalt</Text>
-        <Text style={styles.totalValue}>{kr(approvedSum)}</Text>
+        <Text style={styles.totalValue}>{kr(total)}</Text>
       </View>
 
-      {open ? (
+      {preview || !sent ? null : open ? (
         <>
           <Pressable
             onPress={send}
@@ -303,6 +350,31 @@ export function CustomerView({ token }: { token: string }) {
   );
 }
 
+/** Collapsible group of tasks with its sum. */
+function Section({
+  title,
+  sum,
+  initiallyOpen = false,
+  children,
+}: {
+  title: string;
+  sum: number;
+  initiallyOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = useState(initiallyOpen);
+  return (
+    <View style={styles.card}>
+      <Pressable onPress={() => setOpen((o) => !o)} style={styles.sectionHeader} hitSlop={4}>
+        <Text style={styles.sectionHeaderTitle}>{title}</Text>
+        <Text style={styles.sectionSum}>{kr(sum)}</Text>
+        <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={18} color={c.textSecondary} />
+      </Pressable>
+      {open ? children : null}
+    </View>
+  );
+}
+
 function TaskRow({
   task,
   note,
@@ -313,9 +385,10 @@ function TaskRow({
   task: Task;
   /** The mechanic's comment from the linked inspection item(s). */
   note?: string;
-  decision: Approval | undefined;
-  disabled: boolean;
-  onDecide: (taskId: string, approval: Approval) => void;
+  decision?: Approval;
+  disabled?: boolean;
+  /** Without it the task is read-only (agreed at Mottagning). */
+  onDecide?: (taskId: string, approval: Approval) => void;
 }) {
   return (
     <View style={styles.task}>
@@ -331,22 +404,24 @@ function TaskRow({
           <Text style={styles.criticalText}>Påverkar säkerheten</Text>
         </View>
       ) : null}
+      {onDecide ? (
       <View style={styles.choiceRow}>
         <Choice
           label="Godkänn"
           active={decision === 'godkänd'}
           color={c.approve}
-          disabled={disabled}
+          disabled={!!disabled}
           onPress={() => onDecide(task.id, 'godkänd')}
         />
         <Choice
           label="Neka"
           active={decision === 'nekad'}
           color={c.textSecondary}
-          disabled={disabled}
+          disabled={!!disabled}
           onPress={() => onDecide(task.id, 'nekad')}
         />
       </View>
+      ) : null}
     </View>
   );
 }
@@ -453,7 +528,9 @@ const styles = StyleSheet.create({
   workshop: { color: c.textSecondary, fontWeight: '700', letterSpacing: 1, fontSize: 12 },
   title: { color: c.text, fontSize: 26, fontWeight: '800' },
   muted: { color: c.textSecondary, fontSize: 15, lineHeight: 21 },
-  sectionTitle: { color: c.text, fontSize: 18, fontWeight: '700', marginTop: 8 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  sectionHeaderTitle: { flex: 1, color: c.text, fontSize: 17, fontWeight: '700' },
+  sectionSum: { color: c.textSecondary, fontWeight: '600', fontSize: 15 },
   card: {
     backgroundColor: c.card,
     borderRadius: 18,

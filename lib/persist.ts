@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { BikeData } from './bikeAnalysis';
 import type { InspectionState } from './inspection';
-import { ItemKind, JobComments, Task, OrderInfo } from './types';
+import { ItemKind, JobComments, JobStatus, Task, OrderInfo } from './types';
 
 /**
  * Local auto-save of the current order (AsyncStorage: device storage on
@@ -23,6 +23,8 @@ export type Draft = {
   /** Kundkommentar and Verkstadskommentar; missing in drafts saved before they existed. */
   comments?: JobComments;
   tasks: Task[];
+  /** Jobblista; missing in drafts saved before it existed. */
+  inspectionTasks?: Task[];
   order: OrderInfo;
   /** Besiktning checklist; missing in drafts saved before it existed. */
   inspection?: InspectionState;
@@ -33,6 +35,8 @@ export type Draft = {
   customerId?: string | null;
   /** JSON of the customer as last saved, to skip unchanged re-saves. */
   customerKey?: string;
+  /** Status of the saved job; missing in drafts saved before it existed. */
+  jobStatus?: JobStatus | null;
   savedAt: number;
 };
 
@@ -53,6 +57,7 @@ export async function loadDraft(): Promise<Draft | null> {
     if (
       !draft.transcript &&
       (!draft.tasks || draft.tasks.length === 0) &&
+      (!draft.inspectionTasks || draft.inspectionTasks.length === 0) &&
       !draft.photoUri &&
       !draft.order?.customer &&
       !draft.order?.bikeNumber &&

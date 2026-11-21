@@ -31,9 +31,21 @@ export function tokenFromLocation(): string | null {
   return match ? match[1] : null;
 }
 
+/** True when the customer link was opened with ?preview=1 (staff preview of the draft). */
+export function isPreviewLocation(): boolean {
+  if (typeof window === 'undefined' || !window.location) return false;
+  return new URLSearchParams(window.location.search).get('preview') === '1';
+}
+
 export type CustomerJob = {
   status: JobStatus;
+  /** Tasks agreed at Mottagning. */
   tasks: Task[];
+  /** The Jobblista as sent; null until "Skicka till kund". */
+  inspectionTasks: Task[] | null;
+  /** The current, possibly unsent Jobblista, for the staff preview. */
+  draftInspectionTasks: Task[];
+  sentAt: string | null;
   inspection: InspectionState;
   bike: BikeData | null;
   bikeNumber: string | null;
@@ -67,9 +79,15 @@ export function changeDeadline(respondedAt: string | null): Date | null {
   return respondedAt ? new Date(new Date(respondedAt).getTime() + CHANGE_WINDOW_MS) : null;
 }
 
-/** Same rule as snapbike_customer_respond: open while inspected/approved and inside the 2 h window. */
-export function canRespond(job: CustomerJob, now = new Date()): boolean {
-  if (job.status !== 'inspected' && job.status !== 'customer_approved') return false;
+/**
+ * Whether the customer may answer this task; same rule as snapbike_customer_respond.
+ * Before work starts: any task within the 2 h window. Under arbete: only
+ * unanswered tasks (tilläggsorder), without time limit.
+ */
+export function canAnswerTask(job: CustomerJob, task: Task, now = new Date()): boolean {
+  if (!job.inspectionTasks) return false;
+  if (job.status === 'in_progress') return !task.approval;
+  if (!['checked_in', 'received', 'inspected', 'awaiting_customer', 'customer_approved'].includes(job.status)) return false;
   const deadline = changeDeadline(job.respondedAt);
   return !deadline || now < deadline;
 }

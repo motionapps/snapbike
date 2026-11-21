@@ -28,6 +28,7 @@ import {
 } from '../lib/api';
 import { inspectionImageUrl } from '../lib/taskImages';
 import { useOrderContext } from '../lib/orderContext';
+import { clearJobListSent } from '../lib/supabase';
 import {
   INSPECTION_ITEM_COUNT,
   INSPECTION_TEMPLATE,
@@ -46,6 +47,7 @@ import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from '../lib/speech
 import { colors, gutter, radius } from '../lib/theme';
 import { ImagePreviewModal } from './ImagePreviewModal';
 import { MicButton, MicPhase } from './MicButton';
+import { DoneButton, StepLock } from './StepDone';
 import { WaveText } from './WaveText';
 
 const MIC_LABELS: Partial<Record<MicPhase, string>> = {
@@ -61,8 +63,12 @@ const MIC_LABELS: Partial<Record<MicPhase, string>> = {
 export function InspectionScreen() {
   const insets = useSafeAreaInsets();
   const {
-    setTasks,
-    goToOrder,
+    tasks,
+    inspectionTasks,
+    setInspectionTasks,
+    setJobListSend,
+    order,
+    goToJobList,
     prices,
     inspection: results,
     setInspection: setResults,
@@ -75,6 +81,9 @@ export function InspectionScreen() {
   const [micError, setMicError] = useState('');
   const [creatingTasks, setCreatingTasks] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  // Bottom edge of the mic card; once scrolled past it, a thin stop bar shows.
+  const micCardBottom = useRef(0);
+  const [micScrolledAway, setMicScrolledAway] = useState(false);
   const sectionY = useRef<Record<string, number>>({});
   const [previewUri, setPreviewUri] = useState<string | null>(null);
   // Hold ✓ or ⚠ on an item to speak a comment into its note field.
@@ -265,30 +274,51 @@ export function InspectionScreen() {
     });
   }, []);
 
-  const reset = useCallback(() => {
-    setResults({});
-    setInspectionTranscript('');
-  }, [setResults, setInspectionTranscript]);
-
   const checkedCount = useMemo(() => Object.keys(results).length, [results]);
   const issues = useMemo(() => inspectionIssues(results), [results]);
   const done = checkedCount === INSPECTION_ITEM_COUNT;
 
-  // Gör en prissatt jobblista av anmärkningarna och hoppa till offerten.
-  const createTasks = useCallback(async () => {
-    if (issues.length === 0) return;
+  // Gör jobblistan av anmärkningarna och hoppa till Jobblista-tabben.
+  const runCreateTasks = useCallback(async () => {
     setMicError('');
     setCreatingTasks(true);
     try {
-      const newTasks = await tasksFromInspection(issues, inspectionTranscript, prices);
-      setTasks((current) => [...current, ...newTasks]);
-      goToOrder();
+      const newTasks = await tasksFromInspection(issues, inspectionTranscript, prices, tasks);
+      if (newTasks.length === 0) {
+        setMicError('Alla anmärkningar täcks redan av det som avtalades vid mottagningen.');
+        return;
+      }
+      // A recreated list is unsent again.
+      if (order.bookingId) await clearJobListSent(order.bookingId);
+      setJobListSend((current) =>
+        current ? { ...current, sentTasks: null, sentAt: null, verbalApprovalAt: null } : current
+      );
+      setInspectionTasks(newTasks);
+      goToJobList();
     } catch (err) {
       setMicError(err instanceof Error ? err.message : String(err));
     } finally {
       setCreatingTasks(false);
     }
-  }, [issues, setTasks, goToOrder, prices, inspectionTranscript]);
+  }, [issues, inspectionTranscript, prices, tasks, order.bookingId, setInspectionTasks, setJobListSend, goToJobList]);
+
+  const createTasks = useCallback(() => {
+    if (issues.length === 0) return;
+    if (inspectionTasks.length === 0) {
+      void runCreateTasks();
+      return;
+    }
+    const title = 'Du har redan skapat en jobblista';
+    const message = 'Är du säker på att du vill skapa den igen?';
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${title}. ${message}`)) void runCreateTasks();
+      return;
+    }
+    Alert.alert(title, message, [
+      { text: 'Avbryt', style: 'cancel' },
+      { text: 'Skapa igen', style: 'destructive', onPress: () => void runCreateTasks() },
+    ]);
+  }, [issues.length, inspectionTasks.length, runCreateTasks]);
 
   return (
     <View style={styles.root}>
@@ -319,8 +349,20 @@ export function InspectionScreen() {
         />
       </View>
 
+      {phase === 'recording' && micScrolledAway ? (
+        <Pressable onPress={() => void stopRecording()} style={styles.compactMic}>
+          <Ionicons name="stop" size={12} color={colors.text} />
+          <Text style={styles.compactMicText}>Spelar in – tryck för att stoppa</Text>
+        </Pressable>
+      ) : null}
+
       <ScrollView
         ref={scrollRef}
+        onScroll={(e) => {
+          const away = e.nativeEvent.contentOffset.y > micCardBottom.current;
+          if (away !== micScrolledAway) setMicScrolledAway(away);
+        }}
+        scrollEventThrottle={32}
         contentContainerStyle={[
           styles.content,
           { paddingBottom: insets.bottom + 24 },
@@ -328,7 +370,14 @@ export function InspectionScreen() {
         keyboardShouldPersistTaps="handled"
         keyboardDismissMode="on-drag"
       >
-        <View style={styles.micCard}>
+        <StepLock tab="inspect" gap={22}>
+        <View
+          style={styles.micCard}
+          onLayout={(e) => {
+            const { y, height } = e.nativeEvent.layout;
+            micCardBottom.current = y + height;
+          }}
+        >
           <MicButton
             phase={phase}
             onToggle={handleMic}
@@ -556,14 +605,10 @@ export function InspectionScreen() {
               </Text>
             </View>
           ) : null}
-
-          {checkedCount > 0 ? (
-            <Pressable onPress={reset} style={styles.resetButton}>
-              <Ionicons name="refresh-outline" size={18} color={colors.text} />
-              <Text style={styles.resetText}>Ny besiktning</Text>
-            </Pressable>
-          ) : null}
         </View>
+        </StepLock>
+
+        <DoneButton tab="inspect" />
       </ScrollView>
       <ImagePreviewModal uri={previewUri} onClose={() => setPreviewUri(null)} />
     </View>
@@ -672,6 +717,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     gap: 12,
     alignItems: 'center',
+  },
+  compactMic: {
+    height: 25,
+    marginHorizontal: gutter,
+    marginBottom: 6,
+    borderRadius: 12.5,
+    backgroundColor: colors.recording,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  compactMicText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '700',
   },
   micHint: {
     color: colors.textFaint,
@@ -888,20 +949,5 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: 13,
     lineHeight: 19,
-  },
-  resetButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingVertical: 13,
-  },
-  resetText: {
-    color: colors.text,
-    fontWeight: '600',
   },
 });

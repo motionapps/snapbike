@@ -10,12 +10,13 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { jobImageUrl } from '../lib/supabase';
 import { colors, gutter, radius } from '../lib/theme';
-import { Job, Task, JobStatus, tasksTotal } from '../lib/types';
+import { Job, JobStatus, jobTotal } from '../lib/types';
+
+const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
 import { BikeDetails } from './BikeDetails';
 import { InspectionSummary } from './InspectionSummary';
 import { JobHeader } from './JobHeader';
@@ -27,7 +28,6 @@ type Props = {
   job: Job | null;
   onClose: () => void;
   onChangeStatus: (id: string, status: JobStatus) => void;
-  onUpdateTasks: (id: string, tasks: Task[]) => void;
   onUpdateComment: (id: string, field: CommentField, text: string) => void;
   onStartCheckIn: (job: Job) => void;
   onEditBikeDetails: (job: Job) => void;
@@ -40,14 +40,10 @@ type Props = {
 /** The next step for each status: a label and what it does. */
 type NextAction = { label: string; icon: string; run: () => void };
 
-/** Identifies the price being edited: a task's own price or one of its products. */
-type EditTarget = { taskId: string; productId: string | null };
-
 export function JobDetailModal({
   job,
   onClose,
   onChangeStatus,
-  onUpdateTasks,
   onUpdateComment,
   onStartCheckIn,
   onEditBikeDetails,
@@ -56,11 +52,14 @@ export function JobDetailModal({
   onSelectBike,
   onDelete,
 }: Props) {
-  const [editing, setEditing] = useState<EditTarget | null>(null);
-  const [editValue, setEditValue] = useState('');
   const [zoomUri, setZoomUri] = useState<string | null>(null);
   // Snapshot of what the notes modal shows; null when it is closed.
   const [notes, setNotes] = useState<NoteEntry[] | null>(null);
+
+  // Rough overview of everything to do; denied Jobblista tasks are left out.
+  const overviewTasks = job
+    ? [...job.tasks, ...job.inspectionTasks.filter((task) => task.approval !== 'nekad')]
+    : [];
 
   const transcripts: NoteEntry[] = job
     ? [
@@ -68,30 +67,6 @@ export function JobDetailModal({
         { title: 'Besiktningstranskribering', text: job.inspectionTranscript },
       ].filter((entry) => entry.text.trim() !== '')
     : [];
-
-  const startEdit = (target: EditTarget, price: number) => {
-    setEditing(target);
-    setEditValue(price > 0 ? String(price) : '');
-  };
-
-  const commitEdit = () => {
-    if (editing && job) {
-      const price = Number(editValue.replace(',', '.')) || 0;
-      const tasks = job.tasks.map((task) => {
-        if (task.id !== editing.taskId) return task;
-        if (editing.productId === null) return { ...task, price };
-        return {
-          ...task,
-          products: task.products.map((product) =>
-            product.id === editing.productId ? { ...product, price } : product
-          ),
-        };
-      });
-      onUpdateTasks(job.id, tasks);
-    }
-    setEditing(null);
-    setEditValue('');
-  };
 
   // Navigation that switches tab waits until the modal is fully dismissed:
   // on iOS, hiding the Jobb tab mid-dismiss leaves an invisible modal that
@@ -117,8 +92,6 @@ export function JobDetailModal({
   const close = () => {
     setZoomUri(null);
     setNotes(null);
-    setEditing(null);
-    setEditValue('');
     onClose();
   };
 
@@ -151,6 +124,7 @@ export function JobDetailModal({
           },
         };
       case 'checked_in':
+      case 'received':
         return {
           label: 'Starta besiktningen',
           icon: 'clipboard',
@@ -159,6 +133,7 @@ export function JobDetailModal({
           },
         };
       case 'inspected':
+      case 'awaiting_customer':
       case 'customer_approved':
         return {
           label: 'Starta arbetet',
@@ -181,21 +156,6 @@ export function JobDetailModal({
         return null;
     }
   })();
-
-  const priceInput = (
-    <TextInput
-      style={styles.priceInput}
-      placeholder="kr"
-      placeholderTextColor={colors.textFaint}
-      value={editValue}
-      onChangeText={setEditValue}
-      keyboardType="numeric"
-      returnKeyType="done"
-      autoFocus
-      onSubmitEditing={commitEdit}
-      onBlur={commitEdit}
-    />
-  );
 
   return (
     <Modal
@@ -315,72 +275,29 @@ export function JobDetailModal({
               </Pressable>
             </View>
 
-            <View style={styles.taskList}>
-              {job.tasks.map((task) => (
-                <View key={task.id} style={styles.taskCard}>
-                  <View style={styles.taskRow}>
-                    <View style={styles.taskText}>
-                      <Text style={styles.taskCategory}>
-                        {task.category.toUpperCase()}
-                      </Text>
-                      <Text style={styles.taskTitle}>{task.title}</Text>
+            <View style={styles.overview}>
+              {overviewTasks.length === 0 ? (
+                <Text style={styles.overviewEmpty}>Inga jobb än</Text>
+              ) : (
+                overviewTasks.map((task) => {
+                  const products = task.products.reduce((sum, p) => sum + p.price, 0);
+                  return (
+                    <View key={task.id} style={styles.overviewRow}>
+                      <Text style={styles.overviewTitle}>{task.title}</Text>
+                      <Text style={styles.overviewLine}>Arbete {kr(task.price)}</Text>
+                      {task.products.length > 0 ? (
+                        <Text style={styles.overviewLine}>Produkter {kr(products)}</Text>
+                      ) : null}
                     </View>
-                    {editing?.taskId === task.id && editing.productId === null ? (
-                      priceInput
-                    ) : (
-                      <Pressable
-                        onPress={() =>
-                          startEdit({ taskId: task.id, productId: null }, task.price)
-                        }
-                        hitSlop={6}
-                      >
-                        <Text style={styles.taskPrice}>{task.price} kr</Text>
-                      </Pressable>
-                    )}
-                  </View>
-                  {task.products.map((product) => (
-                    <View key={product.id} style={styles.productRow}>
-                      <Ionicons
-                        name="cube-outline"
-                        size={14}
-                        color={colors.textSecondary}
-                      />
-                      <Text style={styles.productName}>{product.name}</Text>
-                      {editing?.taskId === task.id &&
-                      editing.productId === product.id ? (
-                        priceInput
-                      ) : (
-                        <Pressable
-                          onPress={() =>
-                            startEdit(
-                              { taskId: task.id, productId: product.id },
-                              product.price
-                            )
-                          }
-                          hitSlop={6}
-                          style={product.price > 0 ? undefined : styles.priceMissing}
-                        >
-                          <Text
-                            style={[
-                              styles.productPrice,
-                              product.price <= 0 && styles.priceMissingText,
-                            ]}
-                          >
-                            {product.price > 0 ? `${product.price} kr` : '– kr'}
-                          </Text>
-                        </Pressable>
-                      )}
-                    </View>
-                  ))}
-                </View>
-              ))}
-            </View>
-
-            <View style={styles.totalRow}>
-              <Text style={styles.totalLabel}>Totalt</Text>
-              <Text style={styles.totalValue}>
-                {tasksTotal(job.tasks).toLocaleString('sv-SE')} kr
-              </Text>
+                  );
+                })
+              )}
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Totalt</Text>
+                <Text style={styles.totalValue}>
+                  {kr(jobTotal(job.tasks, job.inspectionTasks))}
+                </Text>
+              </View>
             </View>
 
             <InspectionSummary
@@ -557,78 +474,31 @@ const styles = StyleSheet.create({
     borderCurve: 'continuous',
     backgroundColor: colors.cardRaised,
   },
-  taskList: {
-    gap: 10,
-  },
-  taskCard: {
+  overview: {
     backgroundColor: colors.card,
     borderRadius: radius.md,
     borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.border,
     padding: 14,
-    gap: 8,
-  },
-  taskRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: 10,
   },
-  taskText: {
-    flex: 1,
-    gap: 3,
+  overviewEmpty: {
+    color: colors.textSecondary,
   },
-  taskCategory: {
-    color: colors.accent,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 1,
+  overviewRow: {
+    gap: 2,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
   },
-  taskTitle: {
+  overviewTitle: {
     color: colors.text,
     fontWeight: '600',
   },
-  taskPrice: {
-    color: colors.text,
-    fontWeight: '700',
-  },
-  productRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingLeft: 6,
-  },
-  productName: {
-    flex: 1,
+  overviewLine: {
     color: colors.textSecondary,
-  },
-  productPrice: {
-    color: colors.textSecondary,
-    fontWeight: '600',
-  },
-  priceMissing: {
-    borderRadius: radius.sm,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderStyle: 'dashed',
-    borderColor: colors.accent,
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-  },
-  priceMissingText: {
-    color: colors.accent,
-  },
-  priceInput: {
-    backgroundColor: colors.cardRaised,
-    borderRadius: radius.sm,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: colors.border,
-    color: colors.text,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    width: 76,
-    textAlign: 'right',
+    fontSize: 13,
   },
   totalRow: {
     flexDirection: 'row',
