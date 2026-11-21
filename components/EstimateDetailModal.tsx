@@ -13,7 +13,7 @@ import {
   View,
 } from 'react-native';
 import { estimateImageUrl } from '../lib/supabase';
-import { colors, radius } from '../lib/theme';
+import { colors, gutter, radius } from '../lib/theme';
 import { Estimate, Job, JobStatus, jobsTotal } from '../lib/types';
 import { StatusPill } from './StatusPill';
 
@@ -30,7 +30,12 @@ type Props = {
   onClose: () => void;
   onChangeStatus: (id: string, status: JobStatus) => void;
   onUpdateJobs: (id: string, jobs: Job[]) => void;
+  onStartCheckIn: (estimate: Estimate) => void;
+  onStartInspection: (estimate: Estimate) => void;
 };
+
+/** The next step for each status: a label and what it does. */
+type NextAction = { label: string; icon: string; run: () => void };
 
 /** Identifies the price being edited: a job's own price or one of its products. */
 type EditTarget = { jobId: string; productId: string | null };
@@ -40,6 +45,8 @@ export function EstimateDetailModal({
   onClose,
   onChangeStatus,
   onUpdateJobs,
+  onStartCheckIn,
+  onStartInspection,
 }: Props) {
   const [editing, setEditing] = useState<EditTarget | null>(null);
   const [editValue, setEditValue] = useState('');
@@ -73,6 +80,44 @@ export function EstimateDetailModal({
     setEditValue('');
     onClose();
   };
+
+  const nextAction = ((): NextAction | null => {
+    if (!estimate) return null;
+    switch (estimate.status) {
+      case 'booked':
+        return {
+          label: 'Starta mottagningen',
+          icon: 'mic',
+          run: () => {
+            close();
+            onStartCheckIn(estimate);
+          },
+        };
+      case 'checked_in':
+        return {
+          label: 'Starta besiktningen',
+          icon: 'clipboard',
+          run: () => {
+            close();
+            onStartInspection(estimate);
+          },
+        };
+      case 'inspected':
+        return {
+          label: 'Markera klar',
+          icon: 'checkmark-circle',
+          run: () => onChangeStatus(estimate.id, 'ready'),
+        };
+      case 'ready':
+        return {
+          label: 'Lämna ut',
+          icon: 'exit',
+          run: () => onChangeStatus(estimate.id, 'delivered'),
+        };
+      default:
+        return null;
+    }
+  })();
 
   const priceInput = (
     <TextInput
@@ -117,6 +162,23 @@ export function EstimateDetailModal({
             contentContainerStyle={styles.content}
             keyboardShouldPersistTaps="handled"
           >
+            {nextAction ? (
+              <Pressable
+                onPress={nextAction.run}
+                style={({ pressed }) => [
+                  styles.actionButton,
+                  pressed && styles.actionButtonPressed,
+                ]}
+              >
+                <Ionicons
+                  name={nextAction.icon as never}
+                  size={18}
+                  color={colors.onAccent}
+                />
+                <Text style={styles.actionButtonText}>{nextAction.label}</Text>
+              </Pressable>
+            ) : null}
+
             <StatusPill
               status={estimate.status}
               onChange={(status) => onChangeStatus(estimate.id, status)}
@@ -216,7 +278,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    paddingHorizontal: 20,
+    paddingHorizontal: gutter,
     marginBottom: 16,
   },
   headerText: {
@@ -241,9 +303,27 @@ const styles = StyleSheet.create({
     backgroundColor: colors.cardRaised,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: gutter,
     paddingBottom: 40,
     gap: 16,
+  },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: colors.accent,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    paddingVertical: 14,
+  },
+  actionButtonPressed: {
+    backgroundColor: colors.accentDark,
+  },
+  actionButtonText: {
+    color: colors.onAccent,
+    fontWeight: '700',
+    fontSize: 15,
   },
   photo: {
     width: '100%',

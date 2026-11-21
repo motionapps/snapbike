@@ -6,7 +6,7 @@ import {
   setAudioModeAsync,
   useAudioRecorder,
 } from 'expo-audio';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -30,7 +30,6 @@ import { useOrderContext } from '../lib/orderContext';
 import {
   INSPECTION_ITEM_COUNT,
   INSPECTION_TEMPLATE,
-  InspectionState,
   InspectionStatus,
   inspectionIssues,
   inspectionSummaryText,
@@ -43,7 +42,7 @@ for (const section of INSPECTION_TEMPLATE) {
   for (const item of section.items) ITEM_SECTION[item.id] = section.key;
 }
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from '../lib/speech';
-import { colors, radius } from '../lib/theme';
+import { colors, gutter, radius } from '../lib/theme';
 import { MicButton, MicPhase } from './MicButton';
 
 const MIC_LABELS: Partial<Record<MicPhase, string>> = {
@@ -58,8 +57,14 @@ const MIC_LABELS: Partial<Record<MicPhase, string>> = {
  */
 export function InspectionScreen() {
   const insets = useSafeAreaInsets();
-  const { setJobs, goToOrder, prices } = useOrderContext();
-  const [results, setResults] = useState<InspectionState>({});
+  const {
+    setJobs,
+    goToOrder,
+    prices,
+    order,
+    inspection: results,
+    setInspection: setResults,
+  } = useOrderContext();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [phase, setPhase] = useState<MicPhase>('idle');
   const [micError, setMicError] = useState('');
@@ -69,6 +74,16 @@ export function InspectionScreen() {
   const transcriptRef = useRef('');
 
   const useWebSpeech = !hasOpenAiKey && webSpeechAvailable;
+
+  // The spoken transcript belongs to the current bike: drop it when the bike
+  // changes or the checklist is cleared.
+  const isEmpty = Object.keys(results).length === 0;
+  useEffect(() => {
+    transcriptRef.current = '';
+  }, [order.bookingId]);
+  useEffect(() => {
+    if (isEmpty) transcriptRef.current = '';
+  }, [isEmpty]);
 
   const scrollToItem = useCallback((itemId: string) => {
     const y = sectionY.current[ITEM_SECTION[itemId]];
@@ -484,7 +499,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 10,
-    paddingHorizontal: 20,
+    paddingHorizontal: gutter,
     paddingBottom: 10,
   },
   title: {
@@ -512,7 +527,7 @@ const styles = StyleSheet.create({
   },
   progressTrack: {
     height: 4,
-    marginHorizontal: 20,
+    marginHorizontal: gutter,
     borderRadius: 2,
     backgroundColor: colors.border,
     overflow: 'hidden',
@@ -524,7 +539,7 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: gutter,
     paddingTop: 8,
     gap: 22,
   },

@@ -4,6 +4,7 @@ import { createClient } from '@supabase/supabase-js';
 import * as FileSystem from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { BikeData } from './bikeAnalysis';
+import { InspectionState } from './inspection';
 import { Customer, Estimate, Job, JobStatus, jobsTotal } from './types';
 
 const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
@@ -19,6 +20,8 @@ export type EstimateInput = {
   jobs: Job[];
   customer: Customer | null;
   bike: BikeData | null;
+  bikeNumber: string;
+  inspection: InspectionState;
   /** Existing booking row to update; null inserts a new row. */
   bookingId: string | null;
 };
@@ -34,6 +37,8 @@ export async function saveEstimate({
   jobs,
   customer,
   bike,
+  bikeNumber,
+  inspection,
   bookingId,
 }: EstimateInput): Promise<string> {
   let imagePath: string | null = null;
@@ -65,6 +70,8 @@ export async function saveEstimate({
     total: jobsTotal(jobs),
     customer,
     bike,
+    bike_number: bikeNumber.trim() || null,
+    inspection,
     // Keep the booking's existing photo when no new one was taken.
     ...(imagePath ? { image_path: imagePath } : {}),
   };
@@ -98,13 +105,15 @@ type EstimateRow = {
   status: JobStatus;
   customer: Customer | null;
   bike: BikeData | null;
+  bike_number: string | null;
+  inspection: InspectionState | null;
 };
 
 /** Fetches saved estimates, newest first, optionally only one status. */
 export async function fetchEstimates(status?: JobStatus): Promise<Estimate[]> {
   let query = supabase
     .from('snapbike_estimates')
-    .select('id, created_at, transcript, jobs, image_path, total, status, customer, bike')
+    .select('id, created_at, transcript, jobs, image_path, total, status, customer, bike, bike_number, inspection')
     .order('created_at', { ascending: false });
   if (status) query = query.eq('status', status);
   const { data, error } = await query;
@@ -123,6 +132,8 @@ export async function fetchEstimates(status?: JobStatus): Promise<Estimate[]> {
     status: row.status,
     customer: row.customer,
     bike: row.bike,
+    bikeNumber: row.bike_number ?? '',
+    inspection: row.inspection ?? {},
   }));
 }
 
@@ -155,6 +166,20 @@ export async function updateEstimateJobs(id: string, jobs: Job[]): Promise<void>
   });
   if (error) {
     throw new Error(`Kunde inte spara priser: ${error.message}`);
+  }
+}
+
+/** Auto-save of the Besiktning checklist onto an already saved row. */
+export async function updateEstimateInspection(
+  id: string,
+  inspection: InspectionState
+): Promise<void> {
+  const { error } = await supabase
+    .from('snapbike_estimates')
+    .update({ inspection })
+    .eq('id', id);
+  if (error) {
+    throw new Error(`Kunde inte spara besiktningen: ${error.message}`);
   }
 }
 

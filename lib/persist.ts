@@ -1,4 +1,5 @@
 import { BikeData } from './bikeAnalysis';
+import type { InspectionState } from './inspection';
 import { ItemKind, Job, OrderInfo } from './types';
 
 /**
@@ -20,6 +21,8 @@ export type Draft = {
   transcript: string;
   jobs: Job[];
   order: OrderInfo;
+  /** Besiktning checklist; missing in drafts saved before it existed. */
+  inspection?: InspectionState;
   savedAt: number;
 };
 
@@ -54,7 +57,13 @@ export function loadDraft(): Draft | null {
     if (!raw) return null;
     const draft = JSON.parse(raw) as Draft;
     // Tomt utkast är inte värt att återställa.
-    if (!draft.transcript && (!draft.jobs || draft.jobs.length === 0) && !draft.photoUri) {
+    if (
+      !draft.transcript &&
+      (!draft.jobs || draft.jobs.length === 0) &&
+      !draft.photoUri &&
+      !draft.order?.customer &&
+      Object.keys(draft.inspection ?? {}).length === 0
+    ) {
       return null;
     }
     return draft;

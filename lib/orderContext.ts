@@ -1,5 +1,6 @@
 import { Dispatch, SetStateAction, createContext, useContext } from 'react';
 import type { BikeAnalysisState } from '../components/BikeDetails';
+import type { InspectionState } from './inspection';
 import { ItemKind, Job, OrderInfo, PriceItem } from './types';
 
 /**
@@ -22,6 +23,9 @@ export type OrderContextValue = {
   setBikeAnalysis: Dispatch<SetStateAction<BikeAnalysisState>>;
   /** Price rows that apply to the item kind and bike. */
   prices: PriceItem[];
+  /** Besiktning checklist of the current bike; auto-saved to its row. */
+  inspection: InspectionState;
+  setInspection: Dispatch<SetStateAction<InspectionState>>;
 };
 
 export const OrderContext = createContext<OrderContextValue | null>(null);

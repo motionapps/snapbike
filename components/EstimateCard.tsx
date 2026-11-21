@@ -27,6 +27,9 @@ export const EstimateCard = memo(function EstimateCard({
 }: Props) {
   const imageUrl = estimateImageUrl(estimate.imagePath);
   const jobTitles = estimate.jobs.map((job) => job.title).join(' · ');
+  const customerName = estimate.customer
+    ? `${estimate.customer.firstName} ${estimate.customer.lastName}`.trim()
+    : '';
 
   return (
     <Pressable
@@ -47,6 +50,16 @@ export const EstimateCard = memo(function EstimateCard({
           </View>
         )}
         <View style={styles.info}>
+          <View style={styles.nameRow}>
+            {estimate.bikeNumber ? (
+              <View style={styles.tag}>
+                <Text style={styles.tagText}>#{estimate.bikeNumber}</Text>
+              </View>
+            ) : null}
+            <Text style={styles.name} numberOfLines={1}>
+              {customerName || 'Okänd kund'}
+            </Text>
+          </View>
           <Text style={styles.date}>
             {dateFormat.format(new Date(estimate.createdAt))}
           </Text>
@@ -100,6 +113,30 @@ const styles = StyleSheet.create({
   info: {
     flex: 1,
     gap: 3,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  tag: {
+    backgroundColor: colors.cardRaised,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: colors.border,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+  },
+  tagText: {
+    color: colors.accent,
+    fontWeight: '700',
+    fontSize: 12,
+  },
+  name: {
+    flex: 1,
+    color: colors.text,
+    fontWeight: '700',
+    fontSize: 15,
   },
   date: {
     color: colors.textFaint,

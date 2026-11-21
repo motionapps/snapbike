@@ -57,7 +57,8 @@ const LABELS: Record<string, string> = {
   'foot brake': 'Fotbroms',
 };
 
-const label = (value: string) => LABELS[value] ?? value;
+export const bikeLabel = (value: string) => LABELS[value] ?? value;
+const label = bikeLabel;
 const yesNo = (value: boolean) => (value ? 'Ja' : 'Nej');
 
 type Bike = BikeData['bike'];

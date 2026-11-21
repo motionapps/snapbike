@@ -16,19 +16,36 @@ import { Customer, EMPTY_CUSTOMER, isCustomerValid } from '../lib/types';
 type Props = {
   visible: boolean;
   initial: Customer | null;
+  initialBikeNumber: string;
   onClose: () => void;
-  onSave: (customer: Customer) => void;
+  onSave: (customer: Customer, bikeNumber: string) => void;
 };
 
-/** Drop-in: manually enter the customer. First name and phone are required. */
-export function CustomerModal({ visible, initial, onClose, onSave }: Props) {
+/**
+ * Drop-in: manually enter the customer and the bike tag. First name and phone
+ * are required; the tag is optional but must be 1–100 when given.
+ */
+export function CustomerModal({
+  visible,
+  initial,
+  initialBikeNumber,
+  onClose,
+  onSave,
+}: Props) {
   const [customer, setCustomer] = useState<Customer>(initial ?? EMPTY_CUSTOMER);
+  const [bikeNumber, setBikeNumber] = useState(initialBikeNumber);
 
   useEffect(() => {
-    if (visible) setCustomer(initial ?? EMPTY_CUSTOMER);
-  }, [visible, initial]);
+    if (visible) {
+      setCustomer(initial ?? EMPTY_CUSTOMER);
+      setBikeNumber(initialBikeNumber);
+    }
+  }, [visible, initial, initialBikeNumber]);
 
-  const valid = isCustomerValid(customer);
+  const bikeNum = Number(bikeNumber);
+  const bikeInvalid =
+    bikeNumber !== '' && (bikeNum < 1 || bikeNum > 100 || !Number.isInteger(bikeNum));
+  const valid = isCustomerValid(customer) && !bikeInvalid;
   const set = (key: keyof Customer) => (text: string) =>
     setCustomer((current) => ({ ...current, [key]: text }));
 
@@ -39,7 +56,7 @@ export function CustomerModal({ visible, initial, onClose, onSave }: Props) {
       lastName: customer.lastName.trim(),
       phone: customer.phone.trim(),
       email: customer.email.trim(),
-    });
+    }, bikeNumber);
   };
 
   return (
@@ -75,6 +92,24 @@ export function CustomerModal({ visible, initial, onClose, onSave }: Props) {
             onChange={set('email')}
             keyboardType="email-address"
           />
+          <View style={styles.field}>
+            <View style={styles.labelRow}>
+              <Ionicons name="pricetag-outline" size={13} color={colors.textFaint} />
+              <Text style={styles.label}>Cykeltagg</Text>
+            </View>
+            <TextInput
+              style={[styles.input, styles.tagInput, bikeInvalid && styles.inputError]}
+              value={bikeNumber}
+              onChangeText={(text) => setBikeNumber(text.replace(/[^0-9]/g, '').slice(0, 3))}
+              placeholder="1–100"
+              placeholderTextColor={colors.textFaint}
+              keyboardType="number-pad"
+              maxLength={3}
+            />
+            {bikeInvalid ? (
+              <Text style={styles.hint}>Cykeltaggen måste vara 1–100.</Text>
+            ) : null}
+          </View>
           <Pressable
             onPress={save}
             disabled={!valid}
@@ -159,6 +194,24 @@ const styles = StyleSheet.create({
     color: colors.textFaint,
     fontSize: 12,
     fontWeight: '600',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  tagInput: {
+    width: 90,
+    textAlign: 'center',
+    fontWeight: '700',
+    fontSize: 16,
+  },
+  inputError: {
+    borderColor: colors.danger,
+  },
+  hint: {
+    color: colors.danger,
+    fontSize: 12,
   },
   input: {
     backgroundColor: colors.card,

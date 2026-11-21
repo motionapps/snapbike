@@ -1,4 +1,5 @@
 import { BikeData } from './bikeAnalysis';
+import type { InspectionState } from './inspection';
 
 export type Product = {
   id: string;
@@ -102,6 +103,10 @@ export type Estimate = {
   status: JobStatus;
   customer: Customer | null;
   bike: BikeData | null;
+  /** Workshop tag number; empty when none was given. */
+  bikeNumber: string;
+  /** Saved Besiktning checklist for this bike. */
+  inspection: InspectionState;
 };
 
 export function uid(): string {

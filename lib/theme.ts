@@ -1,3 +1,5 @@
+import { Dimensions } from 'react-native';
+
 export const colors = {
   bg: '#0B0F14',
   card: '#151C24',
@@ -32,3 +34,6 @@ export const shadow = {
   card: { boxShadow: '0 4px 16px rgba(0, 0, 0, 0.35)' },
   button: { boxShadow: '0 6px 20px rgba(185, 241, 60, 0.25)' },
 };
+
+/** Side margin of screens: tight on phones, roomier on tablets/desktop. */
+export const gutter = Dimensions.get('window').width < 500 ? 4 : 20;

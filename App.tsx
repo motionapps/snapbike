@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native';
 import {
+  SafeAreaInsetsContext,
   SafeAreaProvider,
   useSafeAreaInsets,
 } from 'react-native-safe-area-context';
@@ -30,7 +31,6 @@ import { CustomerSection } from './components/CustomerSection';
 import { InspectionScreen } from './components/InspectionScreen';
 import { InspectionGuide } from './components/InspectionGuide';
 import { JobCard } from './components/JobCard';
-import { OrderCard } from './components/OrderCard';
 import { OrderContext, useOrderContext } from './lib/orderContext';
 import { clearDraft, loadDraft, saveDraft } from './lib/persist';
 import { JobsScreen } from './components/JobsScreen';
@@ -42,8 +42,10 @@ import { pricesFor } from './lib/prices';
 import { BikeAnalysisState, BikeDetails } from './components/BikeDetails';
 import { analyzeTranscript, hasOpenAiKey, refineJob, transcribeAudio } from './lib/api';
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from './lib/speech';
-import { saveEstimate } from './lib/supabase';
-import { colors, radius, shadow } from './lib/theme';
+import { saveEstimate, updateEstimateInspection } from './lib/supabase';
+import { InspectionState } from './lib/inspection';
+import { CurrentBikeBar } from './components/CurrentBikeBar';
+import { colors, gutter, radius, shadow } from './lib/theme';
 import {
   Customer,
   EMPTY_ORDER,
@@ -68,7 +70,9 @@ function formatPrice(value: number): string {
   return `${value.toLocaleString('sv-SE')} kr`;
 }
 
-function Screen() {
+type LoadRequest = { estimate: Estimate; nonce: number };
+
+function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   const insets = useSafeAreaInsets();
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const {
@@ -83,6 +87,8 @@ function Screen() {
     bikeAnalysis,
     setBikeAnalysis,
     prices,
+    inspection,
+    setInspection,
   } = useOrderContext();
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -109,6 +115,7 @@ function Screen() {
       if (draft.bike) setBikeAnalysis({ status: 'ready', bike: draft.bike });
       setTranscript(draft.transcript);
       setJobs(draft.jobs);
+      setInspection(draft.inspection ?? {});
       // Older drafts stored customerName/customerPhone; drop those.
       setOrder({
         bikeNumber: draft.order?.bikeNumber ?? '',
@@ -123,15 +130,17 @@ function Screen() {
   useEffect(() => {
     if (!restored.current) return;
     const bike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike : null;
-    saveDraft({ photoUri, itemKind, bike, transcript, jobs, order });
-  }, [photoUri, itemKind, bikeAnalysis, transcript, jobs, order]);
-
-  const patchOrder = useCallback((patch: Partial<OrderInfo>) => {
-    setOrder((current) => ({ ...current, ...patch }));
-  }, []);
+    saveDraft({ photoUri, itemKind, bike, transcript, jobs, order, inspection });
+  }, [photoUri, itemKind, bikeAnalysis, transcript, jobs, order, inspection]);
 
   const setCustomer = useCallback((customer: Customer | null) => {
     setOrder((current) => ({ ...current, customer }));
+    setShowDropIn(false);
+    setSavedId(null);
+  }, []);
+
+  const saveDropIn = useCallback((customer: Customer, bikeNumber: string) => {
+    setOrder((current) => ({ ...current, customer, bikeNumber }));
     setShowDropIn(false);
     setSavedId(null);
   }, []);
@@ -143,8 +152,10 @@ function Screen() {
       ...current,
       customer: booking.customer,
       bookingId: booking.id,
+      bikeNumber: booking.bikeNumber || current.bikeNumber,
     }));
     setJobs((current) => [...booking.jobs, ...current]);
+    setInspection(booking.inspection ?? {});
     if (booking.bike) {
       setItemKind((current) => current ?? 'bike');
       setBikeAnalysis((current) =>
@@ -164,10 +175,18 @@ function Screen() {
     setBikeAnalysis({ status: 'idle' });
     setTranscript('');
     setJobs([]);
+    setInspection({});
     setOrder(EMPTY_ORDER);
     setError('');
     setSavedId(null);
   }, []);
+
+  // Started from the Jobb modal: replace the current order with that job.
+  useEffect(() => {
+    if (!loadRequest) return;
+    newOrder();
+    importBooking(loadRequest.estimate);
+  }, [loadRequest, newOrder, importBooking]);
 
   const setApproval = useCallback(
     (jobId: string, approval: 'godkänd' | 'nekad' | undefined) => {
@@ -433,6 +452,8 @@ function Screen() {
         jobs,
         customer: order.customer,
         bike: bikeAnalysis.status === 'ready' ? bikeAnalysis.bike : null,
+        bikeNumber: order.bikeNumber,
+        inspection,
         bookingId: order.bookingId,
       });
       setSavedId(id);
@@ -443,7 +464,7 @@ function Screen() {
     } finally {
       setSaving(false);
     }
-  }, [photoUri, transcript, jobs, order.customer, order.bookingId, bikeAnalysis]);
+  }, [photoUri, transcript, jobs, order.customer, order.bikeNumber, order.bookingId, bikeAnalysis, inspection]);
 
   const total = jobsTotal(jobs);
   const approved = approvedTotal(jobs);
@@ -531,7 +552,6 @@ function Screen() {
 
           {jobs.length > 0 ? (
             <View style={styles.jobsSection}>
-              <OrderCard order={order} onChange={patchOrder} />
               <Text style={styles.sectionHeading}>Jobb</Text>
               {jobs.map((job) => (
                 <JobCard
@@ -611,8 +631,9 @@ function Screen() {
       <CustomerModal
         visible={showDropIn}
         initial={order.customer}
+        initialBikeNumber={order.bikeNumber}
         onClose={() => setShowDropIn(false)}
-        onSave={setCustomer}
+        onSave={saveDropIn}
       />
       <BookingPickerModal
         visible={showBookings}
@@ -626,9 +647,9 @@ function Screen() {
 type Tab = 'note' | 'inspect' | 'jobs';
 
 const TABS: { key: Tab; label: string; icon: string; iconActive: string }[] = [
-  { key: 'note', label: 'Anteckna', icon: 'mic-outline', iconActive: 'mic' },
-  { key: 'inspect', label: 'Besiktning', icon: 'clipboard-outline', iconActive: 'clipboard' },
   { key: 'jobs', label: 'Jobb', icon: 'file-tray-full-outline', iconActive: 'file-tray-full' },
+  { key: 'note', label: 'Mottagning', icon: 'mic-outline', iconActive: 'mic' },
+  { key: 'inspect', label: 'Besiktning', icon: 'clipboard-outline', iconActive: 'clipboard' },
 ];
 
 function Root() {
@@ -646,7 +667,36 @@ function Root() {
     [itemKind, bikeAnalysis]
   );
 
+  const [inspection, setInspection] = useState<InspectionState>({});
+
+  // Auto-save the checklist onto the bike's row once it has one (before the
+  // first Spara it goes along with that save instead).
+  useEffect(() => {
+    const id = order.bookingId;
+    if (!id) return;
+    const timer = setTimeout(() => {
+      updateEstimateInspection(id, inspection).catch((err) =>
+        console.warn(err instanceof Error ? err.message : err)
+      );
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [order.bookingId, inspection]);
+
   const goToOrder = useCallback(() => setTab('note'), []);
+  const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(null);
+
+  const startCheckIn = useCallback((estimate: Estimate) => {
+    setLoadRequest({ estimate, nonce: Date.now() });
+    setTab('note');
+  }, []);
+
+  const startInspection = useCallback((estimate: Estimate) => {
+    setLoadRequest({ estimate, nonce: Date.now() });
+    setTab('inspect');
+  }, []);
+
+  const currentBike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike.bike : null;
+  const hasCurrentBike = order.customer !== null || currentBike !== null;
 
   return (
     <OrderContext.Provider
@@ -663,20 +713,41 @@ function Root() {
         bikeAnalysis,
         setBikeAnalysis,
         prices,
+        inspection,
+        setInspection,
       }}
     >
     <View style={styles.root}>
       <StatusBar style="light" />
 
+      {hasCurrentBike ? (
+        <CurrentBikeBar
+          customer={order.customer}
+          bike={currentBike}
+          bikeNumber={order.bikeNumber}
+          topInset={insets.top}
+        />
+      ) : null}
+
+      {/* The bar already covers the status bar area, so screens skip it. */}
+      <SafeAreaInsetsContext.Provider
+        value={hasCurrentBike ? { ...insets, top: 0 } : insets}
+      >
+
       <View style={[styles.page, tab !== 'note' && styles.pageHidden]}>
-        <Screen />
+        <Screen loadRequest={loadRequest} />
       </View>
       <View style={[styles.page, tab !== 'inspect' && styles.pageHidden]}>
         <InspectionScreen />
       </View>
       <View style={[styles.page, tab !== 'jobs' && styles.pageHidden]}>
-        <JobsScreen active={tab === 'jobs'} />
+        <JobsScreen
+          active={tab === 'jobs'}
+          onStartCheckIn={startCheckIn}
+          onStartInspection={startInspection}
+        />
       </View>
+      </SafeAreaInsetsContext.Provider>
 
       <View style={[styles.tabBar, { paddingBottom: insets.bottom + 4 }]}>
         {TABS.map((item) => {
@@ -747,7 +818,7 @@ const styles = StyleSheet.create({
     color: colors.accent,
   },
   content: {
-    paddingHorizontal: 20,
+    paddingHorizontal: gutter,
     gap: 20,
   },
   photoSection: {
