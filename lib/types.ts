@@ -25,6 +25,10 @@ export type Task = {
   approval?: 'godkänd' | 'nekad';
   /** Inspection checklist item ids this task fixes; places it on the customer's bike silhouette. */
   inspectionItemIds?: string[];
+  /** Ticked off on the work checklist (Jobblista after sending). */
+  done?: boolean;
+  /** Mechanic's comment from the work checklist. */
+  note?: string;
 };
 
 /**

@@ -128,7 +128,19 @@ export function JobsScreen({
     setRefreshing(false);
   }, [load]);
 
-  const { order, setComments, setCurrentStatus } = useOrderContext();
+  const { order, setComments, currentStatus, setCurrentStatus } = useOrderContext();
+
+  // The current job's status is shared app state (Klar / Lås upp on any tab);
+  // the list follows it at once instead of waiting for the next reload.
+  useEffect(() => {
+    const id = order.bookingId;
+    if (!id || !currentStatus) return;
+    setJobs((current) =>
+      current?.some((job) => job.id === id && job.status !== currentStatus)
+        ? current.map((job) => (job.id === id ? { ...job, status: currentStatus } : job))
+        : current
+    );
+  }, [order.bookingId, currentStatus]);
 
   const changeStatus = useCallback(
     (id: string, status: JobStatus) => {

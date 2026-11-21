@@ -36,7 +36,7 @@ import { clearDraft, loadDraft, saveDraft } from './lib/persist';
 import { JobsScreen } from './components/JobsScreen';
 import { JobListScreen } from './components/JobListScreen';
 import { MicButton, MicPhase } from './components/MicButton';
-import { DoneButton, StepLock } from './components/StepDone';
+import { DoneButton, LockedBanner, StepLock } from './components/StepDone';
 import { STEP_STATUS, StepTab, stepDone } from './lib/jobSteps';
 import { PhotoCard } from './components/PhotoCard';
 import { analyzeBikePhoto, BikeData } from './lib/bikeAnalysis';
@@ -46,7 +46,14 @@ import { BikeAnalysisState, BikeDetails } from './components/BikeDetails';
 import { analyzeTranscript, hasOpenAiKey, refineTask, transcribeAudio } from './lib/api';
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from './lib/speech';
 import * as FileSystem from 'expo-file-system/legacy';
-import { isStaff, jobImageUrl, saveCustomer, saveJob, uploadJobImage } from './lib/supabase';
+import {
+  fetchJobStatus,
+  isStaff,
+  jobImageUrl,
+  saveCustomer,
+  saveJob,
+  uploadJobImage,
+} from './lib/supabase';
 import { AuthProvider, useAuth } from './lib/auth/AuthProvider';
 import { startInStockSync } from './lib/inStockCache';
 import { AuthView } from './components/AuthView';
@@ -743,6 +750,8 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
             ) : null}
           </View>
 
+          <LockedBanner tab="note" />
+
           <StepLock tab="note" gap={20}>
           <View
             style={styles.photoSection}
@@ -932,6 +941,24 @@ function Root() {
   const [currentStatus, setCurrentStatus] = useState<JobStatus | null>(null);
 
   const goToJobList = useCallback(() => setTab('jobList'), []);
+
+  // The stored status is the truth: re-read it for the current job on every
+  // tab switch (and on start), so a local copy can never be stale.
+  useEffect(() => {
+    const id = order.bookingId;
+    if (!id) return;
+    let cancelled = false;
+    fetchJobStatus(id)
+      .then((status) => {
+        if (!cancelled && status) setCurrentStatus(status);
+      })
+      .catch(() => {
+        // Offline: keep the status we have.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab, order.bookingId]);
   // Greyed out until a Jobblista has been created from the remarks.
   const jobListEnabled = inspectionTasks.length > 0;
   const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(null);

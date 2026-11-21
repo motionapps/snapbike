@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ReactNode, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleProp, StyleSheet, Text, View, ViewStyle } from 'react-native';
 import { STEP_STATUS, StepTab, stepDone } from '../lib/jobSteps';
 import { useOrderContext } from '../lib/orderContext';
 import { setJobStatus } from '../lib/supabase';
@@ -15,27 +15,50 @@ export function useStepLocked(tab: StepTab): boolean {
 export function StepLock({ tab, gap, children }: { tab: StepTab; gap: number; children: ReactNode }) {
   const locked = useStepLocked(tab);
   return (
-    <View pointerEvents={locked ? 'none' : 'auto'} style={{ gap }}>
+    <View pointerEvents={locked ? 'none' : 'auto'} style={{ gap, opacity: locked ? 0.85 : 1 }}>
       {children}
     </View>
   );
 }
 
+/** Grey "Låst" strip under a tab's header while the tab is Klar. */
+export function LockedBanner({ tab, style }: { tab: StepTab; style?: StyleProp<ViewStyle> }) {
+  if (!useStepLocked(tab)) return null;
+  return (
+    <View style={[styles.banner, style]}>
+      <Ionicons name="lock-closed" size={12} color={colors.text} />
+      <Text style={styles.bannerText}>LÅST · LÅS UPP LÄNGST NER</Text>
+    </View>
+  );
+}
+
+/** Marks a tab Klar (true) or unlocks it (false) by moving the job's status. */
+export function useSetStepDone(tab: StepTab) {
+  const { order, currentStatus, setCurrentStatus } = useOrderContext();
+  const jobId = order.bookingId;
+  return (done: boolean): Promise<void> => {
+    if (!jobId) return Promise.resolve();
+    const previous = currentStatus;
+    const next = done ? STEP_STATUS[tab].done : STEP_STATUS[tab].undo;
+    setCurrentStatus(next);
+    return setJobStatus(jobId, next).catch((err) => {
+      setCurrentStatus(previous);
+      throw err;
+    });
+  };
+}
+
 /** Klar / Lås upp at the bottom of a tab: moves the job's status on or back. */
 export function DoneButton({ tab }: { tab: StepTab }) {
-  const { order, currentStatus, setCurrentStatus } = useOrderContext();
+  const { order } = useOrderContext();
   const [error, setError] = useState('');
-  const done = stepDone(tab, currentStatus);
+  const done = useStepLocked(tab);
+  const setStepDone = useSetStepDone(tab);
   const jobId = order.bookingId;
 
   const toggle = () => {
-    if (!jobId) return;
-    const previous = currentStatus;
-    const next = done ? STEP_STATUS[tab].undo : STEP_STATUS[tab].done;
     setError('');
-    setCurrentStatus(next);
-    setJobStatus(jobId, next).catch((err) => {
-      setCurrentStatus(previous);
+    setStepDone(!done).catch((err) => {
       setError(err instanceof Error ? err.message : String(err));
     });
   };
@@ -67,6 +90,22 @@ export function DoneButton({ tab }: { tab: StepTab }) {
 }
 
 const styles = StyleSheet.create({
+  banner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: colors.textFaint,
+    borderRadius: radius.sm,
+    borderCurve: 'continuous',
+    paddingVertical: 6,
+  },
+  bannerText: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 1.5,
+  },
   wrap: {
     gap: 8,
   },

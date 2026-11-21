@@ -229,6 +229,7 @@ type JobRow = {
 
 /** Fetches saved jobs, newest first, optionally only one status. */
 export async function fetchJobs(status?: JobStatus): Promise<Job[]> {
+  await pendingStatusWrites;
   let query = supabase
     .from('snapbike_jobs')
     .select('id, created_at, transcript, inspection_transcript, customer_comment, mechanic_comment, tasks, inspection_tasks, image_path, total, status, customer:snapbike_customer(first_name, last_name, phone, email), bike, bike_number, inspection, share_token, customer_responded_at')
@@ -269,13 +270,33 @@ export async function setJobStatus(
   id: string,
   status: JobStatus
 ): Promise<void> {
-  const { error } = await supabase.rpc('snapbike_set_status', {
-    job_id: id,
-    new_status: status,
+  const write = pendingStatusWrites.then(async () => {
+    const { error } = await supabase.rpc('snapbike_set_status', {
+      job_id: id,
+      new_status: status,
+    });
+    if (error) {
+      throw new Error(`Kunde inte ändra status: ${error.message}`);
+    }
   });
-  if (error) {
-    throw new Error(`Kunde inte ändra status: ${error.message}`);
-  }
+  pendingStatusWrites = write.catch(() => {});
+  return write;
+}
+
+// Status writes run in order, and reads wait for them, so a reload never
+// returns the status from before the latest change.
+let pendingStatusWrites: Promise<void> = Promise.resolve();
+
+/** The job's status as stored; null if the job no longer exists. */
+export async function fetchJobStatus(id: string): Promise<JobStatus | null> {
+  await pendingStatusWrites;
+  const { data, error } = await supabase
+    .from('snapbike_jobs')
+    .select('status')
+    .eq('id', id)
+    .maybeSingle();
+  if (error) throw new Error(`Kunde inte hämta status: ${error.message}`);
+  return (data?.status as JobStatus | undefined) ?? null;
 }
 
 type JobListRow = {
@@ -308,16 +329,17 @@ export async function fetchJobList(
   };
 }
 
-// Statuses that may move to inspected / customer_approved; later ones (work
-// started) keep their status.
-const BEFORE_WORK: JobStatus[] = ['booked', 'checked_in', 'inspected', 'customer_approved'];
+// Sending moves an early job to inspected; a verbal approval moves a job not
+// yet approved to customer_approved. Later statuses are left as they are.
+const BEFORE_INSPECTED: JobStatus[] = ['booked', 'checked_in', 'received'];
+const BEFORE_APPROVED: JobStatus[] = [...BEFORE_INSPECTED, 'inspected', 'awaiting_customer'];
 
-async function setStatusIfBeforeWork(id: string, status: JobStatus): Promise<void> {
+async function setStatusIfIn(id: string, status: JobStatus, from: JobStatus[]): Promise<void> {
   const { error } = await supabase
     .from('snapbike_jobs')
     .update({ status })
     .eq('id', id)
-    .in('status', BEFORE_WORK);
+    .in('status', from);
   if (error) throw new Error(error.message);
 }
 
@@ -338,7 +360,7 @@ export async function sendJobList(id: string, inspectionTasks: Task[]): Promise<
     })
     .eq('id', id);
   if (error) throw new Error(`Kunde inte skicka jobblistan: ${error.message}`);
-  await setStatusIfBeforeWork(id, 'inspected').catch((err) => {
+  await setStatusIfIn(id, 'inspected', BEFORE_INSPECTED).catch((err) => {
     throw new Error(`Kunde inte ändra status: ${err.message}`);
   });
   return sentAt;
@@ -362,7 +384,7 @@ export async function approveJobListVerbally(
     })
     .eq('id', id);
   if (error) throw new Error(`Kunde inte spara godkännandet: ${error.message}`);
-  await setStatusIfBeforeWork(id, 'customer_approved').catch((err) => {
+  await setStatusIfIn(id, 'customer_approved', BEFORE_APPROVED).catch((err) => {
     throw new Error(`Kunde inte ändra status: ${err.message}`);
   });
   return approvedAt;

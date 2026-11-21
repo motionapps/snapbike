@@ -47,7 +47,7 @@ import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from '../lib/speech
 import { colors, gutter, radius } from '../lib/theme';
 import { ImagePreviewModal } from './ImagePreviewModal';
 import { MicButton, MicPhase } from './MicButton';
-import { DoneButton, StepLock } from './StepDone';
+import { DoneButton, LockedBanner, StepLock, useSetStepDone } from './StepDone';
 import { WaveText } from './WaveText';
 
 const MIC_LABELS: Partial<Record<MicPhase, string>> = {
@@ -278,7 +278,10 @@ export function InspectionScreen() {
   const issues = useMemo(() => inspectionIssues(results), [results]);
   const done = checkedCount === INSPECTION_ITEM_COUNT;
 
-  // Gör jobblistan av anmärkningarna och hoppa till Jobblista-tabben.
+  const setInspectionDone = useSetStepDone('inspect');
+
+  // Klar, skapa jobblista: make the Jobblista from the remarks, mark
+  // Besiktning Klar and jump to the Jobblista tab.
   const runCreateTasks = useCallback(async () => {
     setMicError('');
     setCreatingTasks(true);
@@ -294,13 +297,14 @@ export function InspectionScreen() {
         current ? { ...current, sentTasks: null, sentAt: null, verbalApprovalAt: null } : current
       );
       setInspectionTasks(newTasks);
+      await setInspectionDone(true);
       goToJobList();
     } catch (err) {
       setMicError(err instanceof Error ? err.message : String(err));
     } finally {
       setCreatingTasks(false);
     }
-  }, [issues, inspectionTranscript, prices, tasks, order.bookingId, setInspectionTasks, setJobListSend, goToJobList]);
+  }, [issues, inspectionTranscript, prices, tasks, order.bookingId, setInspectionTasks, setJobListSend, setInspectionDone, goToJobList]);
 
   const createTasks = useCallback(() => {
     if (issues.length === 0) return;
@@ -348,6 +352,7 @@ export function InspectionScreen() {
           ]}
         />
       </View>
+      <LockedBanner tab="inspect" style={styles.lockedBanner} />
 
       {phase === 'recording' && micScrolledAway ? (
         <Pressable onPress={() => void stopRecording()} style={styles.compactMic}>
@@ -585,13 +590,11 @@ export function InspectionScreen() {
               ) : (
                 <>
                   <Ionicons
-                    name="construct-outline"
+                    name="checkmark"
                     size={18}
                     color={colors.onAccent}
                   />
-                  <Text style={styles.createTasksText}>
-                    Skapa jobblista av anmärkningarna ({issues.length})
-                  </Text>
+                  <Text style={styles.createTasksText}>Klar, skapa jobblista</Text>
                 </>
               )}
             </Pressable>
@@ -695,6 +698,11 @@ const styles = StyleSheet.create({
     borderRadius: 2,
     backgroundColor: colors.border,
     overflow: 'hidden',
+    marginBottom: 6,
+  },
+  lockedBanner: {
+    marginHorizontal: gutter,
+    marginTop: 4,
     marginBottom: 6,
   },
   progressFill: {

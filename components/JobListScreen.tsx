@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { customerLink } from '../lib/customerLink';
 import { useOrderContext } from '../lib/orderContext';
-import { approveJobListVerbally, fetchJobList, sendJobList } from '../lib/supabase';
+import { approveJobListVerbally, fetchJobList, fetchJobStatus, sendJobList } from '../lib/supabase';
 import { colors, gutter, radius } from '../lib/theme';
 import {
   PriceItem,
@@ -26,7 +26,8 @@ import {
   uid,
 } from '../lib/types';
 import { AddTaskModal } from './AddTaskModal';
-import { DoneButton, StepLock, useStepLocked } from './StepDone';
+import { DoneButton, LockedBanner, StepLock, useStepLocked } from './StepDone';
+import { ChecklistRow, TaskDetailModal } from './TaskChecklist';
 import { TaskCard } from './TaskCard';
 
 const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
@@ -59,12 +60,14 @@ export function JobListScreen({ active }: { active: boolean }) {
   const insets = useSafeAreaInsets();
   const {
     tasks,
+    setTasks,
     inspectionTasks,
     setInspectionTasks,
     jobListSend,
     setJobListSend,
     order,
     prices,
+    setCurrentStatus,
   } = useOrderContext();
   const jobId = order.bookingId;
   const [editing, setEditing] = useState(false);
@@ -100,8 +103,38 @@ export function JobListScreen({ active }: { active: boolean }) {
   }, [active, jobId, setJobListSend, setInspectionTasks]);
 
   const sent = !!jobListSend?.sentAt;
-  const locked = sent && !editing;
   const stepLocked = useStepLocked('jobList');
+  // Klar also ends an edit in progress.
+  const locked = (sent && !editing) || stepLocked;
+  // Once sent, the list is the work checklist: swipe to tick tasks off.
+  const checklist = sent && locked;
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const openTask =
+    [...tasks, ...inspectionTasks].find((task) => task.id === openTaskId) ?? null;
+
+  // Checklist changes (done, note) don't touch the customer's approval.
+  const patchTask = useCallback(
+    (taskId: string, patch: Pick<Task, 'done' | 'note'>) => {
+      const apply = (list: Task[]) =>
+        list.map((task) => (task.id === taskId ? { ...task, ...patch } : task));
+      setInspectionTasks(apply);
+      setTasks(apply);
+    },
+    [setInspectionTasks, setTasks]
+  );
+
+  /** Checklist row, or a plain row for a task the customer said no to. */
+  const renderChecklistTask = (task: Task) =>
+    task.approval === 'nekad' ? (
+      <TaskRow key={task.id} task={task} />
+    ) : (
+      <ChecklistRow
+        key={task.id}
+        task={task}
+        onSetDone={(done) => patchTask(task.id, { done })}
+        onOpen={() => setOpenTaskId(task.id)}
+      />
+    );
   const changed = editing && JSON.stringify(inspectionTasks) !== JSON.stringify(backup.current);
 
   // A changed task needs a new answer from the customer.
@@ -199,6 +232,9 @@ export function JobListScreen({ active }: { active: boolean }) {
           ? { ...current, sentTasks: inspectionTasks, sentAt, verbalApprovalAt: null }
           : current
       );
+      // Sending may move the job to Besiktigad.
+      const status = await fetchJobStatus(jobId);
+      if (status) setCurrentStatus(status);
     });
 
   const approveVerbally = () =>
@@ -212,18 +248,26 @@ export function JobListScreen({ active }: { active: boolean }) {
       setJobListSend((current) =>
         current ? { ...current, sentTasks: approved, verbalApprovalAt } : current
       );
+      // The approval moves the job to Godkänd av kund.
+      const status = await fetchJobStatus(jobId);
+      if (status) setCurrentStatus(status);
     });
 
   const preview = () => {
     if (!jobListSend) return;
     const url = `${customerLink(jobListSend.shareToken)}?preview=1`;
     if (Platform.OS === 'web') window.open(url, '_blank');
-    else void Linking.openURL(url);
+    else
+      Linking.openURL(url).catch(() =>
+        setError(`Kunde inte öppna kundsidan (${url}). Är EXPO_PUBLIC_CUSTOMER_URL satt?`)
+      );
   };
 
   const split = splitJobList(inspectionTasks);
   const renderTask = (task: Task) =>
-    locked ? (
+    checklist ? (
+      renderChecklistTask(task)
+    ) : locked ? (
       <TaskRow key={task.id} task={task} />
     ) : (
       <TaskCard
@@ -260,12 +304,12 @@ export function JobListScreen({ active }: { active: boolean }) {
           </Pressable>
         ) : null}
       </View>
+      <LockedBanner tab="jobList" style={styles.lockedBanner} />
 
       <ScrollView
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
       >
-        <StepLock tab="jobList" gap={16}>
         {inspectionTasks.length === 0 ? (
           <Text style={styles.empty}>
             Skapa jobblistan från anmärkningarna under Besiktning.
@@ -274,9 +318,9 @@ export function JobListScreen({ active }: { active: boolean }) {
 
         {tasks.length > 0 ? (
           <Section title="Redan godkända vid mottagning" sum={tasksTotal(tasks)}>
-            {tasks.map((task) => (
-              <TaskRow key={task.id} task={task} />
-            ))}
+            {tasks.map((task) =>
+              checklist ? renderChecklistTask(task) : <TaskRow key={task.id} task={task} />
+            )}
           </Section>
         ) : null}
 
@@ -301,6 +345,7 @@ export function JobListScreen({ active }: { active: boolean }) {
           </>
         )}
 
+        <StepLock tab="jobList" gap={16}>
         {!locked && inspectionTasks.length > 0 ? (
           <Pressable onPress={() => setShowAddTask(true)} style={styles.addTask}>
             <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
@@ -360,6 +405,11 @@ export function JobListScreen({ active }: { active: boolean }) {
         <DoneButton tab="jobList" />
       </ScrollView>
 
+      <TaskDetailModal
+        task={openTask}
+        onClose={() => setOpenTaskId(null)}
+        onChange={patchTask}
+      />
       <AddTaskModal
         visible={showAddTask}
         prices={prices}
@@ -500,6 +550,10 @@ const styles = StyleSheet.create({
   editButtonText: {
     color: colors.text,
     fontWeight: '600',
+  },
+  lockedBanner: {
+    marginHorizontal: gutter,
+    marginBottom: 8,
   },
   content: {
     paddingHorizontal: gutter,
