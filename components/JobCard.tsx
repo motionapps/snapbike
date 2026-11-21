@@ -98,8 +98,8 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   thumb: {
-    width: 300,
-    height: 300,
+    width: 240,
+    height: 240,
     borderRadius: radius.md,
     borderCurve: 'continuous',
     backgroundColor: colors.cardRaised,

@@ -326,11 +326,6 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     persistRemote(latest.current, remote.current);
   }, [photoUri, itemKind, bikeAnalysis, transcript, tasks, order, inspection, holdSave, phase]);
 
-  const setCustomer = useCallback((customer: Customer | null) => {
-    setOrder((current) => ({ ...current, customer }));
-    setShowDropIn(false);
-  }, []);
-
   const saveDropIn = useCallback((customer: Customer, bikeNumber: string) => {
     setOrder((current) => ({ ...current, customer, bikeNumber }));
     setShowDropIn(false);
@@ -719,7 +714,6 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
               customer={order.customer}
               onImportBooking={() => setShowBookings(true)}
               onDropIn={() => setShowDropIn(true)}
-              onClear={() => setCustomer(null)}
             />
           </View>
 

@@ -7,7 +7,6 @@ type Props = {
   customer: Customer | null;
   onImportBooking: () => void;
   onDropIn: () => void;
-  onClear: () => void;
 };
 
 /**
@@ -18,7 +17,6 @@ export function CustomerSection({
   customer,
   onImportBooking,
   onDropIn,
-  onClear,
 }: Props) {
   if (!customer) {
     return (
@@ -37,7 +35,10 @@ export function CustomerSection({
 
   const name = [customer.firstName, customer.lastName].filter(Boolean).join(' ');
   return (
-    <View style={styles.card}>
+    <Pressable
+      onPress={onDropIn}
+      style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
+    >
       <Ionicons name="person-circle-outline" size={28} color={colors.accent} />
       <View style={styles.info}>
         <Text style={styles.name}>{name}</Text>
@@ -45,13 +46,10 @@ export function CustomerSection({
           {[customer.phone, customer.email].filter(Boolean).join(' · ')}
         </Text>
       </View>
-      <Pressable onPress={onDropIn} hitSlop={8} style={styles.iconButton}>
+      <View style={styles.iconButton}>
         <Ionicons name="create-outline" size={18} color={colors.textSecondary} />
-      </Pressable>
-      <Pressable onPress={onClear} hitSlop={8} style={styles.iconButton}>
-        <Ionicons name="close" size={18} color={colors.textSecondary} />
-      </Pressable>
-    </View>
+      </View>
+    </Pressable>
   );
 }
 
@@ -87,6 +85,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     padding: 14,
+  },
+  cardPressed: {
+    opacity: 0.6,
   },
   info: {
     flex: 1,
