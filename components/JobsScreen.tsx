@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -19,6 +19,7 @@ import {
   setJobStatus,
   updateJobComments,
 } from '../lib/supabase';
+import { useScrollToTop } from '../lib/scrollToTop';
 import { colors, gutter, radius } from '../lib/theme';
 import { Job, JobStatus } from '../lib/types';
 import { JobCard } from './JobCard';
@@ -87,6 +88,8 @@ export function JobsScreen({
   const [error, setError] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('active');
+  const listRef = useRef<FlatList<Job>>(null);
+  useScrollToTop('jobs', () => listRef.current?.scrollToOffset({ offset: 0, animated: true }));
   const [query, setQuery] = useState('');
   const [tagQuery, setTagQuery] = useState('');
 
@@ -291,6 +294,7 @@ export function JobsScreen({
         </View>
       ) : (
         <FlatList
+          ref={listRef}
           data={visible}
           keyExtractor={keyExtractor}
           renderItem={renderItem}

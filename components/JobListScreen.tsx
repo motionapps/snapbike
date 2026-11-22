@@ -16,6 +16,7 @@ import { customerIdByPhone, sendMessage } from '../lib/messages';
 import { useOrderContext } from '../lib/orderContext';
 import { approveJobListVerbally, fetchJobList, fetchJobStatus, sendJobList } from '../lib/supabase';
 import { STRINGS } from '../lib/strings';
+import { useScrollToTop } from '../lib/scrollToTop';
 import { colors, gutter, radius } from '../lib/theme';
 import {
   PriceItem,
@@ -87,6 +88,8 @@ export function JobListScreen({ active }: { active: boolean }) {
   const jobId = order.bookingId;
   const [editing, setEditing] = useState(false);
   const editingRef = useRef(false);
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop('jobList', () => scrollRef.current?.scrollTo({ y: 0, animated: true }));
   editingRef.current = editing;
   // The list when "Ändra" was pressed; restored by "Avbryt".
   const backup = useRef<Task[]>([]);
@@ -362,6 +365,7 @@ export function JobListScreen({ active }: { active: boolean }) {
       <LockedBanner tab="jobList" style={styles.lockedBanner} />
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
       >

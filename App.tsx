@@ -61,6 +61,7 @@ import { AuthView } from './components/AuthView';
 import { InspectionState } from './lib/inspection';
 import { CurrentBikeBar } from './components/CurrentBikeBar';
 import { JobNotesModal, NoteEntry } from './components/JobNotesModal';
+import { ScrollToTopContext, ScrollToTopRequest, useScrollToTop } from './lib/scrollToTop';
 import { STRINGS } from './lib/strings';
 import { colors, gutter, radius, shadow } from './lib/theme';
 import {
@@ -210,6 +211,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   const skipNextSave = useRef(false);
   const saveChain = useRef<Promise<void>>(Promise.resolve());
   const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop('note', () => scrollRef.current?.scrollTo({ y: 0, animated: true }));
   // Layout y of the photo section and of the bike details card inside it.
   const photoSectionY = useRef(0);
   const bikeDetailsY = useRef(0);
@@ -926,6 +928,7 @@ const TABS: { key: Tab; label: string; icon: string; iconActive: string }[] = [
 function Root() {
   const insets = useSafeAreaInsets();
   const [tab, setTab] = useState<Tab>('note');
+  const [scrollToTop, setScrollToTop] = useState<ScrollToTopRequest>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [inspectionTasks, setInspectionTasks] = useState<Task[]>([]);
   const [jobListSend, setJobListSend] = useState<JobListSendState | null>(null);
@@ -1086,6 +1089,7 @@ function Root() {
         <SafeAreaInsetsContext.Provider
           value={hasCurrentBike ? { ...insets, top: 0 } : insets}
         >
+        <ScrollToTopContext.Provider value={scrollToTop}>
 
           <View style={[styles.page, tab !== 'note' && styles.pageHidden]}>
             <Screen loadRequest={loadRequest} />
@@ -1112,6 +1116,7 @@ function Root() {
               openRequest={openJobRequest}
             />
           </View>
+        </ScrollToTopContext.Provider>
         </SafeAreaInsetsContext.Provider>
 
         <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom - 16, 8) }]}>
@@ -1121,7 +1126,11 @@ function Root() {
             return (
               <Pressable
                 key={item.key}
-                onPress={() => setTab(item.key)}
+                onPress={() => {
+                  // Pressing the tab already shown scrolls it to the top.
+                  if (isActive) setScrollToTop({ tab: item.key, nonce: Date.now() });
+                  else setTab(item.key);
+                }}
                 style={styles.tabItem}
               >
                 <View style={[styles.tabIcon, done && styles.tabIconDone]}>

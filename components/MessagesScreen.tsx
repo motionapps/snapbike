@@ -21,6 +21,7 @@ import {
   sendMessage,
 } from '../lib/messages';
 import { useOrderContext } from '../lib/orderContext';
+import { useScrollToTop } from '../lib/scrollToTop';
 import { colors, gutter, radius } from '../lib/theme';
 import { customerHasPhone } from '../lib/types';
 
@@ -136,6 +137,8 @@ function ConversationList({
 }) {
   const [conversations, setConversations] = useState<Conversation[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop('messages', () => scrollRef.current?.scrollTo({ y: 0, animated: true }));
 
   useEffect(() => {
     if (!active) return;
@@ -166,7 +169,7 @@ function ConversationList({
   }
 
   return (
-    <ScrollView contentContainerStyle={[styles.list, { paddingBottom: bottomInset + 32 }]}>
+    <ScrollView ref={scrollRef} contentContainerStyle={[styles.list, { paddingBottom: bottomInset + 32 }]}>
       {conversations.map((c) => (
         <Pressable key={c.customerId} onPress={() => onOpen(c)} style={styles.row}>
           <View style={styles.rowHeader}>

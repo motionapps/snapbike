@@ -45,11 +45,24 @@ for (const section of INSPECTION_TEMPLATE) {
   for (const item of section.items) ITEM_SECTION[item.id] = section.key;
 }
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from '../lib/speech';
+import { useScrollToTop } from '../lib/scrollToTop';
 import { colors, gutter, radius } from '../lib/theme';
 import { ImagePreviewModal } from './ImagePreviewModal';
+import { JobNotesModal } from './JobNotesModal';
 import { MicButton, MicPhase } from './MicButton';
 import { DoneButton, LockedBanner, StepLock, useSetStepDone, useStepLocked } from './StepDone';
 import { WaveText } from './WaveText';
+
+/** How the inspection works, behind the info button. Constant so the modal doesn't reset on render. */
+const HELP_ENTRIES = [
+  {
+    title: 'Så funkar besiktningen',
+    text:
+      'Prata dig igenom cykeln bak → fram. Punkterna bockas av och listan scrollar med medan du pratar; ' +
+      'när du stoppar finjusteras allt. Du kan alltid ändra manuellt. Håll in ✓ eller ⚠ på en punkt ' +
+      'för att prata in en kommentar.',
+  },
+];
 
 const MIC_LABELS: Partial<Record<MicPhase, string>> = {
   idle: 'Prata in genomgången – tryck för att spela in',
@@ -91,6 +104,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
   const [micError, setMicError] = useState('');
   const [creatingTasks, setCreatingTasks] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  useScrollToTop('inspect', () => scrollRef.current?.scrollTo({ y: 0, animated: true }));
   useEffect(() => {
     if (scrollReset) scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [scrollReset]);
@@ -99,6 +113,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
   const [micScrolledAway, setMicScrolledAway] = useState(false);
   const sectionY = useRef<Record<string, number>>({});
   const [previewUri, setPreviewUri] = useState<string | null>(null);
+  const [showHelp, setShowHelp] = useState(false);
   // Hold ✓ or ⚠ on an item to speak a comment into its note field.
   const [dictation, setDictation] = useState<{
     itemId: string;
@@ -424,12 +439,9 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
               }}
               labels={MIC_LABELS}
             />
-            <Text style={styles.micHint}>
-              Prata dig igenom cykeln bak → fram. Punkterna bockas av och listan
-              scrollar med medan du pratar; när du stoppar finjusteras allt. Du
-              kan alltid ändra manuellt. Håll in ✓ eller ⚠ på en punkt för att
-              prata in en kommentar.
-            </Text>
+            <Pressable onPress={() => setShowHelp(true)} hitSlop={8} style={styles.helpButton}>
+              <Ionicons name="information-circle-outline" size={22} color={colors.textSecondary} />
+            </Pressable>
           </View>
 
           {micError ? (
@@ -645,6 +657,12 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
         {stepLocked ? <DoneButton tab="inspect" /> : null}
       </ScrollView>
       <ImagePreviewModal uri={previewUri} onClose={() => setPreviewUri(null)} />
+      <JobNotesModal
+        entries={showHelp ? HELP_ENTRIES : null}
+        listTitle=""
+        onSave={() => {}}
+        onClose={() => setShowHelp(false)}
+      />
     </View>
   );
 }
@@ -773,11 +791,10 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
   },
-  micHint: {
-    color: colors.textFaint,
-    fontSize: 12,
-    textAlign: 'center',
-    lineHeight: 17,
+  helpButton: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
   },
   errorBox: {
     flexDirection: 'row',
