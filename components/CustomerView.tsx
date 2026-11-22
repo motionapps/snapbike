@@ -12,7 +12,6 @@ import {
   View,
 } from 'react-native';
 import {
-  SILHOUETTE_ASPECT,
   SILHOUETTE_IMAGES,
   markerPosition,
   silhouetteVariant,
@@ -32,21 +31,9 @@ import { INSPECTION_TEMPLATE, inspectionItemsForTitle } from '../lib/inspection'
 import { jobImageUrl } from '../lib/supabase';
 import { inspectionImageUrl, taskImageUrl } from '../lib/taskImages';
 import { Task, approvedTotal, splitJobList, taskTotal } from '../lib/types';
+import { c, styles } from './CustomerView.styles';
 
 type Approval = 'godkänd' | 'nekad';
-
-/** Light, calm palette for customers (the staff app is dark). */
-const c = {
-  bg: '#F5F6F8',
-  card: '#FFFFFF',
-  border: '#E3E6EA',
-  text: '#16202A',
-  textSecondary: '#5B6670',
-  critical: '#E5484D',
-  normal: '#F5A524',
-  approve: '#2E9E5B',
-  primary: '#16202A',
-};
 
 type Marker = {
   itemId: string;
@@ -538,107 +525,3 @@ function ContactButton() {
     </Pressable>
   );
 }
-
-const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: c.bg },
-  center: { alignItems: 'center', justifyContent: 'center', padding: 24, gap: 10 },
-  centerText: { textAlign: 'center' },
-  content: {
-    width: '100%',
-    maxWidth: 640,
-    alignSelf: 'center',
-    padding: 16,
-    paddingBottom: 48,
-    gap: 12,
-  },
-  workshop: { color: c.textSecondary, fontWeight: '700', letterSpacing: 1, fontSize: 12 },
-  title: { color: c.text, fontSize: 26, fontWeight: '800' },
-  muted: { color: c.textSecondary, fontSize: 15, lineHeight: 21 },
-  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  sectionHeaderTitle: { flex: 1, color: c.text, fontSize: 17, fontWeight: '700' },
-  sectionSum: { color: c.textSecondary, fontWeight: '600', fontSize: 15 },
-  card: {
-    backgroundColor: c.card,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: c.border,
-    padding: 14,
-    gap: 12,
-  },
-  bikeBox: { width: '100%', aspectRatio: SILHOUETTE_ASPECT, borderRadius: 12, overflow: 'hidden' },
-  eye: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255,255,255,0.9)',
-    borderWidth: 1,
-    borderColor: c.border,
-  },
-  glowHit: { position: 'absolute', alignItems: 'center', justifyContent: 'center' },
-  glow: { position: 'absolute', width: 36, height: 36, borderRadius: 18 },
-  glowDot: { width: 12, height: 12, borderRadius: 6, borderWidth: 2, borderColor: '#FFFFFF' },
-  glowDotSelected: { width: 18, height: 18, borderRadius: 9 },
-  detail: { gap: 8, borderTopWidth: 1, borderTopColor: c.border, paddingTop: 12 },
-  detailHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  partImage: { width: 56, height: 56, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: c.border },
-  detailTitle: { color: c.text, fontSize: 18, fontWeight: '700' },
-  task: { gap: 6, paddingVertical: 6 },
-  taskHead: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  taskTitle: { flex: 1, color: c.text, fontSize: 16, fontWeight: '600' },
-  taskPrice: { color: c.text, fontSize: 16, fontWeight: '700' },
-  criticalBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  criticalText: { color: c.critical, fontWeight: '600' },
-  choiceRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
-  choice: {
-    flex: 1,
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 10,
-    paddingVertical: 10,
-    alignItems: 'center',
-  },
-  choiceDisabled: { opacity: 0.4 },
-  choiceText: { color: c.text, fontWeight: '600' },
-  choiceTextActive: { color: '#FFFFFF' },
-  totalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  totalLabel: { color: c.textSecondary, fontWeight: '600', fontSize: 16 },
-  totalValue: { color: c.text, fontWeight: '800', fontSize: 22 },
-  send: { backgroundColor: c.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
-  sendDisabled: { opacity: 0.4 },
-  sendText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
-  locked: { alignItems: 'center', gap: 10 },
-  lockedBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: '#FFF4D6',
-    borderColor: '#F5D27A',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-  },
-  lockedBannerText: { flex: 1, color: c.text, fontWeight: '600' },
-  message: { color: c.text, fontWeight: '600' },
-  contact: {
-    flexDirection: 'row',
-    gap: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: c.border,
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    backgroundColor: c.card,
-  },
-  contactText: { color: c.text, fontWeight: '600' },
-});

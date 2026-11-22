@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
-import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { styles } from './ImagePreviewModal.styles';
 
 type Props = {
   /** Image to show enlarged; null hides the preview. */
@@ -32,35 +33,3 @@ export function ImagePreviewModal({ uri, onClose }: Props) {
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  backdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 20,
-  },
-  frame: {
-    width: '100%',
-    maxWidth: 520,
-    aspectRatio: 1,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    borderCurve: 'continuous',
-    overflow: 'hidden',
-  },
-  image: {
-    flex: 1,
-  },
-  close: {
-    position: 'absolute',
-    right: 16,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-  },
-});

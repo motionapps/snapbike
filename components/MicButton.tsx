@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef } from 'react';
-import { ActivityIndicator, Animated, Pressable, StyleSheet, Text, View } from 'react-native';
-import { colors, shadow } from '../lib/theme';
+import { ActivityIndicator, Animated, Pressable, Text, View } from 'react-native';
+import { colors } from '../lib/theme';
+import { styles } from './MicButton.styles';
 
 export type MicPhase = 'idle' | 'recording' | 'transcribing' | 'analyzing';
 
@@ -86,45 +87,3 @@ export function MicButton({ phase, onToggle, onHoldStart, onHoldEnd, labels }: P
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  wrap: {
-    alignItems: 'center',
-    gap: 12,
-  },
-  buttonArea: {
-    width: 84,
-    height: 84,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  halo: {
-    position: 'absolute',
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: 'rgba(255, 69, 58, 0.25)',
-  },
-  haloHidden: {
-    opacity: 0,
-  },
-  button: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accent,
-    ...shadow.button,
-  },
-  buttonRecording: {
-    backgroundColor: colors.recording,
-    boxShadow: '0 6px 20px rgba(255, 69, 58, 0.35)',
-  },
-  buttonPressed: {
-    opacity: 0.85,
-  },
-  label: {
-    color: colors.textSecondary,
-  },
-});

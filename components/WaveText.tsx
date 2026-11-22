@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Animated, Easing, StyleProp, StyleSheet, TextStyle, View } from 'react-native';
+import { Animated, Easing, StyleProp, TextStyle, View } from 'react-native';
+import { styles } from './WaveText.styles';
 
 /** Time for the crest to pass one letter. */
 const MS_PER_CHAR = 80;
@@ -60,7 +61,3 @@ export function WaveText({ text, style }: { text: string; style?: StyleProp<Text
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  row: { flexDirection: 'row' },
-});
