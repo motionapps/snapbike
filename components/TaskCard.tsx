@@ -114,7 +114,10 @@ export function TaskCard({
         <View key={product.id} style={styles.productRow}>
           <Ionicons name="cube-outline" size={15} color={colors.textSecondary} />
           <View style={styles.productInfo}>
-            <Text style={styles.productName}>{product.name}</Text>
+            <Text style={styles.productName}>
+              {product.quantity ? `${product.quantity} st ` : ''}
+              {product.name}
+            </Text>
             {product.label || product.stock !== undefined ? (
               <Text style={styles.productMeta}>
                 {product.label ? PRODUCT_LABELS[product.label] : null}
@@ -161,7 +164,9 @@ export function TaskCard({
                   product.price <= 0 && styles.priceMissingText,
                 ]}
               >
-                {product.price > 0 ? `${product.price} kr` : '– kr'}
+                {product.price > 0
+                    ? `${product.quantity ? `${product.quantity} × ` : ''}${product.price} kr`
+                    : '– kr'}
               </Text>
             </Pressable>
           )}

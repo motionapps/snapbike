@@ -7,7 +7,7 @@ import {
   InspectionState,
   InspectionStatus,
 } from './inspection';
-import { priceCsvFor } from './prices';
+import { applyProductRules, priceCsvFor } from './prices';
 import { SERVICE_GUIDE } from './servicePackage';
 import { searchInStock } from './inStockCache';
 import { searchProducts } from './productSearch';
@@ -124,6 +124,10 @@ const JOB_ITEM_SCHEMA = {
             type: 'number',
             description: 'Lagersaldo från sökresultatet (1 = i lager, 0 = beställningsvara).',
           },
+          quantity: {
+            type: 'number',
+            description: 'Antal enligt prislistans Produkter-kolumn (t.ex. 2 för "2 st"), annars 1.',
+          },
           label: {
             type: 'string',
             enum: ['samma', 'likvärdig', 'billigare'],
@@ -186,6 +190,7 @@ type ToolProduct = {
   articleNumber?: string;
   stock?: number;
   label?: 'samma' | 'likvärdig' | 'billigare';
+  quantity?: number;
 };
 
 type ToolTask = {
@@ -222,11 +227,19 @@ const WHEEL_RULES =
   'ALDRIG två arbeten för samma hjul (t.ex. både "Punktering inkl. ' +
   'standardslang" och "Däckbyte - per hjul").';
 
+const PRODUCT_RULES =
+  'PRODUKTREGEL: Prislistans kolumn Produkter styr produktförslagen. "nej" = ' +
+  'föreslå INGA produkter för jobbet (tom lista). "ja" = föreslå produkter ' +
+  'fritt enligt reglerna ovan. Annars listar kolumnen jobbets standardprodukter ' +
+  '(t.ex. "2 st Routa W244 35-622 | ..."): föreslå då ENDAST dem, sök upp var ' +
+  'och en med search_stock (på artikelnumret om det finns, annars namnet) för ' +
+  'exakt namn, artikelnummer, pris och lagersaldo, och ange antalet som quantity.';
+
 const systemPrompt = (prices: PriceItem[]) =>
   'Du är assistent på en cykelverkstad. Du får en transkriberad röstanteckning ' +
   'från besiktningen av en kundcykel. Identifiera varje jobb som nämns och matcha ' +
   'det mot verkstadens prislista nedan (CSV, semikolonseparerad: ' +
-  'Servicetyp;Beskrivning;Pris). Välj alltid den rad som bäst motsvarar jobbet ' +
+  'Servicetyp;Beskrivning;Pris;Produkter). Välj alltid den rad som bäst motsvarar jobbet ' +
   'och använd dess exakta Beskrivning och Pris.\n\n' +
   'Markera jobb som "kritisk" när felet gör cykeln trafikfarlig eller ' +
   'oanvändbar (t.ex. "går inte att cykla på", trasig broms), annars "normal".\n\n' +
@@ -241,6 +254,8 @@ const systemPrompt = (prices: PriceItem[]) =>
   'visas som beställningsvara). Hittar du ingen rimlig produkt alls: lägg med ' +
   'delen med pris 0 och utan artikelnummer.\n\n' +
   WHEEL_RULES +
+  '\n\n' +
+  PRODUCT_RULES +
   '\n\nNär du är klar: anropa create_task_list exakt en gång med hela jobblistan.\n\n' +
   SERVICE_GUIDE +
   '\n\nPRISLISTA:\n' +
@@ -256,6 +271,8 @@ const refinePrompt = (prices: PriceItem[]) =>
   'search_stock och ange exakta namn, priser, artikelnummer och lagersaldon ' +
   'från sökresultaten. Behåll allt som instruktionen inte berör oförändrat.\n\n' +
   WHEEL_RULES +
+  '\n\n' +
+  PRODUCT_RULES +
   '\n\nNär du är klar: anropa update_task exakt en gång med hela det ' +
   'uppdaterade jobbet.\n\n' +
   SERVICE_GUIDE +
@@ -396,7 +413,7 @@ export async function analyzeTranscript(
   if (!input.tasks) {
     throw new Error('Claude returnerade ingen jobblista.');
   }
-  return input.tasks.map(mapTask);
+  return input.tasks.map((task) => applyProductRules(mapTask(task)));
 }
 
 /**
@@ -460,6 +477,7 @@ export async function refineTask(
         articleNumber: product.articleNumber,
         stock: product.stock,
         label: product.label,
+        quantity: product.quantity,
       })),
     },
     instruktion: instruction,
@@ -476,7 +494,7 @@ export async function refineTask(
     throw new Error('Claude returnerade inget uppdaterat jobb.');
   }
   return {
-    ...mapTask(input.task),
+    ...applyProductRules(mapTask(input.task)),
     id: task.id,
     inspectionItemIds: task.inspectionItemIds,
   };
@@ -499,6 +517,7 @@ function mapTask(task: ToolTask): Task {
       articleNumber: product.articleNumber,
       stock: product.stock,
       label: product.label,
+      quantity: product.quantity && product.quantity > 1 ? product.quantity : undefined,
     })),
   };
 }

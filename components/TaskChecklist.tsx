@@ -14,7 +14,7 @@ import {
   View,
 } from 'react-native';
 import { colors, radius } from '../lib/theme';
-import { Task, taskTotal } from '../lib/types';
+import { Task, productTotal, taskTotal } from '../lib/types';
 
 const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
 
@@ -154,8 +154,11 @@ export function TaskDetailModal({
             {current.products.map((product) => (
               <View key={product.id} style={styles.product}>
                 <View style={styles.line}>
-                  <Text style={styles.productName}>{product.name}</Text>
-                  <Text style={styles.lineValue}>{kr(product.price)}</Text>
+                  <Text style={styles.productName}>
+                    {product.quantity ? `${product.quantity} st ` : ''}
+                    {product.name}
+                  </Text>
+                  <Text style={styles.lineValue}>{kr(productTotal(product))}</Text>
                 </View>
                 <Text style={styles.productMeta} selectable>
                   Art.nr {product.articleNumber || '–'}

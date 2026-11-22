@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import { jobImageUrl } from '../lib/supabase';
 import { colors, gutter, radius } from '../lib/theme';
-import { Job, JobStatus, jobTotal } from '../lib/types';
+import { Job, JobStatus, jobTotal, productTotal } from '../lib/types';
 
 const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
 import { BikeDetails } from './BikeDetails';
@@ -280,7 +280,7 @@ export function JobDetailModal({
                 <Text style={styles.overviewEmpty}>Inga jobb än</Text>
               ) : (
                 overviewTasks.map((task) => {
-                  const products = task.products.reduce((sum, p) => sum + p.price, 0);
+                  const products = task.products.reduce((sum, p) => sum + productTotal(p), 0);
                   return (
                     <View key={task.id} style={styles.overviewRow}>
                       <Text style={styles.overviewTitle}>{task.title}</Text>

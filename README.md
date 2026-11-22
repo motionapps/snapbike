@@ -43,13 +43,26 @@ Projektet **cykelnatur** (`diwlgaiijdclojyeuvle`, eu-north-1) används:
 `bikeType` styr vilka rader som visas (se `pricesFor` i `lib/prices.ts`):
 `all_bikes`, `electric`, `racer`, `cargo`, `hub`, `external` för cyklar,
 `part` för lösa delar, `trolley` för barnvagnar, `other` för övrigt.
-Om CSV:n ändras, regenerera med:
+
+`has_product` (true/false): om AI:n ska föreslå produkter för jobbet alls.
+`has_standard_products` (true/false): då föreslås bara jobbets standardprodukter
+från `assets/snapbike_standard_products.csv`, en rad per produkt:
+
+- `Beskrivning` – exakt som i prislistan
+- `Produkt` – produktnamnet AI:n söker på i lagret
+- `Antal` – hur många (t.ex. 2 däck)
+- `Pris` – valfritt styckpris. Om satt används det i stället för lagerpriset,
+  och arbetet blir prislistans pris minus produkterna (t.ex. 2499 − 2×1000 = 499)
+- `Artikelnummer` – valfritt; om satt söker AI:n på det i stället för namnet
+
+Om någon av CSV:erna ändras, regenerera med:
 
 ```bash
 node -e "
 const fs = require('fs');
-const csv = fs.readFileSync('assets/snapbike_prices.csv', 'utf8').trim();
-fs.writeFileSync('lib/priceCsv.ts', '// Auto-generated from assets/snapbike_prices.csv — regenerate with the snippet in README\\nexport const PRICE_CSV = \\\`' + csv + '\\\`;\\n');
+const gen = (src, out, name) => fs.writeFileSync(out, '// Auto-generated from ' + src + ' — regenerate with the snippet in README\\nexport const ' + name + ' = \\\`' + fs.readFileSync(src, 'utf8').trim() + '\\\`;\\n');
+gen('assets/snapbike_prices.csv', 'lib/priceCsv.ts', 'PRICE_CSV');
+gen('assets/snapbike_standard_products.csv', 'lib/standardProductsCsv.ts', 'STANDARD_PRODUCTS_CSV');
 "
 ```
 

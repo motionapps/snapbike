@@ -11,6 +11,8 @@ export type Product = {
   stock?: number;
   /** Typ av förslag: samma modell/märke, likvärdigt alternativ eller billigare. */
   label?: 'samma' | 'likvärdig' | 'billigare';
+  /** How many of the product the job needs; undefined = 1. */
+  quantity?: number;
 };
 
 export type Task = {
@@ -96,6 +98,10 @@ export type PriceItem = {
   price: number;
   /** The price list's bikeType column: all_bikes, electric, racer, cargo, hub, external, part, trolley, other. */
   bikeType: string;
+  /** has_product column: whether the job gets product suggestions at all. */
+  hasProduct: boolean;
+  /** has_standard_products column: suggest only the row's products in snapbike_standard_products.csv. */
+  hasStandardProducts: boolean;
 };
 
 /** Workshop lifecycle, mirrors the snapbike_job_status enum on Supabase. */
@@ -174,7 +180,12 @@ export function uid(): string {
 }
 
 export function taskTotal(task: Task): number {
-  return task.price + task.products.reduce((p, prod) => p + prod.price, 0);
+  return task.price + task.products.reduce((p, prod) => p + productTotal(prod), 0);
+}
+
+/** Unit price × quantity. */
+export function productTotal(product: Product): number {
+  return product.price * (product.quantity ?? 1);
 }
 
 export function tasksTotal(tasks: Task[]): number {
