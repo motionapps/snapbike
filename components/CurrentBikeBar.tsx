@@ -1,8 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { BikeData } from '../lib/bikeAnalysis';
-import { colors } from '../lib/theme';
-import { Customer, JobComments, customerWarning } from '../lib/types';
+import { colors, statusColors } from '../lib/theme';
+import { Customer, JobComments, JobStatus, STATUS_LABELS, customerWarning } from '../lib/types';
 import { bikeLabel } from './BikeDetails';
 import type { CommentField } from './JobNotesModal';
 
@@ -61,6 +61,8 @@ type Props = {
   customer: Customer | null;
   bike: BikeData['bike'] | null;
   bikeNumber: string;
+  /** The job's status, shown at the end of the row. */
+  status: JobStatus | null;
   topInset: number;
   onPress: () => void;
   /** Shows the Verkstadskommentar/Kundkommentar buttons; null hides them. */
@@ -73,6 +75,7 @@ export function CurrentBikeBar({
   customer,
   bike,
   bikeNumber,
+  status,
   topInset,
   onPress,
   comments,
@@ -108,6 +111,14 @@ export function CurrentBikeBar({
           <Text style={[styles.bike, { color: textColor }]} numberOfLines={1}>
             {bikeText}
           </Text>
+        ) : null}
+        {status ? (
+          <View style={styles.status}>
+            <View style={[styles.statusDot, { backgroundColor: statusColors[status] }]} />
+            <Text style={styles.statusText} numberOfLines={1}>
+              {STATUS_LABELS[status]}
+            </Text>
+          </View>
         ) : null}
       </Pressable>
       {comments ? (
@@ -180,6 +191,26 @@ const styles = StyleSheet.create({
   },
   commentButtonPressed: {
     opacity: 0.7,
+  },
+  status: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginLeft: 'auto',
+    backgroundColor: 'rgba(11, 15, 20, 0.85)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+  },
+  statusDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+  },
+  statusText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 12,
   },
   commentButtonText: {
     color: '#FFFFFF',

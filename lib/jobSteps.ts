@@ -7,7 +7,7 @@ export type StepTab = 'note' | 'inspect' | 'jobList';
 export const STEP_STATUS: Record<StepTab, { done: JobStatus; undo: JobStatus }> = {
   note: { done: 'received', undo: 'checked_in' },
   inspect: { done: 'inspected', undo: 'received' },
-  jobList: { done: 'awaiting_customer', undo: 'inspected' },
+  jobList: { done: 'ready', undo: 'in_progress' },
 };
 
 /** A step is done (and locked) once the job's status has reached its Klar status. */

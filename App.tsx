@@ -34,6 +34,7 @@ import { TaskCard } from './components/TaskCard';
 import { OrderContext, useOrderContext } from './lib/orderContext';
 import { clearDraft, loadDraft, saveDraft } from './lib/persist';
 import { JobsScreen } from './components/JobsScreen';
+import { MessagesScreen } from './components/MessagesScreen';
 import { JobListScreen } from './components/JobListScreen';
 import { MicButton, MicPhase } from './components/MicButton';
 import { DoneButton, LockedBanner, StepLock } from './components/StepDone';
@@ -907,13 +908,14 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   );
 }
 
-type Tab = 'note' | 'inspect' | 'jobList' | 'jobs';
+type Tab = 'note' | 'inspect' | 'jobList' | 'messages' | 'jobs';
 
 const TABS: { key: Tab; label: string; icon: string; iconActive: string }[] = [
   { key: 'jobs', label: 'Jobb', icon: 'file-tray-full-outline', iconActive: 'file-tray-full' },
   { key: 'note', label: 'Mottagning', icon: 'mic-outline', iconActive: 'mic' },
   { key: 'inspect', label: 'Besiktning', icon: 'clipboard-outline', iconActive: 'clipboard' },
   { key: 'jobList', label: 'Jobblista', icon: 'list-outline', iconActive: 'list' },
+  { key: 'messages', label: 'Meddelanden', icon: 'chatbubbles-outline', iconActive: 'chatbubbles' },
 ];
 
 function Root() {
@@ -960,8 +962,6 @@ function Root() {
       cancelled = true;
     };
   }, [tab, order.bookingId]);
-  // Greyed out until a Jobblista has been created from the remarks.
-  const jobListEnabled = inspectionTasks.length > 0;
   const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(null);
 
   const startCheckIn = useCallback((job: Job) => {
@@ -1052,6 +1052,7 @@ function Root() {
           customer={order.customer}
           bike={currentBike}
           bikeNumber={order.bikeNumber}
+          status={currentStatus}
           topInset={insets.top}
           onPress={openCurrentJob}
           comments={tab === 'note' || tab === 'inspect' || tab === 'jobList' ? comments : null}
@@ -1087,6 +1088,9 @@ function Root() {
       <View style={[styles.page, tab !== 'jobList' && styles.pageHidden]}>
         <JobListScreen active={tab === 'jobList'} />
       </View>
+      <View style={[styles.page, tab !== 'messages' && styles.pageHidden]}>
+        <MessagesScreen active={tab === 'messages'} />
+      </View>
       <View style={[styles.page, tab !== 'jobs' && styles.pageHidden]}>
         <JobsScreen
           active={tab === 'jobs'}
@@ -1105,14 +1109,12 @@ function Root() {
       <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom - 16, 8) }]}>
         {TABS.map((item) => {
           const isActive = tab === item.key;
-          const disabled = item.key === 'jobList' && !jobListEnabled;
           const done = item.key in STEP_STATUS && stepDone(item.key as StepTab, currentStatus);
           return (
             <Pressable
               key={item.key}
               onPress={() => setTab(item.key)}
-              disabled={disabled}
-              style={[styles.tabItem, disabled && styles.tabItemDisabled]}
+              style={styles.tabItem}
             >
               <View style={[styles.tabIcon, done && styles.tabIconDone]}>
                 <Ionicons
@@ -1270,9 +1272,6 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  tabItemDisabled: {
-    opacity: 0.35,
   },
   tabLabel: {
     color: colors.textFaint,

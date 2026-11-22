@@ -106,8 +106,11 @@ export function JobListScreen({ active }: { active: boolean }) {
   const stepLocked = useStepLocked('jobList');
   // Klar also ends an edit in progress.
   const locked = (sent && !editing) || stepLocked;
-  // Once sent, the list is the work checklist: swipe to tick tasks off.
-  const checklist = sent && locked;
+  // Mottagning Klar without remarks: the Mottagning tasks are the whole list.
+  const receptionDone = useStepLocked('note');
+  const receptionOnly = inspectionTasks.length === 0 && receptionDone;
+  // Once sent, or with only Mottagning, the list is the work checklist.
+  const checklist = (sent && locked) || receptionOnly;
   const [openTaskId, setOpenTaskId] = useState<string | null>(null);
   const openTask =
     [...tasks, ...inspectionTasks].find((task) => task.id === openTaskId) ?? null;
@@ -310,9 +313,9 @@ export function JobListScreen({ active }: { active: boolean }) {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
       >
-        {inspectionTasks.length === 0 ? (
+        {inspectionTasks.length === 0 && !receptionOnly ? (
           <Text style={styles.empty}>
-            Skapa jobblistan från anmärkningarna under Besiktning.
+            Markera Mottagning som Klar, eller skapa jobblistan från anmärkningarna under Besiktning.
           </Text>
         ) : null}
 
