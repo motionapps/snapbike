@@ -365,6 +365,7 @@ export function JobListScreen({ active }: { active: boolean }) {
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
       >
+        <StepLock tab="jobList" gap={16}>
         {inspectionTasks.length === 0 && !receptionOnly ? (
           <Text style={styles.empty}>
             Markera Mottagning som Klar, eller skapa jobblistan från anmärkningarna under Besiktning.
@@ -399,7 +400,6 @@ export function JobListScreen({ active }: { active: boolean }) {
           </>
         )}
 
-        <StepLock tab="jobList" gap={16}>
         {!locked && inspectionTasks.length > 0 ? (
           <Pressable onPress={() => setShowAddTask(true)} style={styles.addTask}>
             <Ionicons name="add-circle-outline" size={20} color={colors.accent} />

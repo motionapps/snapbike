@@ -90,7 +90,7 @@ export function CurrentBikeBar({
   const warning = customerWarning(customer);
 
   return (
-    <View style={[styles.bar, { backgroundColor: background, paddingTop: topInset + 6 }]}>
+    <View style={[styles.bar, { backgroundColor: background, paddingTop: topInset }]}>
       <Pressable onPress={onPress} style={styles.row}>
         <Ionicons name="bicycle" size={17} color={textColor} />
         {bikeNumber ? (

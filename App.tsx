@@ -1009,7 +1009,6 @@ function Root() {
   // Tapping the bike bar: show the current job in the Jobb tab.
   const [openJobRequest, setOpenJobRequest] = useState<{ id: string; nonce: number } | null>(null);
   const openCurrentJob = useCallback(() => {
-    setTab('jobs');
     if (order.bookingId) setOpenJobRequest({ id: order.bookingId, nonce: Date.now() });
   }, [order.bookingId]);
 

@@ -118,9 +118,12 @@ export function JobsScreen({
     if (active) void load();
   }, [active, load]);
 
+  // Opened from the bar on any tab: the list may not be loaded (or may lack the job) yet.
   useEffect(() => {
-    if (openRequest) setOpenId(openRequest.id);
-  }, [openRequest]);
+    if (!openRequest) return;
+    setOpenId(openRequest.id);
+    void load();
+  }, [openRequest, load]);
 
   const refresh = useCallback(async () => {
     setRefreshing(true);

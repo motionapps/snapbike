@@ -15,7 +15,7 @@ export function useStepLocked(tab: StepTab): boolean {
 export function StepLock({ tab, gap, children }: { tab: StepTab; gap: number; children: ReactNode }) {
   const locked = useStepLocked(tab);
   return (
-    <View pointerEvents={locked ? 'none' : 'auto'} style={{ gap, opacity: locked ? 0.85 : 1 }}>
+    <View pointerEvents={locked ? 'none' : 'auto'} style={{ gap, opacity: locked ? 0.4 : 1 }}>
       {children}
     </View>
   );
