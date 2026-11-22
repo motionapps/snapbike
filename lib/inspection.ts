@@ -75,6 +75,7 @@ export const INSPECTION_TEMPLATE: InspectionSection[] = [
       { id: 'mid-hoses', title: 'Hydraulslangar', hint: 'läckage/skador' },
       { id: 'mid-frame', title: 'Ram & gaffel', hint: 'sprickor, bucklor' },
       { id: 'mid-stem', title: 'Styre & styrstam', hint: 'riktning, bultar' },
+      { id: 'mid-bartape', title: 'Styrlinda', hint: 'slitage, lossnat' },
       {
         id: 'mid-saddle',
         title: 'Sadel & sadelstolpe',
@@ -117,6 +118,44 @@ export const INSPECTION_TEMPLATE: InspectionSection[] = [
   },
 ];
 
+/** Bike fields the template adapts to; null shows every item. */
+type TemplateBike = {
+  bike_type: string;
+  gears: { back: string };
+  brakes: { front: string; back: string };
+  dampers: { front: boolean; back: boolean };
+} | null;
+
+/** Whether an item applies to the bike (unknown bike: every item). */
+function itemApplies(itemId: string, bike: TemplateBike): boolean {
+  if (!bike) return true;
+  const hubGear = bike.gears.back === 'hub';
+  switch (itemId) {
+    // A hub gear has no cassette or rear derailleur.
+    case 'drive-cassette':
+    case 'drive-derailleur':
+      return !hubGear;
+    case 'mid-hoses':
+      return bike.brakes.front === 'hydraulic disc' || bike.brakes.back === 'hydraulic disc';
+    case 'mid-bartape':
+      return bike.bike_type === 'road bike';
+    case 'extra-suspension':
+      return !hubGear && (bike.dampers.front || bike.dampers.back);
+    case 'extra-dropper':
+      return !hubGear && bike.bike_type === 'mountain bike';
+    default:
+      return true;
+  }
+}
+
+/** The template with only the items that apply to the bike; empty sections dropped. */
+export function inspectionTemplateFor(bike: TemplateBike): InspectionSection[] {
+  return INSPECTION_TEMPLATE.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => itemApplies(item.id, bike)),
+  })).filter((section) => section.items.length > 0);
+}
+
 export type InspectionResult = {
   status: InspectionStatus;
   note: string;
@@ -131,10 +170,11 @@ export const INSPECTION_ITEM_COUNT = INSPECTION_TEMPLATE.reduce(
 
 /** All issues in template order, with section/item titles for display. */
 export function inspectionIssues(
-  state: InspectionState
+  state: InspectionState,
+  template: InspectionSection[] = INSPECTION_TEMPLATE
 ): { itemId: string; section: string; title: string; note: string }[] {
   const issues: { itemId: string; section: string; title: string; note: string }[] = [];
-  for (const section of INSPECTION_TEMPLATE) {
+  for (const section of template) {
     for (const item of section.items) {
       const result = state[item.id];
       if (result?.status === 'issue') {
@@ -170,6 +210,7 @@ const ITEM_KEYWORDS: Record<string, { words: string[]; needsSide?: 'front' | 'ba
   'mid-hoses': { words: ['hydraulslang', 'slangar', 'bromsslang'] },
   'mid-frame': { words: ['ram', 'ramen', 'gaffel', 'gaffeln'] },
   'mid-stem': { words: ['styre', 'styrstam', 'stam'] },
+  'mid-bartape': { words: ['styrlinda', 'linda', 'lindan'] },
   'mid-saddle': { words: ['sadel', 'sadeln', 'sadelstolpe'] },
   'mid-accessories': { words: ['tillbehör', 'stänkskärm', 'pakethållare', 'ringklocka'] },
   'mid-kickstand': { words: ['stöd', 'ställ', 'benstöd'] },
@@ -231,9 +272,14 @@ export function matchInspectionPhrase(
 }
 
 /** Plain-text summary of the inspection, e.g. to paste into a message. */
-export function inspectionSummaryText(state: InspectionState): string {
-  const issues = inspectionIssues(state);
-  const checked = Object.values(state).filter((r) => r.status !== 'skip').length;
+export function inspectionSummaryText(
+  state: InspectionState,
+  template: InspectionSection[] = INSPECTION_TEMPLATE
+): string {
+  const issues = inspectionIssues(state, template);
+  const checked = template
+    .flatMap((section) => section.items)
+    .filter((item) => state[item.id] && state[item.id].status !== 'skip').length;
   const lines = [`Besiktning: ${checked} punkter kontrollerade.`];
   if (issues.length === 0) {
     lines.push('Inga anmärkningar.');

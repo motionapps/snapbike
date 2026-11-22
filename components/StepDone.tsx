@@ -50,7 +50,7 @@ export function useSetStepDone(tab: StepTab) {
 
 /** Klar / Lås upp at the bottom of a tab: moves the job's status on or back. */
 export function DoneButton({ tab }: { tab: StepTab }) {
-  const { order } = useOrderContext();
+  const { order, goToInspection, goToJobList } = useOrderContext();
   const [error, setError] = useState('');
   const done = useStepLocked(tab);
   const setStepDone = useSetStepDone(tab);
@@ -58,6 +58,11 @@ export function DoneButton({ tab }: { tab: StepTab }) {
 
   const toggle = () => {
     setError('');
+    // Klar moves on to the next step: Mottagning → Besiktning → Jobblista.
+    if (!done) {
+      if (tab === 'note') goToInspection();
+      if (tab === 'inspect') goToJobList();
+    }
     setStepDone(!done).catch((err) => {
       setError(err instanceof Error ? err.message : String(err));
     });

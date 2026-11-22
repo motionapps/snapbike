@@ -20,6 +20,7 @@ export type OrderContextValue = {
   jobListSend: JobListSendState | null;
   setJobListSend: Dispatch<SetStateAction<JobListSendState | null>>;
   goToJobList: () => void;
+  goToInspection: () => void;
   /** What the photo shows (Jev); null until a photo is classified. */
   itemKind: ItemKind | null;
   setItemKind: Dispatch<SetStateAction<ItemKind | null>>;

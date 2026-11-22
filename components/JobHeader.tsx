@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { colors, gutter, radius } from '../lib/theme';
 import { Job, customerWarning } from '../lib/types';
 import { bikeLabel } from './BikeDetails';
-import { textColorOnBike } from './CurrentBikeBar';
+import { bikeColorHex, textColorOnBike } from './CurrentBikeBar';
 
 type Props = {
   job: Job;
@@ -22,7 +22,7 @@ export function JobHeader({ job, onClose, onPress }: Props) {
     : '';
   const warning = customerWarning(customer);
   // Tinted in the bike's colour, like the bar above the tabs.
-  const background = bike ? bike.color : colors.bg;
+  const background = bike ? bikeColorHex(bike.color) : colors.bg;
   const textColor = bike ? textColorOnBike(bike.color) : colors.text;
 
   return (
@@ -45,7 +45,7 @@ export function JobHeader({ job, onClose, onPress }: Props) {
           ) : null}
           {bikeText ? (
             <View style={styles.bikeRow}>
-              {bike ? <View style={[styles.colorDot, { backgroundColor: bike.color }]} /> : null}
+              {bike ? <View style={[styles.colorDot, { backgroundColor: bikeColorHex(bike.color) }]} /> : null}
               <Text style={[styles.detail, { color: textColor }]} numberOfLines={1}>
                 {bikeText}
               </Text>

@@ -20,6 +20,38 @@ const LIGHT_COLORS = new Set([
   'gray',
 ]);
 
+/**
+ * Hex per bike colour. CSS colour names don't match how the colours are
+ * named (CSS "brown" is a blood red), so each one is set explicitly.
+ */
+const BIKE_COLOR_HEX: Record<string, string> = {
+  black: '#1A1A1A',
+  white: '#F2F2F2',
+  red: '#D32F2F',
+  blue: '#1E5BC6',
+  green: '#2E7D32',
+  yellow: '#F2C200',
+  orange: '#EF6C00',
+  purple: '#6A3FA0',
+  pink: '#E88AB4',
+  brown: '#6B4423',
+  gray: '#8A8F96',
+  silver: '#C0C4C8',
+  gold: '#C9A227',
+  navy: '#1B2A4A',
+  maroon: '#7A1F2B',
+  teal: '#00897B',
+  lime: '#9CCC3C',
+  cyan: '#26C6DA',
+  magenta: '#C2185B',
+  beige: '#D9C7A3',
+};
+
+/** Display colour for a bike colour name. */
+export function bikeColorHex(color: string): string {
+  return BIKE_COLOR_HEX[color] ?? color;
+}
+
 /** Text colour that reads on top of a bike colour. */
 export function textColorOnBike(color: string): string {
   return LIGHT_COLORS.has(color) ? '#0B0F14' : '#FFFFFF';
@@ -50,7 +82,7 @@ export function CurrentBikeBar({
   const bikeText = bike
     ? [bike.brand, bikeLabel(bike.bike_type)].filter(Boolean).join(' · ')
     : '';
-  const background = bike ? bike.color : colors.cardRaised;
+  const background = bike ? bikeColorHex(bike.color) : colors.cardRaised;
   const textColor = bike ? textColorOnBike(bike.color) : '#FFFFFF';
   const warning = customerWarning(customer);
 

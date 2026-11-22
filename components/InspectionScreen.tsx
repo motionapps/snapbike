@@ -30,9 +30,10 @@ import { inspectionImageUrl } from '../lib/taskImages';
 import { useOrderContext } from '../lib/orderContext';
 import { clearJobListSent } from '../lib/supabase';
 import {
-  INSPECTION_ITEM_COUNT,
   INSPECTION_TEMPLATE,
+  InspectionState,
   InspectionStatus,
+  inspectionTemplateFor,
   inspectionIssues,
   inspectionSummaryText,
   matchInspectionPhrase,
@@ -75,7 +76,15 @@ export function InspectionScreen() {
     inspectionTranscript,
     setInspectionTranscript,
     setHoldSave,
+    bikeAnalysis,
   } = useOrderContext();
+  // Only the items that apply to this bike (gear system, suspension, type).
+  const bike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike.bike : null;
+  const template = useMemo(() => inspectionTemplateFor(bike), [bike]);
+  const itemIds = useMemo(
+    () => new Set(template.flatMap((section) => section.items.map((item) => item.id))),
+    [template]
+  );
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [phase, setPhase] = useState<MicPhase>('idle');
   const [micError, setMicError] = useState('');
@@ -115,7 +124,7 @@ export function InspectionScreen() {
   // Live medan man pratar: markera punkten och scrolla dit (webb-taligenkänning).
   const handlePhrase = useCallback(
     (phrase: string) => {
-      const hits = matchInspectionPhrase(phrase);
+      const hits = matchInspectionPhrase(phrase).filter((hit) => itemIds.has(hit.itemId));
       if (hits.length === 0) return;
       setResults((current) => {
         const next = { ...current };
@@ -126,7 +135,7 @@ export function InspectionScreen() {
       });
       scrollToItem(hits[0].itemId);
     },
-    [scrollToItem]
+    [scrollToItem, itemIds]
   );
 
   /** Starts capturing speech; false if the microphone was not allowed. */
@@ -179,14 +188,19 @@ export function InspectionScreen() {
 
       setPhase('analyzing');
       const found = await analyzeInspection(text);
+      // Items that don't apply to this bike are ignored.
+      const applicable: InspectionState = {};
+      for (const [id, result] of Object.entries(found)) {
+        if (itemIds.has(id)) applicable[id] = result;
+      }
       // AI:n är facit och skriver över live-gissningarna för nämnda punkter.
-      setResults((current) => ({ ...current, ...found }));
+      setResults((current) => ({ ...current, ...applicable }));
     } catch (err) {
       setMicError(err instanceof Error ? err.message : String(err));
     } finally {
       setPhase('idle');
     }
-  }, [endCapture, setInspectionTranscript]);
+  }, [endCapture, setInspectionTranscript, itemIds]);
 
   /** Long press on ✓/⚠: set that status and start listening for a comment. */
   const startDictation = useCallback(
@@ -265,18 +279,22 @@ export function InspectionScreen() {
   const markSectionOk = useCallback((sectionIndex: number) => {
     setResults((current) => {
       const next = { ...current };
-      for (const item of INSPECTION_TEMPLATE[sectionIndex].items) {
+      for (const item of template[sectionIndex].items) {
         if (!next[item.id]) {
           next[item.id] = { status: 'ok', note: '' };
         }
       }
       return next;
     });
-  }, []);
+  }, [template]);
 
-  const checkedCount = useMemo(() => Object.keys(results).length, [results]);
-  const issues = useMemo(() => inspectionIssues(results), [results]);
-  const done = checkedCount === INSPECTION_ITEM_COUNT;
+  const itemCount = itemIds.size;
+  const checkedCount = useMemo(
+    () => [...itemIds].filter((id) => results[id]).length,
+    [results, itemIds]
+  );
+  const issues = useMemo(() => inspectionIssues(results, template), [results, template]);
+  const done = checkedCount === itemCount;
 
   const setInspectionDone = useSetStepDone('inspect');
 
@@ -334,7 +352,7 @@ export function InspectionScreen() {
       >
         <Text style={styles.title}>Besiktning</Text>
         <Text style={styles.subtitle}>
-          {checkedCount}/{INSPECTION_ITEM_COUNT} punkter
+          {checkedCount}/{itemCount} punkter
         </Text>
         {issues.length > 0 ? (
           <View style={styles.issueCounter}>
@@ -348,7 +366,7 @@ export function InspectionScreen() {
         <View
           style={[
             styles.progressFill,
-            { width: `${(checkedCount / INSPECTION_ITEM_COUNT) * 100}%` },
+            { width: `${(checkedCount / itemCount) * 100}%` },
           ]}
         />
       </View>
@@ -409,7 +427,7 @@ export function InspectionScreen() {
           </View>
         ) : null}
 
-        {INSPECTION_TEMPLATE.map((section, sectionIndex) => {
+        {template.map((section, sectionIndex) => {
           const sectionDone = section.items.every((item) => results[item.id]);
           return (
             <View
@@ -543,7 +561,7 @@ export function InspectionScreen() {
             />
             <Text style={styles.sectionTitle}>Sammanfattning</Text>
             <Text style={styles.summaryCount}>
-              {checkedCount}/{INSPECTION_ITEM_COUNT}
+              {checkedCount}/{itemCount}
             </Text>
           </View>
 
@@ -604,7 +622,7 @@ export function InspectionScreen() {
             <View style={styles.summaryBox}>
               <Text style={styles.summaryLabel}>SOM TEXT</Text>
               <Text selectable style={styles.summaryText}>
-                {inspectionSummaryText(results)}
+                {inspectionSummaryText(results, template)}
               </Text>
             </View>
           ) : null}

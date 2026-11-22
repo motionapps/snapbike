@@ -159,6 +159,7 @@ const INSPECTION_IMAGES: Record<string, ImageKey> = {
   'mid-hoses': 'bleed',
   'mid-frame': 'frame',
   'mid-stem': 'stem',
+  'mid-bartape': 'barTape',
   'mid-saddle': 'saddle',
   'mid-accessories': 'rack',
   'mid-kickstand': 'kickstand',

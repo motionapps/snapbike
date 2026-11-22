@@ -941,6 +941,7 @@ function Root() {
   const [currentStatus, setCurrentStatus] = useState<JobStatus | null>(null);
 
   const goToJobList = useCallback(() => setTab('jobList'), []);
+  const goToInspection = useCallback(() => setTab('inspect'), []);
 
   // The stored status is the truth: re-read it for the current job on every
   // tab switch (and on start), so a local copy can never be stale.
@@ -1025,6 +1026,7 @@ function Root() {
         order,
         setOrder,
         goToJobList,
+        goToInspection,
         itemKind,
         setItemKind,
         bikeAnalysis,
