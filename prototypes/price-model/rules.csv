@@ -1,0 +1,4 @@
+rule_id,scope,type,from_action,to_action,factor,second_side_percent,rounding,note
+replace_from_mount,*,action_multiplier,mount,replace,1.5,,9,Byt kostar Montera × faktor när Byt saknar eget pris
+both_sides,*,both_sides,,,,67,9,Fram + bak = ena sidan + andra sidan till procent av priset
+brake_both_sides,brake,both_sides,,,,50,9,Exempel: bromsar får halva priset för andra sidan

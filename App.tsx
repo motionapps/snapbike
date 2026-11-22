@@ -44,7 +44,7 @@ import { analyzeBikePhoto, BikeData } from './lib/bikeAnalysis';
 import { classifyItemKind } from './lib/itemKind';
 import { pricesFor } from './lib/prices';
 import { BikeAnalysisState, BikeDetails } from './components/BikeDetails';
-import { analyzeTranscript, hasOpenAiKey, refineTask, transcribeAudio } from './lib/api';
+import { analyzeTranscript, hasOpenAiKey, refineTask, transcribeAudio } from './lib/llm-communication/api';
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from './lib/speech';
 import * as FileSystem from 'expo-file-system/legacy';
 import {
@@ -323,40 +323,40 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   // Restore an auto-saved draft on start.
   useEffect(() => {
     void (async () => {
-    const draft = await loadDraft();
-    if (draft) {
-      let photo = draft.photoUri;
-      // The camera photo lives in the cache folder; if the OS has cleared it,
-      // fall back to the uploaded copy.
-      if (photo && Platform.OS !== 'web' && photo.startsWith('file:')) {
-        const info = await FileSystem.getInfoAsync(photo).catch(() => null);
-        if (!info?.exists) photo = draft.imagePath ? jobImageUrl(draft.imagePath) : null;
+      const draft = await loadDraft();
+      if (draft) {
+        let photo = draft.photoUri;
+        // The camera photo lives in the cache folder; if the OS has cleared it,
+        // fall back to the uploaded copy.
+        if (photo && Platform.OS !== 'web' && photo.startsWith('file:')) {
+          const info = await FileSystem.getInfoAsync(photo).catch(() => null);
+          if (!info?.exists) photo = draft.imagePath ? jobImageUrl(draft.imagePath) : null;
+        }
+        remote.current = {
+          jobId: draft.order?.bookingId ?? null,
+          imagePath: draft.imagePath ?? null,
+          uploadedPhotoUri: draft.uploadedPhotoUri ?? null,
+          customerId: draft.customerId,
+          customerKey: draft.customerKey ?? 'null',
+        };
+        setPhotoUri(photo);
+        setItemKind(draft.itemKind ?? null);
+        if (draft.bike) setBikeAnalysis({ status: 'ready', bike: draft.bike });
+        setTranscript(draft.transcript);
+        setTasks(draft.tasks);
+        setInspectionTasks(draft.inspectionTasks ?? []);
+        setInspection(draft.inspection ?? {});
+        setInspectionTranscript(draft.inspectionTranscript ?? '');
+        setComments(draft.comments ?? EMPTY_COMMENTS);
+        setCurrentStatus(draft.jobStatus ?? (draft.order?.bookingId ? 'checked_in' : null));
+        // Older drafts stored customerName/customerPhone; drop those.
+        setOrder({
+          bikeNumber: draft.order?.bikeNumber ?? '',
+          customer: draft.order?.customer ?? null,
+          bookingId: draft.order?.bookingId ?? null,
+        });
       }
-      remote.current = {
-        jobId: draft.order?.bookingId ?? null,
-        imagePath: draft.imagePath ?? null,
-        uploadedPhotoUri: draft.uploadedPhotoUri ?? null,
-        customerId: draft.customerId,
-        customerKey: draft.customerKey ?? 'null',
-      };
-      setPhotoUri(photo);
-      setItemKind(draft.itemKind ?? null);
-      if (draft.bike) setBikeAnalysis({ status: 'ready', bike: draft.bike });
-      setTranscript(draft.transcript);
-      setTasks(draft.tasks);
-      setInspectionTasks(draft.inspectionTasks ?? []);
-      setInspection(draft.inspection ?? {});
-      setInspectionTranscript(draft.inspectionTranscript ?? '');
-      setComments(draft.comments ?? EMPTY_COMMENTS);
-      setCurrentStatus(draft.jobStatus ?? (draft.order?.bookingId ? 'checked_in' : null));
-      // Older drafts stored customerName/customerPhone; drop those.
-      setOrder({
-        bikeNumber: draft.order?.bikeNumber ?? '',
-        customer: draft.order?.customer ?? null,
-        bookingId: draft.order?.bookingId ?? null,
-      });
-    }
-    restored.current = true;
+      restored.current = true;
     })();
   }, []);
 
@@ -755,56 +755,56 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
           <LockedBanner tab="note" />
 
           <StepLock tab="note" gap={20}>
-          <View
-            style={styles.photoSection}
-            onLayout={(e) => (photoSectionY.current = e.nativeEvent.layout.y)}
-          >
-            <PhotoCard uri={photoUri} onTakePhoto={takePhoto} />
-            {photoUri && itemKind && itemKind !== 'bike' ? (
-              <View style={styles.bikeDetailsCard}>
-                <Text style={styles.itemKindText}>{ITEM_KIND_LABELS[itemKind]}</Text>
-              </View>
-            ) : null}
-            {photoUri && bikeAnalysis.status !== 'idle' ? (
-              <View
-                style={styles.bikeDetailsCard}
-                onLayout={(e) => (bikeDetailsY.current = e.nativeEvent.layout.y)}
-              >
-                <BikeDetails
-                  key={photoUri}
-                  expandNonce={focusBikeNonce}
-                  state={bikeAnalysis}
-                  onRetry={runBikeAnalysis}
-                  onChange={(bike) => setBikeAnalysis({ status: 'ready', bike })}
-                />
-              </View>
-            ) : null}
-            <CustomerSection
-              customer={order.customer}
-              onImportBooking={() => setShowBookings(true)}
-              onDropIn={() => setShowDropIn(true)}
-            />
-          </View>
-
-          <InspectionGuide />
-
-          <MicButton
-            phase={phase}
-            onToggle={handleToggle}
-            onHoldStart={() => {
-              if (phase === 'idle') void startRecording();
-            }}
-            onHoldEnd={() => {
-              if (phase === 'recording') void stopRecording();
-            }}
-          />
-
-          {error ? (
-            <View style={styles.errorBox}>
-              <Ionicons name="warning-outline" size={16} color={colors.danger} />
-              <Text style={styles.errorText}>{error}</Text>
+            <View
+              style={styles.photoSection}
+              onLayout={(e) => (photoSectionY.current = e.nativeEvent.layout.y)}
+            >
+              <PhotoCard uri={photoUri} onTakePhoto={takePhoto} />
+              {photoUri && itemKind && itemKind !== 'bike' ? (
+                <View style={styles.bikeDetailsCard}>
+                  <Text style={styles.itemKindText}>{ITEM_KIND_LABELS[itemKind]}</Text>
+                </View>
+              ) : null}
+              {photoUri && bikeAnalysis.status !== 'idle' ? (
+                <View
+                  style={styles.bikeDetailsCard}
+                  onLayout={(e) => (bikeDetailsY.current = e.nativeEvent.layout.y)}
+                >
+                  <BikeDetails
+                    key={photoUri}
+                    expandNonce={focusBikeNonce}
+                    state={bikeAnalysis}
+                    onRetry={runBikeAnalysis}
+                    onChange={(bike) => setBikeAnalysis({ status: 'ready', bike })}
+                  />
+                </View>
+              ) : null}
+              <CustomerSection
+                customer={order.customer}
+                onImportBooking={() => setShowBookings(true)}
+                onDropIn={() => setShowDropIn(true)}
+              />
             </View>
-          ) : null}
+
+            <InspectionGuide />
+
+            <MicButton
+              phase={phase}
+              onToggle={handleToggle}
+              onHoldStart={() => {
+                if (phase === 'idle') void startRecording();
+              }}
+              onHoldEnd={() => {
+                if (phase === 'recording') void stopRecording();
+              }}
+            />
+
+            {error ? (
+              <View style={styles.errorBox}>
+                <Ionicons name="warning-outline" size={16} color={colors.danger} />
+                <Text style={styles.errorText}>{error}</Text>
+              </View>
+            ) : null}
 
           </StepLock>
 
@@ -830,51 +830,51 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
           ) : null}
 
           <StepLock tab="note" gap={20}>
-          {tasks.length > 0 ? (
-            <View style={styles.tasksSection}>
-              <Text style={styles.sectionHeading}>Jobb</Text>
-              {tasks.map((task) => (
-                <TaskCard
-                  key={task.id}
-                  task={task}
-                  onRemove={removeTask}
-                  onAddProduct={addProduct}
-                  onRemoveProduct={removeProduct}
-                  onUpdateProduct={updateProduct}
-                  voiceState={
-                    voiceEditId === task.id
-                      ? voiceEditRecording
-                        ? 'recording'
-                        : 'processing'
-                      : undefined
-                  }
-                  onVoiceEdit={toggleTaskVoice}
-                  onSetApproval={setApproval}
-                />
-              ))}
-            </View>
-          ) : null}
+            {tasks.length > 0 ? (
+              <View style={styles.tasksSection}>
+                <Text style={styles.sectionHeading}>Jobb</Text>
+                {tasks.map((task) => (
+                  <TaskCard
+                    key={task.id}
+                    task={task}
+                    onRemove={removeTask}
+                    onAddProduct={addProduct}
+                    onRemoveProduct={removeProduct}
+                    onUpdateProduct={updateProduct}
+                    voiceState={
+                      voiceEditId === task.id
+                        ? voiceEditRecording
+                          ? 'recording'
+                          : 'processing'
+                        : undefined
+                    }
+                    onVoiceEdit={toggleTaskVoice}
+                    onSetApproval={setApproval}
+                  />
+                ))}
+              </View>
+            ) : null}
 
-          <Pressable onPress={() => setShowAddTask(true)} style={styles.addTask}>
-            <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
-            <Text style={styles.addTaskText}>{STRINGS.addActionManually}</Text>
-          </Pressable>
+            <Pressable onPress={() => setShowAddTask(true)} style={styles.addTask}>
+              <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
+              <Text style={styles.addTaskText}>{STRINGS.addActionManually}</Text>
+            </Pressable>
 
-          {tasks.length > 0 ? (
-            <View style={styles.footer}>
-              <View style={styles.totalRow}>
-                <Text style={styles.totalLabel}>
-                  {hasRejected ? 'Att betala (godkänt)' : 'Totalt'}
-                </Text>
-                <View style={styles.totalValues}>
-                  {hasRejected ? (
-                    <Text style={styles.totalStruck}>{formatPrice(total)}</Text>
-                  ) : null}
-                  <Text style={styles.totalValue}>{formatPrice(approved)}</Text>
+            {tasks.length > 0 ? (
+              <View style={styles.footer}>
+                <View style={styles.totalRow}>
+                  <Text style={styles.totalLabel}>
+                    {hasRejected ? 'Att betala (godkänt)' : 'Totalt'}
+                  </Text>
+                  <View style={styles.totalValues}>
+                    {hasRejected ? (
+                      <Text style={styles.totalStruck}>{formatPrice(total)}</Text>
+                    ) : null}
+                    <Text style={styles.totalValue}>{formatPrice(approved)}</Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          ) : null}
+            ) : null}
 
           </StepLock>
 
@@ -1054,97 +1054,97 @@ function Root() {
         setCurrentStatus,
       }}
     >
-    <View style={styles.root}>
-      <StatusBar style="light" />
+      <View style={styles.root}>
+        <StatusBar style="light" />
 
-      {hasCurrentBike ? (
-        <CurrentBikeBar
-          customer={order.customer}
-          bike={currentBike}
-          bikeNumber={order.bikeNumber}
-          status={currentStatus}
-          topInset={insets.top}
-          onPress={openCurrentJob}
-          comments={tab === 'note' || tab === 'inspect' || tab === 'jobList' ? comments : null}
-          onOpenComment={(field) =>
-            setBarNote([
-              field === 'customerComment'
-                ? // Written by the customer when booking: read-only.
+        {hasCurrentBike ? (
+          <CurrentBikeBar
+            customer={order.customer}
+            bike={currentBike}
+            bikeNumber={order.bikeNumber}
+            status={currentStatus}
+            topInset={insets.top}
+            onPress={openCurrentJob}
+            comments={tab === 'note' || tab === 'inspect' || tab === 'jobList' ? comments : null}
+            onOpenComment={(field) =>
+              setBarNote([
+                field === 'customerComment'
+                  ? // Written by the customer when booking: read-only.
                   { title: 'Kundkommentar', text: comments.customerComment }
-                : { title: 'Verkstadskommentar', text: comments.mechanicComment, field },
-            ])
-          }
+                  : { title: 'Verkstadskommentar', text: comments.mechanicComment, field },
+              ])
+            }
+          />
+        ) : null}
+        <JobNotesModal
+          entries={barNote}
+          listTitle=""
+          onSave={(field, text) => setComments((current) => ({ ...current, [field]: text }))}
+          onClose={() => setBarNote(null)}
         />
-      ) : null}
-      <JobNotesModal
-        entries={barNote}
-        listTitle=""
-        onSave={(field, text) => setComments((current) => ({ ...current, [field]: text }))}
-        onClose={() => setBarNote(null)}
-      />
 
-      {/* The bar already covers the status bar area, so screens skip it. */}
-      <SafeAreaInsetsContext.Provider
-        value={hasCurrentBike ? { ...insets, top: 0 } : insets}
-      >
+        {/* The bar already covers the status bar area, so screens skip it. */}
+        <SafeAreaInsetsContext.Provider
+          value={hasCurrentBike ? { ...insets, top: 0 } : insets}
+        >
 
-      <View style={[styles.page, tab !== 'note' && styles.pageHidden]}>
-        <Screen loadRequest={loadRequest} />
-      </View>
-      <View style={[styles.page, tab !== 'inspect' && styles.pageHidden]}>
-        <InspectionScreen scrollReset={inspectionScrollReset} />
-      </View>
-      <View style={[styles.page, tab !== 'jobList' && styles.pageHidden]}>
-        <JobListScreen active={tab === 'jobList'} />
-      </View>
-      <View style={[styles.page, tab !== 'messages' && styles.pageHidden]}>
-        <MessagesScreen active={tab === 'messages'} />
-      </View>
-      <View style={[styles.page, tab !== 'jobs' && styles.pageHidden]}>
-        <JobsScreen
-          active={tab === 'jobs'}
-          onStartCheckIn={startCheckIn}
-          onEditBikeDetails={editBikeDetails}
-          onEditCustomer={editCustomer}
-          onStartInspection={startInspection}
-          onSelectBike={selectBike}
-          onNewJob={startNewJob}
-          onJobDeleted={jobDeleted}
-          openRequest={openJobRequest}
-        />
-      </View>
-      </SafeAreaInsetsContext.Provider>
+          <View style={[styles.page, tab !== 'note' && styles.pageHidden]}>
+            <Screen loadRequest={loadRequest} />
+          </View>
+          <View style={[styles.page, tab !== 'inspect' && styles.pageHidden]}>
+            <InspectionScreen scrollReset={inspectionScrollReset} />
+          </View>
+          <View style={[styles.page, tab !== 'jobList' && styles.pageHidden]}>
+            <JobListScreen active={tab === 'jobList'} />
+          </View>
+          <View style={[styles.page, tab !== 'messages' && styles.pageHidden]}>
+            <MessagesScreen active={tab === 'messages'} />
+          </View>
+          <View style={[styles.page, tab !== 'jobs' && styles.pageHidden]}>
+            <JobsScreen
+              active={tab === 'jobs'}
+              onStartCheckIn={startCheckIn}
+              onEditBikeDetails={editBikeDetails}
+              onEditCustomer={editCustomer}
+              onStartInspection={startInspection}
+              onSelectBike={selectBike}
+              onNewJob={startNewJob}
+              onJobDeleted={jobDeleted}
+              openRequest={openJobRequest}
+            />
+          </View>
+        </SafeAreaInsetsContext.Provider>
 
-      <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom - 16, 8) }]}>
-        {TABS.map((item) => {
-          const isActive = tab === item.key;
-          const done = item.key in STEP_STATUS && stepDone(item.key as StepTab, currentStatus);
-          return (
-            <Pressable
-              key={item.key}
-              onPress={() => setTab(item.key)}
-              style={styles.tabItem}
-            >
-              <View style={[styles.tabIcon, done && styles.tabIconDone]}>
-                <Ionicons
-                  name={(isActive ? item.iconActive : item.icon) as never}
-                  size={22}
-                  color={isActive ? colors.accent : colors.textFaint}
-                />
-                {done ? (
-                  <View style={styles.tabCheck}>
-                    <Ionicons name="checkmark" size={10} color={colors.onAccent} />
-                  </View>
-                ) : null}
-              </View>
-              <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
-                {item.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+        <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom - 16, 8) }]}>
+          {TABS.map((item) => {
+            const isActive = tab === item.key;
+            const done = item.key in STEP_STATUS && stepDone(item.key as StepTab, currentStatus);
+            return (
+              <Pressable
+                key={item.key}
+                onPress={() => setTab(item.key)}
+                style={styles.tabItem}
+              >
+                <View style={[styles.tabIcon, done && styles.tabIconDone]}>
+                  <Ionicons
+                    name={(isActive ? item.iconActive : item.icon) as never}
+                    size={22}
+                    color={isActive ? colors.accent : colors.textFaint}
+                  />
+                  {done ? (
+                    <View style={styles.tabCheck}>
+                      <Ionicons name="checkmark" size={10} color={colors.onAccent} />
+                    </View>
+                  ) : null}
+                </View>
+                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
-    </View>
     </OrderContext.Provider>
   );
 }

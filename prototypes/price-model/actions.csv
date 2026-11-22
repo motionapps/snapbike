@@ -1,0 +1,12 @@
+action_id,name,in_repair_set,needs_product,note
+replace,Byt,true,true,Del i has_repair. Ta av gammal del och sätt dit ny
+adjust,Justera,true,false,Del i has_repair
+clean_lube,Rengör/Smörj,true,false,Del i has_repair
+align,Rikta,false,false,Hjul - bromsskiva och växelöra
+bleed,Lufta,false,false,Bara broms
+build,Bygg,false,true,Bara hjul
+service,Service,false,false,Nav och navväxel
+mount,Montera,false,true,Sätt dit en ny del där ingen fanns
+repair,Reparera,false,false,
+troubleshoot,Felsök,false,false,
+refill,Fyll på,false,false,Fylla på vätska (t.ex. tubeless)

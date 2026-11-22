@@ -1,0 +1,47 @@
+part_id,parent_id,name,parameters,has_repair,extra_actions,child_actions,requires,inspection_items,note
+wheel,,Hjul,position|mounting|motor,false,replace|align|build,,wheel_off,front:front-rim|rear:rear-rim,Grupp och del: Byt/Rikta/Bygg gäller hela hjulet
+tire,wheel,Däck,,true,,,,front:front-tire|rear:rear-tire,Ärver position/mounting/motor
+tubeless,tire,Tubeless,,false,mount|refill,,,,Ärver från däck och hjul
+tube,wheel,Slang,,true,,,,front:front-tire|rear:rear-tire,
+spokes,wheel,Ekrar,,true,,,,,
+hub,wheel,Nav/hjullager,,true,service,,,front:front-hub|rear:rear-hub,
+brake,,Broms,position|brake_type|brake_system,true,bleed,,,front:front-brake|rear:rear-brake,Grupp och del: Justera/Lufta gäller hela bromsen
+brake_pads,brake,Bromsbelägg,,true,,,,,Ärver allt från broms
+brake_disc,brake,Bromsskiva,,true,align,,wheel_off:replace,,
+brake_cable,brake,Bromsvajer,,true,,,,mid-cables,
+brake_lever,brake,Bromsok/handtag/reglage,,true,,,,,
+drivetrain,,Drivlina,,false,,,,,Bara grupp
+chain,drivetrain,Kedja,,true,,,,drive-chain,
+cassette,drivetrain,Kassett/frikrans,,true,,,wheel_off@rear,drive-cassette,
+jockey_wheels,drivetrain,Rulltrissor,,true,,,,drive-derailleur,
+chainring,drivetrain,Framdrev/klinga,,true,,,,drive-chainrings,
+crankset,drivetrain,Vevparti,,true,,,,drive-chainrings,
+crank_arm,crankset,Vevarm,,true,repair,,,,Tre nivåer: drivlina → vevparti → vevarm
+bottom_bracket,drivetrain,Vevlager,,true,,,,drive-bb,
+pedals,drivetrain,Pedaler,,true,,,,drive-pedals,
+derailleur,drivetrain,Växel,position,true,,,,drive-derailleur,
+derailleur_hanger,derailleur,Växelöra,,true,align,,,,
+hub_gear,drivetrain,Navväxel,,true,service,,wheel_off:replace|service@rear,rear-hub,
+shifter,drivetrain,Växelreglage,routing,true,,,,mid-cables,
+shift_cable,drivetrain,Växelvajer,,true,,,,mid-cables,
+cockpit,,Styrdel,routing,false,,,,mid-stem,Bara grupp
+handlebar,cockpit,Styre,,true,,,,,
+bar_tape,cockpit,Styrlinda,,true,,,,mid-bartape,
+stem,cockpit,Styrstam,,true,,,,,
+headset,cockpit,Styrlager,,true,,,,ground-headset,
+grips,cockpit,Handtag,,true,,,,,
+frame,,Ram,,false,,,,mid-frame,Bara grupp
+saddle,frame,Sadel/sadelstolpe,,true,,,,mid-saddle,
+kickstand,frame,Stöd,,true,mount,,,mid-kickstand,
+accessories,,Tillbehör,,false,,mount|replace,,mid-accessories,Bara grupp; alla tillbehör kan monteras och bytas (ärvs)
+fender,accessories,Stänkskärm,position|fender_type,false,,,,,
+rack,accessories,Pakethållare,,false,,,,,
+light,accessories,Belysning,position|dynamo,false,repair|troubleshoot,,,,
+chain_guard,accessories,Kedjeskydd,,false,,,,,
+skirt_guard,accessories,Kjolskydd,,false,,,,,
+basket,accessories,Korg,,false,,,,,
+child_seat,accessories,Barnstol,,false,,,,,
+lock,accessories,Lås,,false,,,,,
+electric,,Elsystem,,false,troubleshoot,,,,Grupp och del
+display,electric,Display,,true,,,,,
+other,,Övrigt,,false,repair|mount|troubleshoot,,,,Ingen del

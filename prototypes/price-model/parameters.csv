@@ -1,0 +1,9 @@
+parameter,name,values,note
+position,Position,front|rear|both,both = front+rear in one job
+mounting,Montering,on_bike|loose,loose = löst hjul inlämnat
+motor,Navmotor,no|yes,Hjul med navmotor
+brake_type,Bromstyp,disc|rim,
+brake_system,Bromssystem,mechanical|hydraulic,
+dynamo,Dynamo,no|yes,Belysning
+fender_type,Stänkskärmstyp,simple|complex|no_stays,
+routing,Dragning,external|internal,Vajrar/slangar genom ramen eller styret

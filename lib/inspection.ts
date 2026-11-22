@@ -271,6 +271,19 @@ export function matchInspectionPhrase(
   return hits;
 }
 
+/**
+ * Inspection items a task title is about, e.g. "Däckbyte per hjul fram" →
+ * front-tire. A tyre hit drops the rim on the same side ("hjul" matches both).
+ */
+export function inspectionItemsForTitle(title: string): string[] {
+  const ids = matchInspectionPhrase(title).map((hit) => hit.itemId);
+  return ids.filter(
+    (id) =>
+      !(id === 'front-rim' && ids.includes('front-tire')) &&
+      !(id === 'rear-rim' && ids.includes('rear-tire'))
+  );
+}
+
 /** Plain-text summary of the inspection, e.g. to paste into a message. */
 export function inspectionSummaryText(
   state: InspectionState,

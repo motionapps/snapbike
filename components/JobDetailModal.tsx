@@ -18,7 +18,6 @@ import { Job, JobStatus, jobTotal, productTotal } from '../lib/types';
 
 const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
 import { BikeDetails } from './BikeDetails';
-import { InspectionSummary } from './InspectionSummary';
 import { JobHeader } from './JobHeader';
 import { CommentField, JobNotesModal, NoteEntry } from './JobNotesModal';
 import { StatusPill } from './StatusPill';
@@ -187,17 +186,6 @@ export function JobDetailModal({
 
             <View style={styles.buttonRow}>
               <NoteButton
-                label="Kundkommentar"
-                icon="chatbubble"
-                filled={job.customerComment.trim() !== ''}
-                onPress={() =>
-                  setNotes([
-                    // Written by the customer when booking: read-only.
-                    { title: 'Kundkommentar', text: job.customerComment },
-                  ])
-                }
-              />
-              <NoteButton
                 label="Verkstadskommentar"
                 icon="construct"
                 filled={job.mechanicComment.trim() !== ''}
@@ -213,6 +201,17 @@ export function JobDetailModal({
                 filled={transcripts.length > 0}
                 disabled={transcripts.length === 0}
                 onPress={() => setNotes(transcripts)}
+              />
+              <NoteButton
+                label="Kundkommentar"
+                icon="chatbubble"
+                filled={job.customerComment.trim() !== ''}
+                onPress={() =>
+                  setNotes([
+                    // Written by the customer when booking: read-only.
+                    { title: 'Kundkommentar', text: job.customerComment },
+                  ])
+                }
               />
             </View>
 
@@ -300,13 +299,6 @@ export function JobDetailModal({
                 </Text>
               </View>
             </View>
-
-            <InspectionSummary
-              job={job}
-              onContinue={() => {
-                closeThen(() => onStartInspection(job));
-              }}
-            />
 
             <Pressable
               onPress={confirmDelete}

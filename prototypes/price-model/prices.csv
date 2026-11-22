@@ -1,0 +1,90 @@
+part_id,action_id,conditions,price,has_product,source,note
+tire,replace,,299,true,Däckbyte per hjul fram / bak,
+tire,replace,mounting=loose,329,true,Byte däck/slang - löst hjul ink standardslang,Inkl. standardslang
+tubeless,mount,,699,false,Tubeless (inkl. fälgtejp - vätska - ventil) - per hjul,
+tubeless,refill,,299,false,Påfyllning av vätska Tubeless (ink vätska),
+tube,replace,,399,false,Punktering fram / bak inkl. standardslang,
+tube,replace,mounting=loose,329,false,Byte däck/slang - löst hjul ink standardslang,
+tube,replace,item=trolley,299,false,Barnvagnspunktering inkl. slang,
+wheel,align,,499,false,Hjulriktning - per hjul,
+wheel,align,mounting=loose,449,false,Hjulriktning löst hjul - per hjul,
+wheel,align,motor=yes,899,false,Hjulriktning med motor,
+wheel,replace,,399,true,Byte bakhjul - däck och drev/kassett,Inkl. flytt av däck och drev/kassett till nya hjulet
+wheel,build,,1299,true,Hjulbygge - per hjul (Standard - Hybrid - mtb),
+wheel,build,motor=yes,1599,false,Hjulbygge med motor,
+spokes,replace,,33,false,Ekrar vid riktning - per st,Pris per eker
+hub,adjust,,199,false,Justering hjullager,
+hub,replace,,399,true,Byte hjullager/axel/body,
+hub,service,position=front,349,false,Service framnav fr.,Från-pris
+hub,service,position=rear;gears=external,499,false,Service/byte - lager/body bakhjul,
+hub,service,position=rear;gears=hub,499,false,Service baknav - oväxlat fr.,Från-pris
+brake,adjust,,169,false,Justering fälg- eller skivbroms - per styck,
+brake,bleed,,399,false,Luftning hydraulisk broms - per styck,
+brake_pads,replace,brake_type=disc,249,true,Byte bromsbelägg fram / bak - per par (Skivbroms),
+brake_pads,replace,brake_type=rim,169,true,Byte bromsbelägg fram / bak - per par (Fälgbroms),
+brake_disc,replace,,299,true,Byte av bromsskiva,
+brake_disc,align,,169,false,Riktning av bromsskiva,Rikta finns även här
+brake_cable,replace,position=front,279,false,Bromsvajerbyte och hölje inkl. material - fram,Pris skiljer per sida
+brake_cable,replace,position=rear,329,false,Bromsvajerbyte och hölje inkl. material - bak,Pris skiljer per sida
+brake_lever,replace,,299,true,Byte av bromsok/handtag/reglage (Mekaniskt),
+brake_lever,replace,brake_system=hydraulic,499,true,Byte bromsok/handtag/reglage inkl. luftn. (ej racer),
+chain,replace,,449,true,Byte Kedja 1tim,Oklart när den gäller
+chain,replace,gears=external,349,true,Byte Kedja,
+chain,replace,gears=hub,399,true,Byte Kedja och krans. Fotbromsad cykel,Inkl. krans
+chain,adjust,gears=hub,199,false,Spänna kedja,
+chain,clean_lube,,59,false,Torka och Olja kedja,
+cassette,replace,gears=external,359,true,Byte kassett,
+jockey_wheels,replace,gears=external,249,true,Byte rulltrissor,
+chainring,replace,,329,true,Byte framdrev,
+crankset,replace,,499,true,Byte vevparti,
+crank_arm,replace,,229,true,Byte vevarm - vänster sida,
+crank_arm,repair,,799,true,Montering/reparation helsmidd vevarm (fauber),
+bottom_bracket,replace,,699,true,Byte vevlager,
+pedals,replace,,169,true,Byte pedaler,
+derailleur,replace,gears=external,429,true,Byte bakväxel/framväxel,
+derailleur,adjust,position=both;gears=external,349,false,Justering fram- och bakväxel,
+derailleur_hanger,replace,gears=external,299,true,Byte växelöra,
+derailleur_hanger,align,gears=external,259,false,Riktning växelöra,Rikta finns även här
+hub_gear,adjust,gears=hub,169,false,Justering navväxel,
+hub_gear,service,gears=hub,699,false,Service Shimano navvxl Alfin/Nexus - 3–8 vxl,
+hub_gear,replace,gears=hub,599,true,Byte navinsats Nexus,
+shift_cable,replace,gears=hub,299,true,Byte växelvajer och hölje - navväxel,
+shift_cable,replace,gears=external,299,true,Byte växelwire/hölje. MTB/hybrid,
+shift_cable,replace,bike_type=racer,499,true,Byte växelvajer och hölje - racer,
+shifter,replace,,369,true,Byte växel-/bromsreglage - standard/mtb,
+shifter,replace,gears=hub,399,true,Byte växelreglage. Nexus - Sram och Torpedo,
+shifter,replace,bike_type=racer,599,true,Byte växel-/bromsreglage - racer,
+shifter,replace,routing=internal,549,true,Byte av växelreglage med intern dragning,
+handlebar,replace,,499,true,Byte styre - standard/mtb,
+handlebar,replace,bike_type=racer,799,true,Byte styre - racer (ej med invändig dragning),
+handlebar,replace,bike_type=racer;routing=internal,1699,true,Byte av styre med intern dragning och hydraulik,
+bar_tape,replace,bike_type=racer,329,true,Byte styrlinda - racer,
+stem,replace,,249,true,Byte styrstam,
+headset,replace,,349,true,Byte styrlager,
+headset,adjust,,179,false,Justering styrlager (Ej omfettning),
+grips,replace,,139,true,Byte handtag,
+saddle,replace,,149,true,Byte sadel/sadelstolpe,
+kickstand,replace,,249,true,Byte stöd,
+kickstand,mount,,159,true,Montering stöd,
+fender,mount,fender_type=simple,299,true,Montering stänkskärmar enklare - fram/bak,
+fender,mount,fender_type=complex,399,true,Montering stänkskärmar svårare - fram/bak,
+fender,mount,fender_type=complex;position=both,449,true,Montering stänkskärmar svårare inkl. demontering,Inkl. demontering
+fender,mount,fender_type=no_stays,329,true,Montering stänkskärmar utan stag - fram/bak,
+rack,mount,,249,true,Montering pakethållare,
+rack,mount,,349,true,Montering pakethållare enkla inkl. demontering,Inkl. demontering – samma villkor som raden ovan
+light,mount,,199,true,Montering framlampa/baklampa,
+light,mount,dynamo=yes,249,true,Montering framlampa/baklampa dynamo,
+light,repair,,299,false,Reparation fast belysning,
+light,troubleshoot,dynamo=yes,229,false,Felsökning belysning/navdynamo,
+chain_guard,mount,,299,true,Montering kedjeskydd utanpå,
+chain_guard,mount,,399,true,Montering kedjeskydd innanför vevlager,Behöver en parameter (utanpå/innanför)
+skirt_guard,mount,,149,true,Montering kjolskydd,
+basket,mount,,299,true,Montering korg,
+child_seat,mount,,249,true,Montering barnstol,
+lock,mount,,199,true,Montering lås,
+display,replace,electric=yes,599,true,Byte display elcykel,
+electric,troubleshoot,electric=yes,999,false,Felsökning elcykel.,
+other,repair,,449,false,Öppning lås + 100kr per klinga,Ingen del
+other,repair,,400,false,Gänginstats,Ingen del
+other,mount,,25,true,Montering övrigt - kr/min (min 20min),Pris per minut
+other,troubleshoot,,499,false,Besiktning skadad cykel (kontroll av ram - gaffel och hjul samt offert till försäkringsbolag),

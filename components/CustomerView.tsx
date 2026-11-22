@@ -21,16 +21,17 @@ import {
   CustomerJob,
   WORKSHOP_NAME,
   WORKSHOP_PHONE,
+  canAnswerReceptionTask,
   canAnswerTask,
   changeDeadline,
   fetchCustomerJob,
   isPreviewLocation,
   sendCustomerResponse,
 } from '../lib/customerLink';
-import { INSPECTION_TEMPLATE } from '../lib/inspection';
+import { INSPECTION_TEMPLATE, inspectionItemsForTitle } from '../lib/inspection';
 import { jobImageUrl } from '../lib/supabase';
 import { inspectionImageUrl, taskImageUrl } from '../lib/taskImages';
-import { Task, approvedTotal, splitJobList, taskTotal, tasksTotal } from '../lib/types';
+import { Task, approvedTotal, splitJobList, taskTotal } from '../lib/types';
 
 type Approval = 'godkänd' | 'nekad';
 
@@ -86,7 +87,9 @@ export function CustomerView({ token }: { token: string }) {
       setJob(job);
       const initial: Record<string, Approval> = {};
       // Everything is approved unless the customer has denied it.
-      for (const task of job.inspectionTasks ?? []) initial[task.id] = task.approval ?? 'godkänd';
+      for (const task of [...job.tasks, ...(job.inspectionTasks ?? [])]) {
+        initial[task.id] = task.approval ?? 'godkänd';
+      }
       setDecisions(initial);
       setState('ready');
     } catch {
@@ -104,17 +107,24 @@ export function CustomerView({ token }: { token: string }) {
     if (!job) return [];
     const variant = silhouetteVariant(job.bike);
     const list: Marker[] = [];
+    // Mottagning tasks carry no item ids: place them from their title.
+    const receptionTasksFor = (itemId: string) =>
+      job.tasks.filter((t) => inspectionItemsForTitle(t.title).includes(itemId));
     for (const section of INSPECTION_TEMPLATE) {
       for (const item of section.items) {
         const result = job.inspection?.[item.id];
-        if (result?.status !== 'issue') continue;
+        const reception = receptionTasksFor(item.id);
+        if (result?.status !== 'issue' && reception.length === 0) continue;
         const position = markerPosition(item.id, variant);
         if (!position) continue;
-        const tasks = listTasks.filter((t) => t.inspectionItemIds?.includes(item.id));
+        const tasks = [
+          ...reception,
+          ...listTasks.filter((t) => t.inspectionItemIds?.includes(item.id)),
+        ];
         list.push({
           itemId: item.id,
           title: item.title,
-          note: result.note,
+          note: result?.status === 'issue' ? result.note : '',
           tasks,
           critical: tasks.some((t) => t.severity === 'kritisk'),
           position,
@@ -143,15 +153,18 @@ export function CustomerView({ token }: { token: string }) {
   }
 
   const sent = job.inspectionTasks !== null;
-  const answerable = (task: Task) => !preview && canAnswerTask(job, task);
-  const open = listTasks.some(answerable);
+  const receptionIds = new Set(job.tasks.map((t) => t.id));
+  const answerable = (task: Task) =>
+    !preview &&
+    (receptionIds.has(task.id) ? canAnswerReceptionTask(job) : canAnswerTask(job, task));
+  const open = [...job.tasks, ...listTasks].some(answerable);
   const deadline = job.status === 'in_progress' ? null : changeDeadline(job.respondedAt);
   const selectedMarker = markers.find((m) => m.itemId === selected) ?? null;
   const photoUrl = jobImageUrl(job.imagePath);
   const split = splitJobList(listTasks);
-  const total =
-    tasksTotal(job.tasks) +
-    listTasks.filter((t) => decisions[t.id] !== 'nekad').reduce((sum, t) => sum + taskTotal(t), 0);
+  const total = [...job.tasks, ...listTasks]
+    .filter((t) => decisions[t.id] !== 'nekad')
+    .reduce((sum, t) => sum + taskTotal(t), 0);
 
   const decide = (taskId: string, approval: Approval) => {
     setMessage(null);
@@ -163,7 +176,9 @@ export function CustomerView({ token }: { token: string }) {
     setMessage(null);
     try {
       const answers: Record<string, Approval> = {};
-      for (const task of listTasks) if (answerable(task)) answers[task.id] = decisions[task.id];
+      for (const task of [...job.tasks, ...listTasks]) {
+        if (answerable(task)) answers[task.id] = decisions[task.id];
+      }
       await sendCustomerResponse(token, answers);
       await load();
       setMessage('Tack! Vi har fått ditt svar.');
@@ -221,7 +236,7 @@ export function CustomerView({ token }: { token: string }) {
         </View>
       ) : null}
 
-      {sent ? (
+      {sent || markers.length > 0 ? (
         <View style={styles.card}>
           <View style={styles.bikeBox}>
             {showPhoto && photoUrl ? (
@@ -285,9 +300,20 @@ export function CustomerView({ token }: { token: string }) {
       ) : null}
 
       {job.tasks.length > 0 ? (
-        <Section title="Redan godkända vid mottagning" sum={tasksTotal(job.tasks)}>
+        <Section
+          title="Redan godkända vid mottagning"
+          sum={job.tasks
+            .filter((t) => decisions[t.id] !== 'nekad')
+            .reduce((sum, t) => sum + taskTotal(t), 0)}
+        >
           {job.tasks.map((task) => (
-            <TaskRow key={task.id} task={task} />
+            <TaskRow
+              key={task.id}
+              task={task}
+              decision={decisions[task.id]}
+              disabled={!answerable(task)}
+              onDecide={decide}
+            />
           ))}
         </Section>
       ) : null}

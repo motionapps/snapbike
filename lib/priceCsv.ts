@@ -15,8 +15,10 @@ Verkstad Racercyklar,Växelservice,Byte växel-/bromsreglage - racer,599,racer,,
 Verkstad,Bromsservice,Luftning hydraulisk broms - per styck,399,all_bikes,,false,false
 Verkstad,Bromsservice,Bromsvajerbyte och hölje inkl. material - bak,329,all_bikes,,false,false
 Verkstad,Bromsservice,Bromsvajerbyte och hölje inkl. material - fram,279,all_bikes,,false,false
-Verkstad,Bromsservice,Byte bromsbelägg - per par (Skivbroms),249,all_bikes,,true,true
-Verkstad,Bromsservice,Byte bromsbelägg - per par (Fälgbroms),169,all_bikes,,true,false
+Verkstad,Bromsservice,Byte bromsbelägg fram - per par (Skivbroms),249,all_bikes,,true,true
+Verkstad,Bromsservice,Byte bromsbelägg bak - per par (Skivbroms),249,all_bikes,,true,true
+Verkstad,Bromsservice,Byte bromsbelägg fram - per par (Fälgbroms),169,all_bikes,,true,false
+Verkstad,Bromsservice,Byte bromsbelägg bak - per par (Fälgbroms),169,all_bikes,,true,false
 Verkstad,Bromsservice,Byte av bromsok/handtag/reglage (Mekaniskt),299,all_bikes,,true,false
 Verkstad,Bromsservice,Byte bromsok/handtag/reglage inkl. luftn. (ej racer),499,all_bikes,,true,false
 Verkstad,Bromsservice,Riktning av bromsskiva,169,all_bikes,,false,false
@@ -42,15 +44,16 @@ Verkstad,Drivlina,Byte vevparti,499,all_bikes,,true,false
 Verkstad,Drivlina,Byte drivlina (vevparti - kedja - kassett - rulltrissor och justering),999,external,,true,false
 Verkstad,Däck och Slang,Däckbyte med 2 nya Dubbdäck Routa W248 42-622,2299,all_bikes,,true,false
 Verkstad,Däck och Slang,Däckbyte med 2 nya Dubbdäck Routa W124 42-622,1999,all_bikes,,true,false
-Verkstad,Däck och Slang,Punktering < 1 tim inkl. standardslang,499,all_bikes,,false,false
+Verkstad,Däck och Slang,Punktering fram < 1 tim inkl. standardslang,499,all_bikes,,false,false
+Verkstad,Däck och Slang,Punktering bak < 1 tim inkl. standardslang,499,all_bikes,,false,false
 Verkstad,Däck och Slang,Byte däck/slang - löst hjul ink standardslang,329,part,,false,true
-Verkstad,Däck och Slang,Däckbyte - per hjul,299,all_bikes,,true,true
 Verkstad,Däck och Slang,Däckbyte per hjul fram,299,all_bikes,,true,true
 Verkstad,Däck och Slang,Däckbyte per hjul bak,299,all_bikes,,true,true
 Verkstad,Däck och Slang,Däckbyte fram+bak,499,all_bikes,,true,true
 Verkstad,Däck och Slang,Tubeless (inkl. fälgtejp - vätska - ventil) - per hjul,699,all_bikes,,false,false
 Verkstad,Däck och Slang,Påfyllning av vätska Tubeless (ink vätska),299,all_bikes,,false,false
-Verkstad,Däck och Slang,Punktering inkl. standardslang,399,all_bikes,,false,false
+Verkstad,Däck och Slang,Punktering fram inkl. standardslang,399,all_bikes,,false,false
+Verkstad,Däck och Slang,Punktering bak inkl. standardslang,399,all_bikes,,false,false
 Verkstad,Däck och Slang,Däckbyte med 2 nya Dubbdäck Routa W244 35-622,2199,racer,,true,true
 Verkstad,Däck och Slang,Däckbyte med 2 nya Dubbdäck Routa W122 35-622,1898,racer,,true,true
 Verkstad,Däck och Slang,Barnvagnspunktering inkl. slang,299,trolley,,false,false

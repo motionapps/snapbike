@@ -1,8 +1,5 @@
 // Auto-generated from assets/snapbike_standard_products.csv — regenerate with the snippet in README
 export const STANDARD_PRODUCTS_CSV = `Beskrivning,Produkt,Antal,Pris,Artikelnummer
-Däckbyte - per hjul,Schwalbe Road Cruiser,1,,
-Däckbyte - per hjul,Schwalbe Marathon,1,,
-Däckbyte - per hjul,Schwalbe Marathon Plus,1,,
 Däckbyte per hjul fram,Schwalbe Road Cruiser,1,,
 Däckbyte per hjul fram,Schwalbe Marathon,1,,
 Däckbyte per hjul fram,Schwalbe Marathon Plus,1,,

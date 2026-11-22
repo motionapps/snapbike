@@ -1,0 +1,8 @@
+package_id,name,conditions,price,covers,note
+basic_hub,Grundservice Fotbromsade cyklar,gears=hub,599,derailleur.adjust|brake.adjust|chain.clean_lube|hub.adjust|headset.adjust,
+basic_external,Grundservice Utanpåliggande växlar,gears=external,699,derailleur.adjust|brake.adjust|chain.clean_lube|hub.adjust|headset.adjust,
+basic_electric,Grundservice – Elcykel,electric=yes,1299,derailleur.adjust|brake.adjust|chain.clean_lube|hub.adjust|headset.adjust,
+extended_racer,Utökad Grundservice för Tävlings/Träningscyklar,bike_type=racer,1199,derailleur.adjust|brake.adjust|chain.clean_lube|hub.adjust|headset.adjust,Innehåll okänt
+cargo,Lådcykelservice,bike_type=cargo,1899,derailleur.adjust|brake.adjust|brake.bleed|chain.clean_lube|hub.adjust|headset.adjust,
+chain_cassette,Byte Kedja & kassett/frikrans,gears=external,599,chain.replace|cassette.replace,
+drivetrain,Byte drivlina (vevparti - kedja - kassett - rulltrissor och justering),gears=external,999,crankset.replace|chain.replace|cassette.replace|jockey_wheels.replace|derailleur.adjust,

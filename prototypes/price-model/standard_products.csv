@@ -1,0 +1,13 @@
+part_id,action_id,conditions,product,quantity,unit_price,note
+tire,replace,,Schwalbe Road Cruiser,1,,Lagerpris
+tire,replace,,Schwalbe Marathon,1,,Lagerpris
+tire,replace,,Schwalbe Marathon Plus,1,,Lagerpris
+tire,replace,position=both,Schwalbe Road Cruiser,2,,Lagerpris
+tire,replace,position=both,Schwalbe Marathon,2,,Lagerpris
+tire,replace,position=both,Schwalbe Marathon Plus,2,,Lagerpris
+tire,replace,position=both,Routa W248 42-622,2,900,499 + 2 × 900 = 2299
+tire,replace,position=both,Routa W124 42-622,2,750,499 + 2 × 750 = 1999
+tire,replace,position=both;bike_type=racer,Routa W244 35-622,2,850,499 + 2 × 850 = 2199
+tire,replace,position=both;bike_type=racer,Routa W122 35-622,2,699.5,499 + 2 × 699.5 = 1898
+tire,replace,position=both;electric=yes,Routa W244 Ebike 35-622,2,1000,499 + 2 × 1000 = 2499
+tire,replace,position=both;electric=yes,Routa W248 E-Bike 42-622,2,1050,499 + 2 × 1050 = 2599

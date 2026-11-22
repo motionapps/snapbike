@@ -54,6 +54,19 @@ function mergeApprovals(local: Task[], stored: Task[]): Task[] {
   return changed ? merged : local;
 }
 
+/** Mottagning tasks: the customer's stored answer wins where it differs. */
+function mergeReceptionApprovals(local: Task[], stored: Task[]): Task[] {
+  const answers = new Map(stored.filter((t) => t.approval).map((t) => [t.id, t.approval]));
+  let changed = false;
+  const merged = local.map((task) => {
+    const approval = answers.get(task.id);
+    if (!approval || task.approval === approval) return task;
+    changed = true;
+    return { ...task, approval };
+  });
+  return changed ? merged : local;
+}
+
 /**
  * Jobblista: the tasks from the Besiktning remarks, i.e. what the customer is
  * asked to approve. Editable until sent; after that locked until "Ändra".
@@ -91,9 +104,10 @@ export function JobListScreen({ active }: { active: boolean }) {
     if (!active || !jobId) return;
     let cancelled = false;
     fetchJobList(jobId)
-      .then(({ inspectionTasks: stored, send }) => {
+      .then(({ tasks: storedTasks, inspectionTasks: stored, send }) => {
         if (cancelled) return;
         setJobListSend(send);
+        setTasks((current) => mergeReceptionApprovals(current, storedTasks));
         if (!editingRef.current) setInspectionTasks((current) => mergeApprovals(current, stored));
       })
       .catch((err) => {
@@ -102,7 +116,7 @@ export function JobListScreen({ active }: { active: boolean }) {
     return () => {
       cancelled = true;
     };
-  }, [active, jobId, setJobListSend, setInspectionTasks]);
+  }, [active, jobId, setJobListSend, setInspectionTasks, setTasks]);
 
   const sent = !!jobListSend?.sentAt;
   const stepLocked = useStepLocked('jobList');
@@ -839,14 +853,12 @@ const styles = StyleSheet.create({
   readyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 12,
+    gap: 10,
   },
   notifyToggle: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
-    flexShrink: 1,
   },
   notifyText: {
     color: colors.text,
@@ -857,7 +869,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    minWidth: 110,
+    flex: 1,
     backgroundColor: colors.accent,
     borderRadius: radius.lg,
     borderCurve: 'continuous',

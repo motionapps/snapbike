@@ -25,7 +25,7 @@ import {
   hasOpenAiKey,
   tasksFromInspection,
   transcribeAudio,
-} from '../lib/api';
+} from '../lib/llm-communication/api';
 import { inspectionImageUrl } from '../lib/taskImages';
 import { useOrderContext } from '../lib/orderContext';
 import { clearJobListSent } from '../lib/supabase';
@@ -217,7 +217,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
       }));
       // Short tick as recording starts. Fired before the mic opens, because
       // iOS mutes haptics while the audio session is recording.
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => { });
       const ready = beginCapture().catch((err) => {
         setMicError(err instanceof Error ? err.message : String(err));
         return false;
@@ -406,239 +406,239 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
         keyboardDismissMode="on-drag"
       >
         <StepLock tab="inspect" gap={22}>
-        <View
-          style={styles.micCard}
-          onLayout={(e) => {
-            const { y, height } = e.nativeEvent.layout;
-            micCardBottom.current = y + height;
-          }}
-        >
-          <MicButton
-            phase={phase}
-            onToggle={handleMic}
-            onHoldStart={() => {
-              if (phase === 'idle') void startRecording();
+          <View
+            style={styles.micCard}
+            onLayout={(e) => {
+              const { y, height } = e.nativeEvent.layout;
+              micCardBottom.current = y + height;
             }}
-            onHoldEnd={() => {
-              if (phase === 'recording') void stopRecording();
-            }}
-            labels={MIC_LABELS}
-          />
-          <Text style={styles.micHint}>
-            Prata dig igenom cykeln bak → fram. Punkterna bockas av och listan
-            scrollar med medan du pratar; när du stoppar finjusteras allt. Du
-            kan alltid ändra manuellt. Håll in ✓ eller ⚠ på en punkt för att
-            prata in en kommentar.
-          </Text>
-        </View>
-
-        {micError ? (
-          <View style={styles.errorBox}>
-            <Ionicons name="warning-outline" size={16} color={colors.danger} />
-            <Text style={styles.errorText}>{micError}</Text>
-          </View>
-        ) : null}
-
-        {template.map((section, sectionIndex) => {
-          const sectionDone = section.items.every((item) => results[item.id]);
-          return (
-            <View
-              key={section.key}
-              style={styles.section}
-              onLayout={(e) => {
-                sectionY.current[section.key] = e.nativeEvent.layout.y;
+          >
+            <MicButton
+              phase={phase}
+              onToggle={handleMic}
+              onHoldStart={() => {
+                if (phase === 'idle') void startRecording();
               }}
-            >
-              <View style={styles.sectionHeader}>
-                <Ionicons
-                  name={section.icon as never}
-                  size={16}
-                  color={sectionDone ? colors.accent : colors.textSecondary}
-                />
-                <Text style={styles.sectionTitle}>{section.title}</Text>
-                {sectionDone ? (
-                  <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
-                ) : null}
-              </View>
-
-              {section.items.map((item) => {
-                const result = results[item.id];
-                const imageUri = inspectionImageUrl(item.id, item.title);
-                const listening =
-                  dictation?.itemId === item.id ? dictation : null;
-                const statusButton = (
-                  icon: string,
-                  status: InspectionStatus,
-                  activeColor: string,
-                  canDictate: boolean
-                ) => (
-                  <StatusButton
-                    icon={
-                      listening?.status === status && listening.phase === 'recording'
-                        ? 'mic'
-                        : icon
-                    }
-                    active={result?.status === status}
-                    activeColor={activeColor}
-                    onPress={() => setStatus(item.id, status)}
-                    onLongPress={
-                      canDictate ? () => startDictation(item.id, status) : undefined
-                    }
-                    onPressOut={canDictate ? () => void stopDictation() : undefined}
-                  />
-                );
-                return (
-                  <View key={item.id} style={styles.itemCard}>
-                    <View style={styles.itemRow}>
-                      <Pressable
-                        onPress={() => setPreviewUri(imageUri)}
-                        style={styles.itemImageButton}
-                      >
-                        <Image
-                          source={{ uri: imageUri }}
-                          style={styles.itemImage}
-                          contentFit="contain"
-                          transition={150}
-                        />
-                      </Pressable>
-                      <View style={styles.itemText}>
-                        <Text style={styles.itemTitle} numberOfLines={2}>
-                          {item.title}
-                        </Text>
-                        <Text style={styles.itemHint} numberOfLines={2}>
-                          {item.hint}
-                        </Text>
-                      </View>
-                      <View style={styles.statusRow}>
-                        {statusButton('checkmark', 'ok', colors.accent, true)}
-                        {statusButton('warning', 'issue', colors.danger, true)}
-                        {statusButton('remove', 'skip', colors.textSecondary, false)}
-                      </View>
-                    </View>
-                    {result && result.status !== 'skip' ? (
-                      <View style={styles.noteWrap}>
-                        <TextInput
-                          style={styles.noteInput}
-                          placeholder={
-                            listening ? '' : 'Anteckning (t.ex. kedja 0,75 % sliten)'
-                          }
-                          placeholderTextColor={colors.textFaint}
-                          value={result.note}
-                          onChangeText={(text) => setNote(item.id, text)}
-                          onFocus={() => setNoteFocused(true)}
-                          onBlur={() => setNoteFocused(false)}
-                          multiline
-                        />
-                        {listening && !result.note ? (
-                          <View style={styles.noteOverlay} pointerEvents="none">
-                            <WaveText
-                              text={
-                                listening.phase === 'recording'
-                                  ? 'Lyssnar… släpp när du är klar'
-                                  : 'Transkriberar…'
-                              }
-                              style={styles.noteWaveText}
-                            />
-                          </View>
-                        ) : null}
-                      </View>
-                    ) : null}
-                  </View>
-                );
-              })}
-
-              {!sectionDone ? (
-                <Pressable
-                  onPress={() => markSectionOk(sectionIndex)}
-                  style={styles.allOk}
-                >
-                  <Ionicons
-                    name="checkmark-done-outline"
-                    size={18}
-                    color={colors.accent}
-                  />
-                  <Text style={styles.allOkText}>Resten av sektionen OK</Text>
-                </Pressable>
-              ) : null}
-            </View>
-          );
-        })}
-
-        <View style={styles.summary}>
-          <View style={styles.sectionHeader}>
-            <Ionicons
-              name="flag-outline"
-              size={16}
-              color={done ? colors.accent : colors.textSecondary}
+              onHoldEnd={() => {
+                if (phase === 'recording') void stopRecording();
+              }}
+              labels={MIC_LABELS}
             />
-            <Text style={styles.sectionTitle}>Sammanfattning</Text>
-            <Text style={styles.summaryCount}>
-              {checkedCount}/{itemCount}
+            <Text style={styles.micHint}>
+              Prata dig igenom cykeln bak → fram. Punkterna bockas av och listan
+              scrollar med medan du pratar; när du stoppar finjusteras allt. Du
+              kan alltid ändra manuellt. Håll in ✓ eller ⚠ på en punkt för att
+              prata in en kommentar.
             </Text>
           </View>
 
-          {checkedCount === 0 ? (
-            <Text style={styles.emptyText}>
-              Sammanfattningen fylls i medan besiktningen pågår.
-            </Text>
-          ) : issues.length === 0 ? (
-            <View style={styles.noIssues}>
-              <Ionicons
-                name="checkmark-circle-outline"
-                size={28}
-                color={colors.accent}
-              />
-              <Text style={styles.noIssuesText}>
-                {done ? 'Inga anmärkningar' : 'Inga anmärkningar hittills'}
-              </Text>
+          {micError ? (
+            <View style={styles.errorBox}>
+              <Ionicons name="warning-outline" size={16} color={colors.danger} />
+              <Text style={styles.errorText}>{micError}</Text>
             </View>
-          ) : (
-            issues.map((issue, index) => (
-              <View key={index} style={styles.issueCard}>
-                <Ionicons name="warning" size={16} color={colors.danger} />
-                <View style={styles.issueText}>
-                  <Text style={styles.issueTitle}>
-                    {issue.title}
-                    <Text style={styles.issueSection}> · {issue.section}</Text>
-                  </Text>
-                  {issue.note ? (
-                    <Text style={styles.issueNote}>{issue.note}</Text>
+          ) : null}
+
+          {template.map((section, sectionIndex) => {
+            const sectionDone = section.items.every((item) => results[item.id]);
+            return (
+              <View
+                key={section.key}
+                style={styles.section}
+                onLayout={(e) => {
+                  sectionY.current[section.key] = e.nativeEvent.layout.y;
+                }}
+              >
+                <View style={styles.sectionHeader}>
+                  <Ionicons
+                    name={section.icon as never}
+                    size={16}
+                    color={sectionDone ? colors.accent : colors.textSecondary}
+                  />
+                  <Text style={styles.sectionTitle}>{section.title}</Text>
+                  {sectionDone ? (
+                    <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
                   ) : null}
                 </View>
+
+                {section.items.map((item) => {
+                  const result = results[item.id];
+                  const imageUri = inspectionImageUrl(item.id, item.title);
+                  const listening =
+                    dictation?.itemId === item.id ? dictation : null;
+                  const statusButton = (
+                    icon: string,
+                    status: InspectionStatus,
+                    activeColor: string,
+                    canDictate: boolean
+                  ) => (
+                    <StatusButton
+                      icon={
+                        listening?.status === status && listening.phase === 'recording'
+                          ? 'mic'
+                          : icon
+                      }
+                      active={result?.status === status}
+                      activeColor={activeColor}
+                      onPress={() => setStatus(item.id, status)}
+                      onLongPress={
+                        canDictate ? () => startDictation(item.id, status) : undefined
+                      }
+                      onPressOut={canDictate ? () => void stopDictation() : undefined}
+                    />
+                  );
+                  return (
+                    <View key={item.id} style={styles.itemCard}>
+                      <View style={styles.itemRow}>
+                        <Pressable
+                          onPress={() => setPreviewUri(imageUri)}
+                          style={styles.itemImageButton}
+                        >
+                          <Image
+                            source={{ uri: imageUri }}
+                            style={styles.itemImage}
+                            contentFit="contain"
+                            transition={150}
+                          />
+                        </Pressable>
+                        <View style={styles.itemText}>
+                          <Text style={styles.itemTitle} numberOfLines={2}>
+                            {item.title}
+                          </Text>
+                          <Text style={styles.itemHint} numberOfLines={2}>
+                            {item.hint}
+                          </Text>
+                        </View>
+                        <View style={styles.statusRow}>
+                          {statusButton('checkmark', 'ok', colors.accent, true)}
+                          {statusButton('warning', 'issue', colors.danger, true)}
+                          {statusButton('remove', 'skip', colors.textSecondary, false)}
+                        </View>
+                      </View>
+                      {result && result.status !== 'skip' ? (
+                        <View style={styles.noteWrap}>
+                          <TextInput
+                            style={styles.noteInput}
+                            placeholder={
+                              listening ? '' : 'Anteckning (t.ex. kedja 0,75 % sliten)'
+                            }
+                            placeholderTextColor={colors.textFaint}
+                            value={result.note}
+                            onChangeText={(text) => setNote(item.id, text)}
+                            onFocus={() => setNoteFocused(true)}
+                            onBlur={() => setNoteFocused(false)}
+                            multiline
+                          />
+                          {listening && !result.note ? (
+                            <View style={styles.noteOverlay} pointerEvents="none">
+                              <WaveText
+                                text={
+                                  listening.phase === 'recording'
+                                    ? 'Lyssnar… släpp när du är klar'
+                                    : 'Transkriberar…'
+                                }
+                                style={styles.noteWaveText}
+                              />
+                            </View>
+                          ) : null}
+                        </View>
+                      ) : null}
+                    </View>
+                  );
+                })}
+
+                {!sectionDone ? (
+                  <Pressable
+                    onPress={() => markSectionOk(sectionIndex)}
+                    style={styles.allOk}
+                  >
+                    <Ionicons
+                      name="checkmark-done-outline"
+                      size={18}
+                      color={colors.accent}
+                    />
+                    <Text style={styles.allOkText}>Resten av sektionen OK</Text>
+                  </Pressable>
+                ) : null}
               </View>
-            ))
-          )}
+            );
+          })}
 
-          {!stepLocked ? (
-            <Pressable
-              onPress={createTasks}
-              disabled={creatingTasks}
-              style={[styles.createTasks, creatingTasks && styles.createTasksBusy]}
-            >
-              {creatingTasks ? (
-                <ActivityIndicator color={colors.onAccent} />
-              ) : (
-                <>
-                  <Ionicons
-                    name="checkmark"
-                    size={18}
-                    color={colors.onAccent}
-                  />
-                  <Text style={styles.createTasksText}>Klar, skapa jobblista</Text>
-                </>
-              )}
-            </Pressable>
-          ) : null}
-
-          {checkedCount > 0 ? (
-            <View style={styles.summaryBox}>
-              <Text style={styles.summaryLabel}>SOM TEXT</Text>
-              <Text selectable style={styles.summaryText}>
-                {inspectionSummaryText(results, template)}
+          <View style={styles.summary}>
+            <View style={styles.sectionHeader}>
+              <Ionicons
+                name="flag-outline"
+                size={16}
+                color={done ? colors.accent : colors.textSecondary}
+              />
+              <Text style={styles.sectionTitle}>Sammanfattning</Text>
+              <Text style={styles.summaryCount}>
+                {checkedCount}/{itemCount}
               </Text>
             </View>
-          ) : null}
-        </View>
+
+            {checkedCount === 0 ? (
+              <Text style={styles.emptyText}>
+                Sammanfattningen fylls i medan besiktningen pågår.
+              </Text>
+            ) : issues.length === 0 ? (
+              <View style={styles.noIssues}>
+                <Ionicons
+                  name="checkmark-circle-outline"
+                  size={28}
+                  color={colors.accent}
+                />
+                <Text style={styles.noIssuesText}>
+                  {done ? 'Inga anmärkningar' : 'Inga anmärkningar hittills'}
+                </Text>
+              </View>
+            ) : (
+              issues.map((issue, index) => (
+                <View key={index} style={styles.issueCard}>
+                  <Ionicons name="warning" size={16} color={colors.danger} />
+                  <View style={styles.issueText}>
+                    <Text style={styles.issueTitle}>
+                      {issue.title}
+                      <Text style={styles.issueSection}> · {issue.section}</Text>
+                    </Text>
+                    {issue.note ? (
+                      <Text style={styles.issueNote}>{issue.note}</Text>
+                    ) : null}
+                  </View>
+                </View>
+              ))
+            )}
+
+            {!stepLocked ? (
+              <Pressable
+                onPress={createTasks}
+                disabled={creatingTasks}
+                style={[styles.createTasks, creatingTasks && styles.createTasksBusy]}
+              >
+                {creatingTasks ? (
+                  <ActivityIndicator color={colors.onAccent} />
+                ) : (
+                  <>
+                    <Ionicons
+                      name="checkmark"
+                      size={18}
+                      color={colors.onAccent}
+                    />
+                    <Text style={styles.createTasksText}>Klar, skapa jobblista</Text>
+                  </>
+                )}
+              </Pressable>
+            ) : null}
+
+            {checkedCount > 0 ? (
+              <View style={styles.summaryBox}>
+                <Text style={styles.summaryLabel}>SOM TEXT</Text>
+                <Text selectable style={styles.summaryText}>
+                  {inspectionSummaryText(results, template)}
+                </Text>
+              </View>
+            ) : null}
+          </View>
         </StepLock>
 
         {/* Klar is "Klar, skapa jobblista" above; this only shows Lås upp. */}

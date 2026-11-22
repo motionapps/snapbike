@@ -6,12 +6,12 @@ import {
   INSPECTION_TEMPLATE,
   InspectionState,
   InspectionStatus,
-} from './inspection';
-import { applyProductRules, priceCsvFor } from './prices';
-import { SERVICE_GUIDE } from './servicePackage';
-import { searchInStock } from './inStockCache';
-import { searchProducts } from './productSearch';
-import { Task, PriceItem, uid } from './types';
+} from '../inspection';
+import { applyProductRules, priceCsvFor } from '../prices';
+import { SERVICE_GUIDE } from '../servicePackage';
+import { searchInStock } from '../inStockCache';
+import { searchProducts } from '../productSearch';
+import { Task, PriceItem, uid } from '../types';
 
 const OPENAI_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '';
 const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY ?? '';
@@ -213,21 +213,19 @@ type ContentBlock = {
 type MessageParam = {
   role: 'user' | 'assistant';
   content:
-    | string
-    | (
-        | ContentBlock
-        | { type: 'tool_result'; tool_use_id: string; content: string }
-      )[];
+  | string
+  | (
+    | ContentBlock
+    | { type: 'tool_result'; tool_use_id: string; content: string }
+  )[];
 };
 
 const WHEEL_RULES =
   'DEBITERINGSREGEL HJUL: Punktering, slangbyte och däckbyte är samma ' +
   'arbetsmoment. Använd raden "Däckbyte per hjul fram" eller "Däckbyte per ' +
-  'hjul bak" som arbete (ett jobb per hjul; "Däckbyte - per hjul" bara när det ' +
-  'inte framgår vilket hjul) och lägg slang och/eller däck som produkter på ' +
-  'det jobbet. Debitera ' +
-  'ALDRIG två arbeten för samma hjul (t.ex. både "Punktering inkl. ' +
-  'standardslang" och "Däckbyte - per hjul").';
+  'hjul bak" som arbete (ett jobb per hjul) och lägg slang och/eller däck som ' +
+  'produkter på det jobbet. Debitera ALDRIG två arbeten för samma hjul (t.ex. ' +
+  'både "Punktering fram inkl. standardslang" och "Däckbyte per hjul fram").';
 
 const PRODUCT_RULES =
   'PRODUKTREGEL: Prislistans kolumn Produkter styr produktförslagen. "nej" = ' +
@@ -433,7 +431,7 @@ export async function tasksFromInspection(
   if (issues.length === 0) return [];
   const parts = [
     'Skapa en prissatt jobblista som åtgärdar följande anmärkningar från ' +
-      'besiktningen:',
+    'besiktningen:',
     ...issues.map(
       (issue) =>
         `- [${issue.itemId}] ${issue.title} (${issue.section})${issue.note ? `: ${issue.note}` : ''}`
@@ -443,7 +441,7 @@ export async function tasksFromInspection(
     parts.push(
       '',
       'Följande åtgärder är redan överenskomna med kunden vid mottagningen. ' +
-        'Ta INTE med dem igen, och hoppa över anmärkningar som de redan åtgärdar:',
+      'Ta INTE med dem igen, och hoppa över anmärkningar som de redan åtgärdar:',
       ...intakeTasks.map((task) => `- ${task.title}`)
     );
   }
@@ -451,7 +449,7 @@ export async function tasksFromInspection(
     parts.push(
       '',
       'Mekanikerns hela inspelning (använd för detaljer om delar – märke, ' +
-        'modell och mått – när du söker i lagret):',
+      'modell och mått – när du söker i lagret):',
       transcript.trim()
     );
   }

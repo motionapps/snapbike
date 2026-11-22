@@ -91,3 +91,8 @@ export function canAnswerTask(job: CustomerJob, task: Task, now = new Date()): b
   const deadline = changeDeadline(job.respondedAt);
   return !deadline || now < deadline;
 }
+
+/** Mottagning tasks may be denied with the list, but not once work has started. */
+export function canAnswerReceptionTask(job: CustomerJob, now = new Date()): boolean {
+  return job.status !== 'in_progress' && canAnswerTask(job, { approval: undefined } as Task, now);
+}

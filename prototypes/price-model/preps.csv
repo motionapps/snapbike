@@ -1,0 +1,4 @@
+prep_id,name,conditions,value,note
+wheel_off,Hjulet av,position=front,50,Exempelvärde
+wheel_off,Hjulet av,position=rear,100,Exempelvärde
+wheel_off,Hjulet av,position=rear;gears=hub,200,Exempelvärde: navväxel och fotbroms gör bakhjulet tyngre att ta av

@@ -301,6 +301,7 @@ export async function fetchJobStatus(id: string): Promise<JobStatus | null> {
 
 type JobListRow = {
   share_token: string;
+  tasks: Task[] | null;
   inspection_tasks: Task[] | null;
   sent_inspection_tasks: Task[] | null;
   sent_to_customer_at: string | null;
@@ -310,15 +311,16 @@ type JobListRow = {
 /** The Jobblista of a job as stored, with its send state. */
 export async function fetchJobList(
   id: string
-): Promise<{ inspectionTasks: Task[]; send: JobListSendState }> {
+): Promise<{ tasks: Task[]; inspectionTasks: Task[]; send: JobListSendState }> {
   const { data, error } = await supabase
     .from('snapbike_jobs')
-    .select('share_token, inspection_tasks, sent_inspection_tasks, sent_to_customer_at, verbal_approval_at')
+    .select('share_token, tasks, inspection_tasks, sent_inspection_tasks, sent_to_customer_at, verbal_approval_at')
     .eq('id', id)
     .single();
   if (error) throw new Error(`Kunde inte hämta jobblistan: ${error.message}`);
   const row = data as JobListRow;
   return {
+    tasks: row.tasks ?? [],
     inspectionTasks: row.inspection_tasks ?? [],
     send: {
       shareToken: row.share_token,

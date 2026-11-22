@@ -13,6 +13,18 @@ type Stored = { fetchedAt: number; products: SearchProduct[] };
 /** In-memory copy of what's stored; one lowercase search string per product. */
 let cache: { userId: string; products: SearchProduct[]; haystack: string[] } | null = null;
 
+/** Where the list stands, so the product search can show loading or the error. */
+export type InStockStatus = { state: 'idle' | 'loading' | 'ready' | 'error'; error?: string };
+let status: InStockStatus = { state: 'idle' };
+let currentUserId: string | null = null;
+let inFlight: Promise<void> | null = null;
+const listeners = new Set<() => void>();
+
+function setStatus(next: InStockStatus) {
+  status = next;
+  listeners.forEach((listener) => listener());
+}
+
 function setCache(userId: string, products: SearchProduct[]) {
   cache = {
     userId,
@@ -24,31 +36,63 @@ function setCache(userId: string, products: SearchProduct[]) {
 async function refresh(userId: string) {
   const raw = await AsyncStorage.getItem(keyFor(userId));
   const stored = raw ? (JSON.parse(raw) as Stored) : null;
-  if (stored && cache?.userId !== userId) setCache(userId, stored.products);
-  if (stored && Date.now() - stored.fetchedAt < REFRESH_MS) return;
+  // An empty stored list counts as missing and is fetched again.
+  const usable = stored && stored.products.length > 0 ? stored : null;
+  if (usable && cache?.userId !== userId) setCache(userId, usable.products);
+  if (usable && Date.now() - usable.fetchedAt < REFRESH_MS) {
+    setStatus({ state: 'ready' });
+    return;
+  }
 
+  if (!cache) setStatus({ state: 'loading' });
   const products = await fetchInStockProducts();
   setCache(userId, products);
+  setStatus({ state: 'ready' });
   await AsyncStorage.setItem(
     keyFor(userId),
     JSON.stringify({ fetchedAt: Date.now(), products } satisfies Stored)
   );
 }
 
-/** Loads the cache now and refreshes it hourly while signed in. Returns a stop function. */
-export function startInStockSync(userId: string): () => void {
-  const run = () =>
-    refresh(userId).catch((err) =>
-      console.warn('In-stock cache:', err instanceof Error ? err.message : err)
-    );
-  void run();
-  const timer = setInterval(run, REFRESH_MS);
-  return () => clearInterval(timer);
+function run(userId: string): Promise<void> {
+  if (inFlight) return inFlight;
+  inFlight = refresh(userId)
+    .catch((err) => {
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn('In-stock cache:', message);
+      // Keep showing an older list if there is one; otherwise show the error.
+      setStatus(cache ? { state: 'ready' } : { state: 'error', error: message });
+    })
+    .finally(() => {
+      inFlight = null;
+    });
+  return inFlight;
 }
 
-/** Whether the in-stock list has been loaded yet. */
-export function hasInStockCache(): boolean {
-  return cache !== null;
+/** Loads the cache now and refreshes it hourly while signed in. Returns a stop function. */
+export function startInStockSync(userId: string): () => void {
+  currentUserId = userId;
+  void run(userId);
+  const timer = setInterval(() => void run(userId), REFRESH_MS);
+  return () => {
+    clearInterval(timer);
+    if (currentUserId === userId) currentUserId = null;
+  };
+}
+
+/** Fetches the list if it isn't loaded, e.g. after a failed attempt. */
+export function ensureInStock() {
+  if (currentUserId && !cache) void run(currentUserId);
+}
+
+/** Subscribe to status changes (for useSyncExternalStore). */
+export function subscribeInStock(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+
+export function getInStockStatus(): InStockStatus {
+  return status;
 }
 
 /**

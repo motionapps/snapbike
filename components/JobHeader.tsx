@@ -148,6 +148,7 @@ const styles = StyleSheet.create({
   },
   close: {
     alignSelf: 'flex-start',
+    marginRight: 5,
     width: 30,
     height: 30,
     borderRadius: 15,

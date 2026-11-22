@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -11,7 +11,12 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { hasInStockCache, searchInStock } from '../lib/inStockCache';
+import {
+  ensureInStock,
+  getInStockStatus,
+  searchInStock,
+  subscribeInStock,
+} from '../lib/inStockCache';
 import { searchProducts, SearchProduct } from '../lib/productSearch';
 import { colors, radius } from '../lib/theme';
 
@@ -39,9 +44,13 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
   const [error, setError] = useState<string | null>(null);
 
   // "Bara i lager": instant search in the hourly cached stock list on the phone.
+  const stock = useSyncExternalStore(subscribeInStock, getInStockStatus);
+  useEffect(() => {
+    if (visible && inStockOnly) ensureInStock();
+  }, [visible, inStockOnly]);
   const localResults = useMemo(
     () => (inStockOnly ? searchInStock(query) : []),
-    [inStockOnly, query]
+    [inStockOnly, query, stock]
   );
 
   // Everything else: Produktsök, 300 ms after the last keystroke; a newer search
@@ -78,9 +87,13 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
   }, [query, inStockOnly]);
 
   const results = inStockOnly ? localResults : remoteResults;
-  const notice =
-    error ??
-    (inStockOnly && query.trim() && !hasInStockCache() ? 'Lagerlistan laddas fortfarande…' : null);
+  const stockNotice =
+    stock.state === 'error'
+      ? `Kunde inte hämta lagerlistan: ${stock.error}`
+      : stock.state !== 'ready'
+        ? 'Lagerlistan laddas…'
+        : null;
+  const notice = error ?? (inStockOnly && query.trim() ? stockNotice : null);
 
   const reset = () => {
     setQuery('');
