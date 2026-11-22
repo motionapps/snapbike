@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { ReactNode, useEffect, useState } from 'react';
 import {
   KeyboardTypeOptions,
   Modal,
@@ -97,6 +97,7 @@ export function CustomerModal({
     bikeNumber !== '' && (bikeNum < 1 || bikeNum > 100 || !Number.isInteger(bikeNum));
   const valid = !bikeInvalid;
   const missingPhone = !customerHasPhone(customer);
+  const missingTag = bikeNumber === '';
   const set = (key: keyof Customer) => (text: string) => {
     setCustomer((current) => ({ ...current, [key]: text }));
     setSearchField(key === 'email' ? null : key);
@@ -130,18 +131,24 @@ export function CustomerModal({
           contentContainerStyle={styles.form}
           keyboardShouldPersistTaps="handled"
         >
-          <Field label="Förnamn" value={customer.firstName} onChange={set('firstName')} autoFocus />
-          {suggestionsFor('firstName')}
-          <Field label="Efternamn" value={customer.lastName} onChange={set('lastName')} />
-          {suggestionsFor('lastName')}
-          <Field
-            label="Telefon"
-            value={customer.phone}
-            onChange={set('phone')}
-            placeholder="07x-xxx xx xx"
-            keyboardType="phone-pad"
-          />
-          {suggestionsFor('phone')}
+          <SearchSlot field="firstName" active={searchField}>
+            <Field label="Förnamn" value={customer.firstName} onChange={set('firstName')} autoFocus />
+            {suggestionsFor('firstName')}
+          </SearchSlot>
+          <SearchSlot field="lastName" active={searchField}>
+            <Field label="Efternamn" value={customer.lastName} onChange={set('lastName')} />
+            {suggestionsFor('lastName')}
+          </SearchSlot>
+          <SearchSlot field="phone" active={searchField}>
+            <Field
+              label="Telefon"
+              value={customer.phone}
+              onChange={set('phone')}
+              placeholder="07x-xxx xx xx"
+              keyboardType="phone-pad"
+            />
+            {suggestionsFor('phone')}
+          </SearchSlot>
           <Field
             label="E-post"
             value={customer.email}
@@ -171,7 +178,7 @@ export function CustomerModal({
             disabled={!valid}
             style={[
               styles.saveButton,
-              missingPhone && styles.saveButtonWarning,
+              (missingPhone || missingTag) && styles.saveButtonWarning,
               !valid && styles.saveButtonDisabled,
             ]}
           >
@@ -180,10 +187,27 @@ export function CustomerModal({
           {missingPhone ? (
             <Text style={styles.warningText}>Inget korrekt telefonnummer har sparats</Text>
           ) : null}
+          {missingTag ? (
+            <Text style={styles.warningText}>Ingen cykeltagg har angetts</Text>
+          ) : null}
         </ScrollView>
       </View>
     </Modal>
   );
+}
+
+/** Holds a searchable field; the active one sits above its siblings so its suggestions overlay them. */
+function SearchSlot({
+  field,
+  active,
+  children,
+}: {
+  field: SearchField;
+  active: SearchField | null;
+  children: ReactNode;
+}) {
+  const on = field === active;
+  return <View style={[styles.slot, on && styles.slotActive]}>{children}</View>;
 }
 
 function Field({
@@ -286,8 +310,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 11,
   },
+  slot: {
+    position: 'relative',
+  },
+  slotActive: {
+    zIndex: 10,
+    elevation: 10,
+  },
   suggestions: {
-    marginTop: -8,
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    marginTop: 4,
+    boxShadow: '0 6px 16px rgba(0, 0, 0, 0.45)',
     backgroundColor: colors.cardRaised,
     borderRadius: radius.sm,
     borderCurve: 'continuous',

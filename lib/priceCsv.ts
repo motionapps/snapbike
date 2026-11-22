@@ -45,6 +45,8 @@ Verkstad,Däck och Slang,Däckbyte med 2 nya Dubbdäck Routa W124 42-622,1999,al
 Verkstad,Däck och Slang,Punktering < 1 tim inkl. standardslang,499,all_bikes,,false,false
 Verkstad,Däck och Slang,Byte däck/slang - löst hjul ink standardslang,329,part,,false,true
 Verkstad,Däck och Slang,Däckbyte - per hjul,299,all_bikes,,true,true
+Verkstad,Däck och Slang,Däckbyte per hjul fram,299,all_bikes,,true,true
+Verkstad,Däck och Slang,Däckbyte per hjul bak,299,all_bikes,,true,true
 Verkstad,Däck och Slang,Däckbyte fram+bak,499,all_bikes,,true,true
 Verkstad,Däck och Slang,Tubeless (inkl. fälgtejp - vätska - ventil) - per hjul,699,all_bikes,,false,false
 Verkstad,Däck och Slang,Påfyllning av vätska Tubeless (ink vätska),299,all_bikes,,false,false

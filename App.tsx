@@ -61,6 +61,7 @@ import { AuthView } from './components/AuthView';
 import { InspectionState } from './lib/inspection';
 import { CurrentBikeBar } from './components/CurrentBikeBar';
 import { JobNotesModal, NoteEntry } from './components/JobNotesModal';
+import { STRINGS } from './lib/strings';
 import { colors, gutter, radius, shadow } from './lib/theme';
 import {
   Customer,
@@ -805,6 +806,9 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
             </View>
           ) : null}
 
+          </StepLock>
+
+          {/* Outside the lock: the transcript can be read while Mottagning is Klar. */}
           {transcript ? (
             <View style={styles.transcriptBox}>
               <Pressable
@@ -825,6 +829,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
             </View>
           ) : null}
 
+          <StepLock tab="note" gap={20}>
           {tasks.length > 0 ? (
             <View style={styles.tasksSection}>
               <Text style={styles.sectionHeading}>Jobb</Text>
@@ -852,7 +857,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
 
           <Pressable onPress={() => setShowAddTask(true)} style={styles.addTask}>
             <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
-            <Text style={styles.addTaskText}>Lägg till jobb</Text>
+            <Text style={styles.addTaskText}>{STRINGS.addActionManually}</Text>
           </Pressable>
 
           {tasks.length > 0 ? (
@@ -943,7 +948,12 @@ function Root() {
   const [currentStatus, setCurrentStatus] = useState<JobStatus | null>(null);
 
   const goToJobList = useCallback(() => setTab('jobList'), []);
-  const goToInspection = useCallback(() => setTab('inspect'), []);
+  // Klar on Mottagning: Besiktning starts from the top.
+  const [inspectionScrollReset, setInspectionScrollReset] = useState(0);
+  const goToInspection = useCallback(() => {
+    setInspectionScrollReset((n) => n + 1);
+    setTab('inspect');
+  }, []);
 
   // The stored status is the truth: re-read it for the current job on every
   // tab switch (and on start), so a local copy can never be stale.
@@ -1058,11 +1068,10 @@ function Root() {
           comments={tab === 'note' || tab === 'inspect' || tab === 'jobList' ? comments : null}
           onOpenComment={(field) =>
             setBarNote([
-              {
-                title: field === 'customerComment' ? 'Kundkommentar' : 'Verkstadskommentar',
-                text: comments[field],
-                field,
-              },
+              field === 'customerComment'
+                ? // Written by the customer when booking: read-only.
+                  { title: 'Kundkommentar', text: comments.customerComment }
+                : { title: 'Verkstadskommentar', text: comments.mechanicComment, field },
             ])
           }
         />
@@ -1083,7 +1092,7 @@ function Root() {
         <Screen loadRequest={loadRequest} />
       </View>
       <View style={[styles.page, tab !== 'inspect' && styles.pageHidden]}>
-        <InspectionScreen />
+        <InspectionScreen scrollReset={inspectionScrollReset} />
       </View>
       <View style={[styles.page, tab !== 'jobList' && styles.pageHidden]}>
         <JobListScreen active={tab === 'jobList'} />

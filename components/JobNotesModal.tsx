@@ -97,9 +97,13 @@ export function JobNotesModal({ entries, listTitle, onSave, onClose }: Props) {
             />
           ) : (
             <ScrollView contentContainerStyle={styles.textContent}>
-              <Text style={styles.text} selectable>
-                {entry.text}
-              </Text>
+              {entry.text ? (
+                <Text style={styles.text} selectable>
+                  {entry.text}
+                </Text>
+              ) : (
+                <Text style={[styles.text, styles.emptyText]}>Ingen kommentar.</Text>
+              )}
             </ScrollView>
           )
         ) : (
@@ -168,6 +172,9 @@ const styles = StyleSheet.create({
     borderColor: colors.border,
     color: colors.text,
     fontSize: 16,
+  },
+  emptyText: {
+    color: colors.textFaint,
   },
   textContent: {
     paddingHorizontal: gutter,

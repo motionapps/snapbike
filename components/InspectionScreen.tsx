@@ -48,7 +48,7 @@ import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from '../lib/speech
 import { colors, gutter, radius } from '../lib/theme';
 import { ImagePreviewModal } from './ImagePreviewModal';
 import { MicButton, MicPhase } from './MicButton';
-import { DoneButton, LockedBanner, StepLock, useSetStepDone } from './StepDone';
+import { DoneButton, LockedBanner, StepLock, useSetStepDone, useStepLocked } from './StepDone';
 import { WaveText } from './WaveText';
 
 const MIC_LABELS: Partial<Record<MicPhase, string>> = {
@@ -61,7 +61,8 @@ const MIC_LABELS: Partial<Record<MicPhase, string>> = {
  * sammanfattning i botten som uppdateras löpande – tänkt att visas för
  * kunden på en telefon eller skärm medan cykeln gås igenom.
  */
-export function InspectionScreen() {
+/** scrollReset: each new value scrolls back to the top (Klar on Mottagning). */
+export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
   const insets = useSafeAreaInsets();
   const {
     tasks,
@@ -90,6 +91,9 @@ export function InspectionScreen() {
   const [micError, setMicError] = useState('');
   const [creatingTasks, setCreatingTasks] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  useEffect(() => {
+    if (scrollReset) scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [scrollReset]);
   // Bottom edge of the mic card; once scrolled past it, a thin stop bar shows.
   const micCardBottom = useRef(0);
   const [micScrolledAway, setMicScrolledAway] = useState(false);
@@ -297,6 +301,7 @@ export function InspectionScreen() {
   const done = checkedCount === itemCount;
 
   const setInspectionDone = useSetStepDone('inspect');
+  const stepLocked = useStepLocked('inspect');
 
   // Klar, skapa jobblista: make the Jobblista from the remarks, mark
   // Besiktning Klar and jump to the Jobblista tab.
@@ -325,7 +330,14 @@ export function InspectionScreen() {
   }, [issues, inspectionTranscript, prices, tasks, order.bookingId, setInspectionTasks, setJobListSend, setInspectionDone, goToJobList]);
 
   const createTasks = useCallback(() => {
-    if (issues.length === 0) return;
+    if (issues.length === 0) {
+      // Nothing to list: just mark Besiktning Klar and move on.
+      setMicError('');
+      setInspectionDone(true)
+        .then(goToJobList)
+        .catch((err) => setMicError(err instanceof Error ? err.message : String(err)));
+      return;
+    }
     if (inspectionTasks.length === 0) {
       void runCreateTasks();
       return;
@@ -340,7 +352,7 @@ export function InspectionScreen() {
       { text: 'Avbryt', style: 'cancel' },
       { text: 'Skapa igen', style: 'destructive', onPress: () => void runCreateTasks() },
     ]);
-  }, [issues.length, inspectionTasks.length, runCreateTasks]);
+  }, [issues.length, inspectionTasks.length, runCreateTasks, setInspectionDone, goToJobList]);
 
   return (
     <View style={styles.root}>
@@ -597,7 +609,7 @@ export function InspectionScreen() {
             ))
           )}
 
-          {issues.length > 0 ? (
+          {!stepLocked ? (
             <Pressable
               onPress={createTasks}
               disabled={creatingTasks}
@@ -629,7 +641,8 @@ export function InspectionScreen() {
         </View>
         </StepLock>
 
-        <DoneButton tab="inspect" />
+        {/* Klar is "Klar, skapa jobblista" above; this only shows Lås upp. */}
+        {stepLocked ? <DoneButton tab="inspect" /> : null}
       </ScrollView>
       <ImagePreviewModal uri={previewUri} onClose={() => setPreviewUri(null)} />
     </View>

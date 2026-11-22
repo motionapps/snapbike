@@ -222,8 +222,10 @@ type MessageParam = {
 
 const WHEEL_RULES =
   'DEBITERINGSREGEL HJUL: Punktering, slangbyte och däckbyte är samma ' +
-  'arbetsmoment. Använd raden "Däckbyte - per hjul" som arbete (ett jobb per ' +
-  'hjul) och lägg slang och/eller däck som produkter på det jobbet. Debitera ' +
+  'arbetsmoment. Använd raden "Däckbyte per hjul fram" eller "Däckbyte per ' +
+  'hjul bak" som arbete (ett jobb per hjul; "Däckbyte - per hjul" bara när det ' +
+  'inte framgår vilket hjul) och lägg slang och/eller däck som produkter på ' +
+  'det jobbet. Debitera ' +
   'ALDRIG två arbeten för samma hjul (t.ex. både "Punktering inkl. ' +
   'standardslang" och "Däckbyte - per hjul").';
 

@@ -192,7 +192,8 @@ export function JobDetailModal({
                 filled={job.customerComment.trim() !== ''}
                 onPress={() =>
                   setNotes([
-                    { title: 'Kundkommentar', text: job.customerComment, field: 'customerComment' },
+                    // Written by the customer when booking: read-only.
+                    { title: 'Kundkommentar', text: job.customerComment },
                   ])
                 }
               />

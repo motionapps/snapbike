@@ -107,11 +107,6 @@ export function CurrentBikeBar({
             </Text>
           </View>
         ) : null}
-        {bikeText ? (
-          <Text style={[styles.bike, { color: textColor }]} numberOfLines={1}>
-            {bikeText}
-          </Text>
-        ) : null}
         {status ? (
           <View style={styles.status}>
             <View style={[styles.statusDot, { backgroundColor: statusColors[status] }]} />
@@ -121,7 +116,15 @@ export function CurrentBikeBar({
           </View>
         ) : null}
       </Pressable>
+      {bikeText ? (
+        <Pressable onPress={onPress}>
+          <Text style={[styles.bike, { color: textColor }]} numberOfLines={1}>
+            {bikeText}
+          </Text>
+        </Pressable>
+      ) : null}
       {comments ? (
+        // Not tappable itself: taps between the buttons don't open the job.
         <View style={styles.commentRow}>
           <CommentButton
             label="Verkstadskommentar"
@@ -152,7 +155,6 @@ function CommentButton({
   return (
     <Pressable
       onPress={onPress}
-      hitSlop={4}
       style={({ pressed }) => [styles.commentButton, pressed && styles.commentButtonPressed]}
     >
       <Ionicons
@@ -179,6 +181,7 @@ const styles = StyleSheet.create({
   commentRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    marginTop: 6,
   },
   commentButton: {
     flexDirection: 'row',
@@ -187,7 +190,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(11, 15, 20, 0.85)',
     borderRadius: 8,
     paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingVertical: 7,
   },
   commentButtonPressed: {
     opacity: 0.7,
@@ -243,8 +246,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   bike: {
-    flex: 1,
-    textAlign: 'right',
     fontSize: 14,
     opacity: 0.85,
   },

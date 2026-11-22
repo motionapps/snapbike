@@ -11,9 +11,11 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { customerLink } from '../lib/customerLink';
+import { WORKSHOP_NAME, customerLink } from '../lib/customerLink';
+import { customerIdByPhone, sendMessage } from '../lib/messages';
 import { useOrderContext } from '../lib/orderContext';
 import { approveJobListVerbally, fetchJobList, fetchJobStatus, sendJobList } from '../lib/supabase';
+import { STRINGS } from '../lib/strings';
 import { colors, gutter, radius } from '../lib/theme';
 import {
   PriceItem,
@@ -26,7 +28,7 @@ import {
   uid,
 } from '../lib/types';
 import { AddTaskModal } from './AddTaskModal';
-import { DoneButton, LockedBanner, StepLock, useStepLocked } from './StepDone';
+import { DoneButton, LockedBanner, StepLock, useSetStepDone, useStepLocked } from './StepDone';
 import { ChecklistRow, TaskDetailModal } from './TaskChecklist';
 import { TaskCard } from './TaskCard';
 
@@ -184,6 +186,33 @@ export function JobListScreen({ active }: { active: boolean }) {
     [changeTask]
   );
 
+  // Mottagning tasks are edited here too; they were agreed at Mottagning, so
+  // a change keeps their approval.
+  const changeReceptionTask = useCallback(
+    (taskId: string, change: (task: Task) => Task) =>
+      setTasks((current) => current.map((task) => (task.id === taskId ? change(task) : task))),
+    [setTasks]
+  );
+
+  const receptionHandlers = {
+    onRemove: (taskId: string) => setTasks((current) => current.filter((t) => t.id !== taskId)),
+    onAddProduct: (taskId: string, name: string, price: number) =>
+      changeReceptionTask(taskId, (task) => ({
+        ...task,
+        products: [...task.products, { id: uid(), name, price }],
+      })),
+    onUpdateProduct: (taskId: string, productId: string, price: number) =>
+      changeReceptionTask(taskId, (task) => ({
+        ...task,
+        products: task.products.map((p) => (p.id === productId ? { ...p, price } : p)),
+      })),
+    onRemoveProduct: (taskId: string, productId: string) =>
+      changeReceptionTask(taskId, (task) => ({
+        ...task,
+        products: task.products.filter((p) => p.id !== productId),
+      })),
+  };
+
   const setApproval = useCallback(
     (taskId: string, approval: 'godkänd' | 'nekad' | undefined) =>
       setInspectionTasks((current) =>
@@ -284,6 +313,15 @@ export function JobListScreen({ active }: { active: boolean }) {
       />
     );
 
+  const renderReceptionTask = (task: Task) =>
+    checklist ? (
+      renderChecklistTask(task)
+    ) : locked ? (
+      <TaskRow key={task.id} task={task} />
+    ) : (
+      <TaskCard key={task.id} task={task} {...receptionHandlers} />
+    );
+
   const statusText = jobListSend?.verbalApprovalAt
     ? `Muntligt godkänt ${timeFormat.format(new Date(jobListSend.verbalApprovalAt))}`
     : jobListSend?.sentAt
@@ -320,10 +358,9 @@ export function JobListScreen({ active }: { active: boolean }) {
         ) : null}
 
         {tasks.length > 0 ? (
-          <Section title="Redan godkända vid mottagning" sum={tasksTotal(tasks)}>
-            {tasks.map((task) =>
-              checklist ? renderChecklistTask(task) : <TaskRow key={task.id} task={task} />
-            )}
+          // Open: this is what the mechanic works from (closed only for the customer).
+          <Section title="Redan godkända vid mottagning" sum={tasksTotal(tasks)} initiallyOpen>
+            {tasks.map(renderReceptionTask)}
           </Section>
         ) : null}
 
@@ -352,7 +389,7 @@ export function JobListScreen({ active }: { active: boolean }) {
         {!locked && inspectionTasks.length > 0 ? (
           <Pressable onPress={() => setShowAddTask(true)} style={styles.addTask}>
             <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
-            <Text style={styles.addTaskText}>Lägg till jobb</Text>
+            <Text style={styles.addTaskText}>{STRINGS.addActionManually}</Text>
           </Pressable>
         ) : null}
 
@@ -405,7 +442,7 @@ export function JobListScreen({ active }: { active: boolean }) {
         ) : null}
         </StepLock>
 
-        <DoneButton tab="jobList" />
+        {stepLocked ? <DoneButton tab="jobList" /> : <ReadyRow />}
       </ScrollView>
 
       <TaskDetailModal
@@ -419,6 +456,85 @@ export function JobListScreen({ active }: { active: boolean }) {
         onClose={() => setShowAddTask(false)}
         onPick={pickTask}
       />
+    </View>
+  );
+}
+
+/**
+ * Klar on the Jobblista: the bike is ready. "Skicka klarmeddelande" (on by
+ * default) also messages the customer.
+ */
+function ReadyRow() {
+  const { order } = useOrderContext();
+  const setStepDone = useSetStepDone('jobList');
+  const [notify, setNotify] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const jobId = order.bookingId;
+
+  useEffect(() => {
+    setNotify(true);
+    setError('');
+  }, [jobId]);
+
+  const markReady = async () => {
+    setBusy(true);
+    setError('');
+    try {
+      await setStepDone(true);
+      if (!notify) return;
+      const customerId = order.customer ? await customerIdByPhone(order.customer.phone) : null;
+      if (!customerId) {
+        setError('Cykeln är klar, men kunden saknar telefonnummer – inget meddelande skickades.');
+        return;
+      }
+      const name = order.customer?.firstName.trim();
+      await sendMessage(
+        customerId,
+        `Hej${name ? ` ${name}` : ''}! Din cykel är klar och kan hämtas hos ${WORKSHOP_NAME}. Välkommen!`
+      );
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <View style={styles.readyWrap}>
+      <View style={styles.readyRow}>
+        <Pressable
+          onPress={() => setNotify((n) => !n)}
+          style={styles.notifyToggle}
+          hitSlop={8}
+        >
+          <Ionicons
+            name={notify ? 'checkbox' : 'square-outline'}
+            size={22}
+            color={notify ? colors.accent : colors.textFaint}
+          />
+          <Text style={styles.notifyText}>Skicka klarmeddelande</Text>
+        </Pressable>
+        <Pressable
+          onPress={markReady}
+          disabled={!jobId || busy}
+          style={({ pressed }) => [
+            styles.readyButton,
+            (!jobId || busy) && styles.buttonDisabled,
+            pressed && styles.readyButtonPressed,
+          ]}
+        >
+          {busy ? (
+            <ActivityIndicator color={colors.onAccent} />
+          ) : (
+            <>
+              <Ionicons name="checkmark" size={18} color={colors.onAccent} />
+              <Text style={styles.readyButtonText}>Klar</Text>
+            </>
+          )}
+        </Pressable>
+      </View>
+      {error ? <Text style={styles.readyError}>{error}</Text> : null}
     </View>
   );
 }
@@ -642,7 +758,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    paddingVertical: 12,
+    borderRadius: radius.lg,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderStyle: 'dashed',
+    paddingVertical: 14,
   },
   addTaskText: {
     color: colors.accent,
@@ -711,6 +832,50 @@ const styles = StyleSheet.create({
   cancel: {
     alignItems: 'center',
     paddingVertical: 8,
+  },
+  readyWrap: {
+    gap: 8,
+  },
+  readyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  notifyToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexShrink: 1,
+  },
+  notifyText: {
+    color: colors.text,
+    fontWeight: '600',
+  },
+  readyButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    minWidth: 110,
+    backgroundColor: colors.accent,
+    borderRadius: radius.lg,
+    borderCurve: 'continuous',
+    paddingHorizontal: 22,
+    paddingVertical: 11,
+  },
+  readyButtonPressed: {
+    opacity: 0.7,
+  },
+  readyButtonText: {
+    color: colors.onAccent,
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  readyError: {
+    color: colors.danger,
+    fontSize: 13,
+    textAlign: 'center',
   },
   cancelText: {
     color: colors.textSecondary,

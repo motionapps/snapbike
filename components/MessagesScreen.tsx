@@ -189,6 +189,10 @@ function Thread({ customerId, active }: { customerId: string; active: boolean })
   const [draft, setDraft] = useState('');
   const [sending, setSending] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  // KeyboardAvoidingView measures itself relative to its parent, but the bike
+  // bar and title sit above it: offset by its distance from the window top.
+  const wrapRef = useRef<View>(null);
+  const [keyboardOffset, setKeyboardOffset] = useState(0);
 
   useEffect(() => {
     if (!active) return;
@@ -226,9 +230,15 @@ function Thread({ customerId, active }: { customerId: string; active: boolean })
   }, [draft, sending, customerId]);
 
   return (
+    <View
+      ref={wrapRef}
+      style={styles.root}
+      onLayout={() => wrapRef.current?.measureInWindow((_x, y) => setKeyboardOffset(y))}
+    >
     <KeyboardAvoidingView
       style={styles.root}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      keyboardVerticalOffset={keyboardOffset}
     >
       <ScrollView
         ref={scrollRef}
@@ -284,6 +294,7 @@ function Thread({ customerId, active }: { customerId: string; active: boolean })
         </Pressable>
       </View>
     </KeyboardAvoidingView>
+    </View>
   );
 }
 
