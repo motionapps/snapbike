@@ -28,6 +28,7 @@ import {
   uid,
 } from '../lib/types';
 import { AddTaskModal } from './AddTaskModal';
+import { CategoryCard } from './CategoryCard';
 import { DoneButton, LockedBanner, StepLock, useSetStepDone, useStepLocked } from './StepDone';
 import { ChecklistRow, TaskDetailModal } from './TaskChecklist';
 import { TaskCard } from './TaskCard';
@@ -406,7 +407,7 @@ export function JobListScreen({ active }: { active: boolean }) {
 
         {!locked && inspectionTasks.length > 0 ? (
           <Pressable onPress={() => setShowAddTask(true)} style={styles.addTask}>
-            <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
+            <Ionicons name="add-circle-outline" size={20} color={colors.accentLight} />
             <Text style={styles.addTaskText}>{STRINGS.addActionManually}</Text>
           </Pressable>
         ) : null}
@@ -529,7 +530,7 @@ function ReadyRow() {
           <Ionicons
             name={notify ? 'checkbox' : 'square-outline'}
             size={22}
-            color={notify ? colors.accent : colors.textFaint}
+            color={notify ? colors.accentLight : colors.textFaint}
           />
           <Text style={styles.notifyText}>Skicka klarmeddelande</Text>
         </Pressable>
@@ -589,22 +590,24 @@ function Section({
 function TaskRow({ task }: { task: Task }) {
   const rejected = task.approval === 'nekad';
   return (
-    <View style={styles.row}>
-      <View style={styles.rowText}>
-        <Text style={[styles.rowTitle, rejected && styles.struck]}>{task.title}</Text>
-        {task.products.map((product) => (
-          <Text key={product.id} style={styles.rowProduct}>
-            {product.name}
+    <CategoryCard category={task.category} style={rejected && styles.rowRejected}>
+      <View style={styles.row}>
+        <View style={styles.rowText}>
+          <Text style={[styles.rowTitle, rejected && styles.struck]}>{task.title}</Text>
+          {task.products.map((product) => (
+            <Text key={product.id} style={styles.rowProduct}>
+              {product.name}
+            </Text>
+          ))}
+        </View>
+        {task.approval ? (
+          <Text style={[styles.rowBadge, rejected ? styles.badgeRejected : styles.badgeApproved]}>
+            {rejected ? 'NEKAD' : 'GODKÄND'}
           </Text>
-        ))}
+        ) : null}
+        <Text style={[styles.rowPrice, rejected && styles.struck]}>{kr(taskTotal(task))}</Text>
       </View>
-      {task.approval ? (
-        <Text style={[styles.rowBadge, rejected ? styles.badgeRejected : styles.badgeApproved]}>
-          {rejected ? 'NEKAD' : 'GODKÄND'}
-        </Text>
-      ) : null}
-      <Text style={[styles.rowPrice, rejected && styles.struck]}>{kr(taskTotal(task))}</Text>
-    </View>
+    </CategoryCard>
   );
 }
 

@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { fontSize, fonts } from '../lib/theme';
 import { SILHOUETTE_ASPECT } from '../lib/bikeSilhouette';
 
 /** Light, calm palette for customers (the staff app is dark). */
@@ -26,12 +27,12 @@ export const styles = StyleSheet.create({
     paddingBottom: 48,
     gap: 12,
   },
-  workshop: { color: c.textSecondary, fontWeight: '700', letterSpacing: 1, fontSize: 12 },
-  title: { color: c.text, fontSize: 26, fontWeight: '800' },
-  muted: { color: c.textSecondary, fontSize: 15, lineHeight: 21 },
+  workshop: { color: c.textSecondary, fontFamily: fonts.bold, letterSpacing: 1, fontSize: fontSize.small },
+  title: { color: c.text, fontSize: 26, fontFamily: fonts.displayExtraBold },
+  muted: { color: c.textSecondary, fontSize: fontSize.body, fontFamily: fonts.regular, lineHeight: 21 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  sectionHeaderTitle: { flex: 1, color: c.text, fontSize: 17, fontWeight: '700' },
-  sectionSum: { color: c.textSecondary, fontWeight: '600', fontSize: 15 },
+  sectionHeaderTitle: { flex: 1, color: c.text, fontSize: fontSize.emphasis, fontFamily: fonts.bold },
+  sectionSum: { color: c.textSecondary, fontFamily: fonts.semiBold, fontSize: fontSize.body },
   card: {
     backgroundColor: c.card,
     borderRadius: 18,
@@ -61,13 +62,13 @@ export const styles = StyleSheet.create({
   detail: { gap: 8, borderTopWidth: 1, borderTopColor: c.border, paddingTop: 12 },
   detailHead: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   partImage: { width: 56, height: 56, borderRadius: 10, backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: c.border },
-  detailTitle: { color: c.text, fontSize: 18, fontWeight: '700' },
+  detailTitle: { color: c.text, fontSize: fontSize.title, fontFamily: fonts.displayBold },
   task: { gap: 6, paddingVertical: 6 },
   taskHead: { flexDirection: 'row', gap: 12, alignItems: 'center' },
-  taskTitle: { flex: 1, color: c.text, fontSize: 16, fontWeight: '600' },
-  taskPrice: { color: c.text, fontSize: 16, fontWeight: '700' },
+  taskTitle: { flex: 1, color: c.text, fontSize: fontSize.emphasis, fontFamily: fonts.semiBold },
+  taskPrice: { color: c.text, fontSize: fontSize.emphasis, fontFamily: fonts.bold },
   criticalBadge: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  criticalText: { color: c.critical, fontWeight: '600' },
+  criticalText: { color: c.critical, fontFamily: fonts.semiBold },
   choiceRow: { flexDirection: 'row', gap: 8, marginTop: 4 },
   choice: {
     flex: 1,
@@ -78,7 +79,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   choiceDisabled: { opacity: 0.4 },
-  choiceText: { color: c.text, fontWeight: '600' },
+  choiceText: { color: c.text, fontFamily: fonts.semiBold },
   choiceTextActive: { color: '#FFFFFF' },
   totalRow: {
     flexDirection: 'row',
@@ -86,11 +87,11 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 4,
   },
-  totalLabel: { color: c.textSecondary, fontWeight: '600', fontSize: 16 },
-  totalValue: { color: c.text, fontWeight: '800', fontSize: 22 },
+  totalLabel: { color: c.textSecondary, fontFamily: fonts.semiBold, fontSize: fontSize.emphasis },
+  totalValue: { color: c.text, fontFamily: fonts.displayExtraBold, fontSize: 22 },
   send: { backgroundColor: c.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   sendDisabled: { opacity: 0.4 },
-  sendText: { color: '#FFFFFF', fontWeight: '700', fontSize: 16 },
+  sendText: { color: '#FFFFFF', fontFamily: fonts.bold, fontSize: fontSize.emphasis },
   locked: { alignItems: 'center', gap: 10 },
   lockedBanner: {
     flexDirection: 'row',
@@ -102,8 +103,8 @@ export const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 12,
   },
-  lockedBannerText: { flex: 1, color: c.text, fontWeight: '600' },
-  message: { color: c.text, fontWeight: '600' },
+  lockedBannerText: { flex: 1, color: c.text, fontFamily: fonts.semiBold },
+  message: { color: c.text, fontFamily: fonts.semiBold },
   contact: {
     flexDirection: 'row',
     gap: 8,
@@ -115,5 +116,5 @@ export const styles = StyleSheet.create({
     paddingVertical: 10,
     backgroundColor: c.card,
   },
-  contactText: { color: c.text, fontWeight: '600' },
+  contactText: { color: c.text, fontFamily: fonts.semiBold },
 });

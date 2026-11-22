@@ -1,11 +1,8 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
-  rowWrap: {
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
-  },
+  rowWrap: {},
   behind: {
     position: 'absolute', top: 0, right: 0, bottom: 0, left: 0,
     flexDirection: 'row',
@@ -20,40 +17,40 @@ export const styles = StyleSheet.create({
   },
   behindText: {
     color: colors.textSecondary,
-    fontWeight: '700',
-    fontSize: 13,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.small,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    paddingHorizontal: 4,
-    paddingVertical: 10,
-    backgroundColor: colors.card,
   },
   rowText: {
     flex: 1,
     gap: 2,
   },
   rowTitle: {
+    fontSize: fontSize.emphasis,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   rowTitleDone: {
     color: colors.textSecondary,
   },
   rowProduct: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
   },
   rowNote: {
     color: colors.textFaint,
-    fontSize: 12,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
     fontStyle: 'italic',
   },
   rowPrice: {
+    fontSize: fontSize.emphasis,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   sheet: {
     flex: 1,
@@ -70,8 +67,8 @@ export const styles = StyleSheet.create({
   heading: {
     flex: 1,
     color: colors.text,
-    fontWeight: '700',
-    fontSize: 18,
+    fontFamily: fonts.displayBold,
+    fontSize: fontSize.title,
   },
   body: {
     paddingHorizontal: 20,
@@ -93,12 +90,15 @@ export const styles = StyleSheet.create({
     gap: 10,
   },
   lineLabel: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textSecondary,
     flex: 1,
   },
   lineValue: {
+    fontSize: fontSize.body,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   product: {
     gap: 2,
@@ -107,21 +107,25 @@ export const styles = StyleSheet.create({
     paddingTop: 10,
   },
   productName: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.text,
     flex: 1,
   },
   productMeta: {
     color: colors.textFaint,
-    fontSize: 12,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   label: {
     color: colors.textFaint,
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
     letterSpacing: 0.5,
     marginTop: 6,
   },
   input: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     minHeight: 90,
     backgroundColor: colors.card,
     borderRadius: radius.md,
@@ -150,10 +154,12 @@ export const styles = StyleSheet.create({
   },
   doneText: {
     color: colors.onAccent,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: fontSize.emphasis,
+    fontFamily: fonts.bold,
   },
   undoText: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.text,
   },
 });

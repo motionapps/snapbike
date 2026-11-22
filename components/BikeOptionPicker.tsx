@@ -78,7 +78,7 @@ export function BikeOptionPicker({ request, onClose }: Props) {
                     {request.labelFor(option)}
                   </Text>
                   {selected ? (
-                    <Ionicons name="checkmark" size={22} color={colors.accent} />
+                    <Ionicons name="checkmark" size={22} color={colors.accentLight} />
                   ) : null}
                 </Pressable>
               );

@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius, shadow, statusColors } from '../lib/theme';
+import { colors, radius, statusColors, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   cardRejected: {
@@ -9,27 +9,27 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(185, 241, 60, 0.14)',
+    backgroundColor: 'rgba(73, 168, 104, 0.14)',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 1,
   },
   approvedText: {
-    color: colors.accentDark,
-    fontSize: 10,
-    fontWeight: '800',
+    color: colors.success,
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
     letterSpacing: 0.5,
   },
   rejectedBadge: {
-    backgroundColor: 'rgba(255, 90, 95, 0.14)',
+    backgroundColor: 'rgba(196, 79, 91, 0.14)',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 1,
   },
   rejectedText: {
     color: colors.danger,
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
     letterSpacing: 0.5,
   },
   priceStruck: {
@@ -50,15 +50,16 @@ export const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: colors.accent,
+    borderColor: colors.accentLight,
     paddingVertical: 10,
   },
   approveBtnActive: {
     backgroundColor: colors.accent,
   },
   approveLabel: {
-    color: colors.accent,
-    fontWeight: '700',
+    fontSize: fontSize.body,
+    color: colors.accentLight,
+    fontFamily: fonts.bold,
   },
   approveLabelActive: {
     color: colors.onAccent,
@@ -72,7 +73,7 @@ export const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: 'rgba(255, 90, 95, 0.5)',
+    borderColor: 'rgba(196, 79, 91, 0.5)',
     paddingVertical: 10,
   },
   rejectBtnActive: {
@@ -80,21 +81,12 @@ export const styles = StyleSheet.create({
     borderColor: colors.danger,
   },
   rejectLabel: {
+    fontSize: fontSize.body,
     color: colors.danger,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   rejectLabelActive: {
     color: colors.onAccent,
-  },
-  card: {
-    backgroundColor: colors.card,
-    borderRadius: radius.lg,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: 16,
-    gap: 10,
-    ...shadow.card,
   },
   header: {
     flexDirection: 'row',
@@ -105,32 +97,28 @@ export const styles = StyleSheet.create({
     flex: 1,
     gap: 3,
   },
-  category: {
-    color: colors.accent,
-    fontWeight: '700',
-    fontSize: 11,
-    letterSpacing: 1,
-  },
   title: {
+    fontSize: fontSize.emphasis,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   price: {
+    fontSize: fontSize.emphasis,
     color: colors.text,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   remove: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cardRaised,
   },
   voice: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cardRaised,
@@ -143,7 +131,7 @@ export const styles = StyleSheet.create({
   },
   voiceHint: {
     color: colors.textFaint,
-    fontSize: 11,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   productRow: {
     flexDirection: 'row',
@@ -156,19 +144,21 @@ export const styles = StyleSheet.create({
     gap: 1,
   },
   productName: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
   productMeta: {
     color: colors.textFaint,
-    fontSize: 11,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   inStock: {
-    color: colors.accentDark,
-    fontWeight: '600',
+    color: colors.success,
+    fontFamily: fonts.semiBold,
   },
   orderItem: {
     color: statusColors.inspected,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   categoryRow: {
     flexDirection: 'row',
@@ -179,32 +169,33 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
-    backgroundColor: 'rgba(255, 90, 95, 0.12)',
+    backgroundColor: 'rgba(196, 79, 91, 0.12)',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 1,
   },
   criticalText: {
     color: colors.danger,
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
     letterSpacing: 0.5,
   },
   productPrice: {
+    fontSize: fontSize.body,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   priceMissing: {
     borderRadius: radius.sm,
     borderCurve: 'continuous',
     borderWidth: 1,
     borderStyle: 'dashed',
-    borderColor: colors.accent,
+    borderColor: colors.accentLight,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
   priceMissingText: {
-    color: colors.accent,
+    color: colors.accentLight,
   },
   inputEditPrice: {
     width: 76,
@@ -214,16 +205,24 @@ export const styles = StyleSheet.create({
   addProduct: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 6,
-    paddingLeft: 4,
-    paddingVertical: 2,
-    alignSelf: 'flex-start',
+    paddingVertical: 10,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    borderWidth: 1,
+    borderStyle: 'dashed',
+    borderColor: colors.accentLight,
+    backgroundColor: 'rgba(96, 165, 250, 0.08)',
   },
   addProductText: {
-    color: colors.accent,
-    fontWeight: '600',
+    fontSize: fontSize.body,
+    color: colors.accentLight,
+    fontFamily: fonts.semiBold,
   },
   input: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     backgroundColor: colors.cardRaised,
     borderRadius: radius.sm,
     borderCurve: 'continuous',

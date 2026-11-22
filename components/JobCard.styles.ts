@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius, shadow } from '../lib/theme';
+import { colors, radius, shadow, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   card: {
@@ -45,26 +45,26 @@ export const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderCurve: 'continuous',
     borderWidth: 2,
-    borderColor: colors.accent,
+    borderColor: colors.accentLight,
     paddingHorizontal: 10,
     paddingVertical: 2,
     marginBottom: 4,
   },
   tagText: {
-    color: colors.accent,
-    fontWeight: '800',
+    color: colors.accentLight,
+    fontFamily: fonts.displayExtraBold,
     fontSize: 40,
     fontVariant: ['tabular-nums'],
   },
   name: {
     color: colors.text,
-    fontWeight: '700',
-    fontSize: 19,
+    fontFamily: fonts.displayBold,
+    fontSize: fontSize.title,
   },
   date: {
     color: colors.textFaint,
-    fontSize: 14,
-    fontWeight: '700',
+    fontSize: fontSize.body,
+    fontFamily: fonts.bold,
     letterSpacing: 0.5,
     textTransform: 'uppercase',
   },
@@ -77,8 +77,8 @@ export const styles = StyleSheet.create({
   tasksHeaderText: {
     flex: 1,
     color: colors.text,
-    fontWeight: '600',
-    fontSize: 16,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSize.emphasis,
   },
   chevron: {
     width: 18,
@@ -95,7 +95,7 @@ export const styles = StyleSheet.create({
   },
   task: {
     color: colors.text,
-    fontSize: 16,
+    fontSize: fontSize.emphasis, fontFamily: fonts.regular,
     paddingVertical: 10,
   },
   taskDivider: {
@@ -105,7 +105,7 @@ export const styles = StyleSheet.create({
   total: {
     marginTop: 4,
     color: colors.text,
-    fontWeight: '700',
-    fontSize: 18,
+    fontFamily: fonts.displayBold,
+    fontSize: fontSize.title,
   },
 });

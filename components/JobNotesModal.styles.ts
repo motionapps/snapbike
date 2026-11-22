@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius } from '../lib/theme';
+import { colors, gutter, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   sheet: {
@@ -20,8 +20,8 @@ export const styles = StyleSheet.create({
   heading: {
     flex: 1,
     color: colors.text,
-    fontWeight: '700',
-    fontSize: 18,
+    fontFamily: fonts.displayBold,
+    fontSize: fontSize.title,
   },
   close: {
     width: 30,
@@ -42,9 +42,11 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     color: colors.text,
-    fontSize: 16,
+    fontSize: fontSize.emphasis, fontFamily: fonts.regular,
   },
   emptyText: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textFaint,
   },
   textContent: {
@@ -53,7 +55,7 @@ export const styles = StyleSheet.create({
   },
   text: {
     color: colors.text,
-    fontSize: 16,
+    fontSize: fontSize.emphasis, fontFamily: fonts.regular,
     lineHeight: 23,
   },
   list: {
@@ -80,11 +82,12 @@ export const styles = StyleSheet.create({
     gap: 3,
   },
   rowTitle: {
+    fontSize: fontSize.emphasis,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   rowPreview: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
 });

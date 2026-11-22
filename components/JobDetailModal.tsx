@@ -349,7 +349,7 @@ function NoteButton({ label, icon, filled, disabled, onPress }: NoteButtonProps)
       <Ionicons
         name={(filled ? icon : `${icon}-outline`) as never}
         size={18}
-        color={filled ? colors.accent : colors.textSecondary}
+        color={filled ? colors.accentLight : colors.textSecondary}
       />
       <Text style={styles.noteButtonText} numberOfLines={1} adjustsFontSizeToFit>
         {label}

@@ -183,7 +183,7 @@ export function BikeDetails({ state, onRetry, onChange, onEdit, expandNonce }: P
   if (state.status === 'analyzing') {
     return (
       <View style={styles.header}>
-        <ActivityIndicator size="small" color={colors.accent} />
+        <ActivityIndicator size="small" color={colors.accentLight} />
         <Text style={styles.headerFaint}>Analyserar cykeln…</Text>
       </View>
     );
@@ -251,7 +251,7 @@ export function BikeDetails({ state, onRetry, onChange, onEdit, expandNonce }: P
   return (
     <View>
       <Pressable onPress={toggle} style={styles.header} hitSlop={4}>
-        <Ionicons name="sparkles" size={15} color={colors.accent} />
+        <Ionicons name="sparkles" size={15} color={colors.accentLight} />
         <Text style={styles.headerText}>Information om cykeln</Text>
         {onEdit ? (
           <Pressable onPress={onEdit} hitSlop={8} style={styles.editButton}>

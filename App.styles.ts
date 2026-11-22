@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius } from './lib/theme';
+import { colors, gutter, radius, fontSize, fonts } from './lib/theme';
 
 export const styles = StyleSheet.create({
   root: {
@@ -13,6 +13,8 @@ export const styles = StyleSheet.create({
     padding: 24,
   },
   noAccessText: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.text,
     textAlign: 'center',
   },
@@ -24,8 +26,9 @@ export const styles = StyleSheet.create({
     paddingVertical: 9,
   },
   signOutText: {
+    fontSize: fontSize.body,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   flex: {
     flex: 1,
@@ -58,7 +61,7 @@ export const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   tabIconDone: {
-    borderColor: colors.accent,
+    borderColor: colors.accentLight,
   },
   tabCheck: {
     position: 'absolute',
@@ -73,11 +76,11 @@ export const styles = StyleSheet.create({
   },
   tabLabel: {
     color: colors.textFaint,
-    fontSize: 11,
-    fontWeight: '600',
+    fontSize: fontSize.small,
+    fontFamily: fonts.semiBold,
   },
   tabLabelActive: {
-    color: colors.accent,
+    color: colors.accentLight,
   },
   content: {
     paddingHorizontal: gutter,
@@ -88,8 +91,8 @@ export const styles = StyleSheet.create({
   },
   itemKindText: {
     color: colors.text,
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: fontSize.body,
+    fontFamily: fonts.semiBold,
     padding: 14,
   },
   bikeDetailsCard: {
@@ -118,30 +121,34 @@ export const styles = StyleSheet.create({
     paddingVertical: 5,
   },
   newOrderText: {
-    color: colors.textSecondary,
-    fontWeight: '600',
-    fontSize: 12,
+    color: colors.textSoft,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSize.small,
   },
   title: {
     color: colors.text,
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: fonts.displayExtraBold,
   },
   subtitle: {
-    color: colors.textFaint,
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
+    color: colors.textSoft,
   },
   errorBox: {
     flexDirection: 'row',
     gap: 8,
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(255, 90, 95, 0.1)',
+    backgroundColor: 'rgba(196, 79, 91, 0.1)',
     borderRadius: radius.md,
     borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: 'rgba(255, 90, 95, 0.35)',
+    borderColor: 'rgba(196, 79, 91, 0.35)',
     padding: 12,
   },
   errorText: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     flex: 1,
     color: colors.danger,
   },
@@ -161,11 +168,13 @@ export const styles = StyleSheet.create({
   },
   transcriptLabel: {
     color: colors.textFaint,
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
     letterSpacing: 1,
   },
   transcriptText: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textSecondary,
     fontStyle: 'italic',
   },
@@ -174,8 +183,8 @@ export const styles = StyleSheet.create({
   },
   sectionHeading: {
     color: colors.text,
-    fontWeight: '700',
-    fontSize: 16,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.emphasis,
   },
   addTask: {
     flexDirection: 'row',
@@ -190,8 +199,9 @@ export const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   addTaskText: {
-    color: colors.accent,
-    fontWeight: '600',
+    fontSize: fontSize.body,
+    color: colors.accentLight,
+    fontFamily: fonts.semiBold,
   },
   footer: {
     gap: 14,
@@ -203,8 +213,9 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   totalLabel: {
+    fontSize: fontSize.body,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   totalValues: {
     flexDirection: 'row',
@@ -213,13 +224,13 @@ export const styles = StyleSheet.create({
   },
   totalStruck: {
     color: colors.textFaint,
-    fontSize: 14,
+    fontSize: fontSize.body, fontFamily: fonts.regular,
     textDecorationLine: 'line-through',
   },
   totalValue: {
     color: colors.text,
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: fontSize.title,
+    fontFamily: fonts.displayExtraBold,
   },
   saveStatus: {
     flexDirection: 'row',
@@ -230,8 +241,8 @@ export const styles = StyleSheet.create({
   },
   saveStatusText: {
     color: colors.textFaint,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: fontSize.small,
+    fontFamily: fonts.semiBold,
   },
   saveStatusError: {
     color: colors.danger,

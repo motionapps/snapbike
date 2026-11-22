@@ -1,4 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
+import { Archivo_700Bold } from '@expo-google-fonts/archivo/700Bold';
+import { Archivo_800ExtraBold } from '@expo-google-fonts/archivo/800ExtraBold';
+import { IBMPlexSans_400Regular } from '@expo-google-fonts/ibm-plex-sans/400Regular';
+import { IBMPlexSans_600SemiBold } from '@expo-google-fonts/ibm-plex-sans/600SemiBold';
+import { IBMPlexSans_700Bold } from '@expo-google-fonts/ibm-plex-sans/700Bold';
+import { useFonts } from 'expo-font';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 import {
@@ -748,7 +754,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
             <Text style={styles.subtitle}>Verkstadsanteckning</Text>
             {transcript || tasks.length > 0 || photoUri ? (
               <Pressable onPress={newOrder} style={styles.newOrder} hitSlop={8}>
-                <Ionicons name="add" size={15} color={colors.textSecondary} />
+                <Ionicons name="add" size={15} color={colors.textSoft} />
                 <Text style={styles.newOrderText}>Ny order</Text>
               </Pressable>
             ) : null}
@@ -858,7 +864,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
             ) : null}
 
             <Pressable onPress={() => setShowAddTask(true)} style={styles.addTask}>
-              <Ionicons name="add-circle-outline" size={20} color={colors.accent} />
+              <Ionicons name="add-circle-outline" size={20} color={colors.accentLight} />
               <Text style={styles.addTaskText}>{STRINGS.addActionManually}</Text>
             </Pressable>
 
@@ -1137,7 +1143,7 @@ function Root() {
                   <Ionicons
                     name={(isActive ? item.iconActive : item.icon) as never}
                     size={22}
-                    color={isActive ? colors.accent : colors.textFaint}
+                    color={isActive ? colors.accentLight : colors.textFaint}
                   />
                   {done ? (
                     <View style={styles.tabCheck}>
@@ -1158,6 +1164,15 @@ function Root() {
 }
 
 export default function App() {
+  const [fontsLoaded, fontError] = useFonts({
+    IBMPlexSans_400Regular,
+    IBMPlexSans_600SemiBold,
+    IBMPlexSans_700Bold,
+    Archivo_700Bold,
+    Archivo_800ExtraBold,
+  });
+  // On a load error, fall back to system fonts rather than a blank app.
+  if (!fontsLoaded && !fontError) return null;
   return (
     <SafeAreaProvider>
       <AuthProvider>

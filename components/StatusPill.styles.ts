@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   row: {
@@ -23,8 +23,8 @@ export const styles = StyleSheet.create({
   },
   pillText: {
     color: colors.text,
-    fontWeight: '600',
-    fontSize: 13,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSize.small,
   },
   dot: {
     width: 8,
@@ -59,8 +59,8 @@ export const styles = StyleSheet.create({
   },
   sheetTitle: {
     color: colors.textFaint,
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
     letterSpacing: 1,
     textTransform: 'uppercase',
     padding: 10,
@@ -78,8 +78,9 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.cardRaised,
   },
   optionText: {
+    fontSize: fontSize.body,
     flex: 1,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
 });

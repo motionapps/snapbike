@@ -1,4 +1,5 @@
 import { StyleSheet } from 'react-native';
+import { fontSize, fonts } from '../lib/theme';
 
 const BLUE = '#1976d2';
 export const styles = StyleSheet.create({
@@ -24,26 +25,26 @@ export const styles = StyleSheet.create({
     columnGap: 16,
     rowGap: 10,
   },
-  linkText: { color: BLUE, fontSize: 14, fontWeight: '600' },
+  linkText: { color: BLUE, fontSize: fontSize.body, fontFamily: fonts.semiBold },
   closeBtn: { marginLeft: 16 },
-  title: { fontSize: 28, fontWeight: '700', color: '#1f2329' },
-  subtitle: { fontSize: 15, color: '#6b7280', marginTop: 6, marginBottom: 28 },
-  label: { fontSize: 13, fontWeight: '600', color: '#3c4043', marginBottom: 6, marginTop: 14 },
+  title: { fontSize: 28, fontFamily: fonts.displayBold, color: '#1f2329' },
+  subtitle: { fontSize: fontSize.body, fontFamily: fonts.regular, color: '#6b7280', marginTop: 6, marginBottom: 28 },
+  label: { fontSize: fontSize.small, fontFamily: fonts.semiBold, color: '#3c4043', marginBottom: 6, marginTop: 14 },
   input: {
     borderWidth: 1,
     borderColor: '#dcdee2',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
-    fontSize: 16,
+    fontSize: fontSize.emphasis, fontFamily: fonts.regular,
     color: '#1f2329',
     backgroundColor: '#fafafa',
   },
   // The confirmation code: large and spaced so six digits read at a glance.
-  codeInput: { fontSize: 22, letterSpacing: 6, textAlign: 'center' },
+  codeInput: { fontSize: 22, fontFamily: fonts.displayBold, letterSpacing: 6, textAlign: 'center' },
   resendBtn: { alignSelf: 'center', marginTop: 18, padding: 6 },
-  error: { color: '#d32f2f', fontSize: 14, marginTop: 14 },
-  notice: { color: '#2e7d32', fontSize: 14, marginTop: 14 },
+  error: { color: '#d32f2f', fontSize: fontSize.body, fontFamily: fonts.regular, marginTop: 14 },
+  notice: { color: '#2e7d32', fontSize: fontSize.body, fontFamily: fonts.regular, marginTop: 14 },
   button: {
     backgroundColor: BLUE,
     borderRadius: 10,
@@ -54,6 +55,6 @@ export const styles = StyleSheet.create({
     minHeight: 52,
   },
   buttonDisabled: { opacity: 0.6 },
-  buttonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  buttonText: { color: '#fff', fontSize: fontSize.emphasis, fontFamily: fonts.bold },
 
 });

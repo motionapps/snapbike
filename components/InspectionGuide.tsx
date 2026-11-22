@@ -60,7 +60,7 @@ export function InspectionGuide() {
           hitSlop={8}
           style={[styles.navButton, index === 0 && styles.navDisabled]}
         >
-          <Ionicons name="chevron-back" size={16} color={colors.textSecondary} />
+          <Ionicons name="chevron-back" size={20} color={colors.textSecondary} />
         </Pressable>
         <Pressable
           onPress={() => setIndex((i) => Math.min(last, i + 1))}
@@ -70,7 +70,7 @@ export function InspectionGuide() {
         >
           <Ionicons
             name="chevron-forward"
-            size={16}
+            size={20}
             color={colors.textSecondary}
           />
         </Pressable>

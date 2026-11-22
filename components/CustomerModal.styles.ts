@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   sheet: {
@@ -16,8 +16,8 @@ export const styles = StyleSheet.create({
   heading: {
     flex: 1,
     color: colors.text,
-    fontWeight: '700',
-    fontSize: 18,
+    fontFamily: fonts.displayBold,
+    fontSize: fontSize.title,
   },
   close: {
     width: 30,
@@ -37,8 +37,8 @@ export const styles = StyleSheet.create({
   },
   label: {
     color: colors.textFaint,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: fontSize.small,
+    fontFamily: fonts.semiBold,
   },
   labelRow: {
     flexDirection: 'row',
@@ -48,17 +48,19 @@ export const styles = StyleSheet.create({
   tagInput: {
     width: 90,
     textAlign: 'center',
-    fontWeight: '700',
-    fontSize: 16,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.emphasis,
   },
   inputError: {
     borderColor: colors.danger,
   },
   hint: {
     color: colors.danger,
-    fontSize: 12,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   input: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     backgroundColor: colors.card,
     borderRadius: radius.sm,
     borderCurve: 'continuous',
@@ -99,13 +101,14 @@ export const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   suggestionName: {
+    fontSize: fontSize.body,
     flex: 1,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   suggestionPhone: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   saveButton: {
     alignItems: 'center',
@@ -120,15 +123,16 @@ export const styles = StyleSheet.create({
   },
   warningText: {
     color: colors.warning,
-    fontSize: 13,
-    fontWeight: '600',
+    fontSize: fontSize.small,
+    fontFamily: fonts.semiBold,
     textAlign: 'center',
   },
   saveButtonDisabled: {
     opacity: 0.4,
   },
   saveText: {
+    fontSize: fontSize.body,
     color: colors.onAccent,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
 });

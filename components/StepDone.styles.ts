@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   banner: {
@@ -14,8 +14,8 @@ export const styles = StyleSheet.create({
   },
   bannerText: {
     color: colors.text,
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
     letterSpacing: 1.5,
   },
   wrap: {
@@ -44,8 +44,8 @@ export const styles = StyleSheet.create({
     opacity: 0.7,
   },
   text: {
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: fontSize.emphasis,
+    fontFamily: fonts.bold,
   },
   textDone: {
     color: colors.onAccent,
@@ -55,7 +55,7 @@ export const styles = StyleSheet.create({
   },
   error: {
     color: colors.danger,
-    fontSize: 13,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
     textAlign: 'center',
   },
 });

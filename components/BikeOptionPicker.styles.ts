@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   sheet: {
@@ -16,8 +16,8 @@ export const styles = StyleSheet.create({
   },
   heading: {
     color: colors.text,
-    fontSize: 20,
-    fontWeight: '700',
+    fontSize: fontSize.title,
+    fontFamily: fonts.displayBold,
   },
   close: {
     width: 40,
@@ -43,14 +43,14 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.card,
   },
   optionSelected: {
-    borderColor: colors.accent,
+    borderColor: colors.accentLight,
   },
   optionText: {
     color: colors.text,
-    fontSize: 17,
+    fontSize: fontSize.emphasis, fontFamily: fonts.regular,
   },
   optionTextSelected: {
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   pressed: {
     opacity: 0.7,
@@ -64,7 +64,7 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
     backgroundColor: colors.card,
     color: colors.text,
-    fontSize: 17,
+    fontSize: fontSize.emphasis, fontFamily: fonts.regular,
   },
   save: {
     minHeight: 54,
@@ -76,7 +76,7 @@ export const styles = StyleSheet.create({
   },
   saveText: {
     color: colors.onAccent,
-    fontSize: 17,
-    fontWeight: '700',
+    fontSize: fontSize.emphasis,
+    fontFamily: fonts.bold,
   },
 });

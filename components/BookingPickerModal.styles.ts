@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   sheet: {
@@ -16,8 +16,8 @@ export const styles = StyleSheet.create({
   heading: {
     flex: 1,
     color: colors.text,
-    fontWeight: '700',
-    fontSize: 18,
+    fontFamily: fonts.displayBold,
+    fontSize: fontSize.title,
   },
   close: {
     width: 30,
@@ -31,10 +31,14 @@ export const styles = StyleSheet.create({
     marginTop: 40,
   },
   error: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.danger,
     paddingHorizontal: 20,
   },
   empty: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textFaint,
     textAlign: 'center',
     marginTop: 40,
@@ -64,11 +68,12 @@ export const styles = StyleSheet.create({
     gap: 2,
   },
   rowTitle: {
+    fontSize: fontSize.emphasis,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   rowMeta: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
 });

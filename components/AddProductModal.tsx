@@ -167,10 +167,10 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
           <Ionicons
             name={inStockOnly ? 'checkbox' : 'square-outline'}
             size={20}
-            color={inStockOnly ? colors.accent : colors.textFaint}
+            color={inStockOnly ? colors.accentLight : colors.textFaint}
           />
           <Text style={styles.checkLabel}>Bara i lager</Text>
-          {searching ? <ActivityIndicator size="small" color={colors.accent} /> : null}
+          {searching ? <ActivityIndicator size="small" color={colors.accentLight} /> : null}
         </Pressable>
         {notice ? <Text style={styles.error}>{notice}</Text> : null}
         <View style={styles.form}>

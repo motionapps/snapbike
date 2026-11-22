@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius } from '../lib/theme';
+import { colors, gutter, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   root: {
@@ -15,9 +15,11 @@ export const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: fonts.displayExtraBold,
   },
   subtitle: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textFaint,
     flex: 1,
   },
@@ -32,8 +34,9 @@ export const styles = StyleSheet.create({
     paddingVertical: 6,
   },
   editButtonText: {
+    fontSize: fontSize.body,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   lockedBanner: {
     marginHorizontal: gutter,
@@ -45,6 +48,8 @@ export const styles = StyleSheet.create({
     gap: 16,
   },
   empty: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textSecondary,
     textAlign: 'center',
     paddingVertical: 24,
@@ -65,13 +70,14 @@ export const styles = StyleSheet.create({
   },
   sectionTitle: {
     color: colors.text,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: fontSize.body,
+    fontFamily: fonts.bold,
     flex: 1,
   },
   sectionSum: {
+    fontSize: fontSize.body,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   sectionBody: {
     paddingHorizontal: 10,
@@ -82,37 +88,39 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 10,
-    paddingHorizontal: 4,
-    paddingVertical: 8,
-    borderTopWidth: 1,
-    borderTopColor: colors.border,
+  },
+  rowRejected: {
+    opacity: 0.55,
   },
   rowText: {
     flex: 1,
     gap: 2,
   },
   rowTitle: {
+    fontSize: fontSize.emphasis,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   rowProduct: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
   },
   rowBadge: {
-    fontSize: 11,
-    fontWeight: '700',
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
     marginTop: 2,
   },
   badgeApproved: {
-    color: colors.accentDark,
+    color: colors.success,
   },
   badgeRejected: {
     color: colors.textFaint,
   },
   rowPrice: {
+    fontSize: fontSize.body,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   struck: {
     textDecorationLine: 'line-through',
@@ -131,8 +139,9 @@ export const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   addTaskText: {
-    color: colors.accent,
-    fontWeight: '600',
+    fontSize: fontSize.body,
+    color: colors.accentLight,
+    fontFamily: fonts.semiBold,
   },
   totalRow: {
     flexDirection: 'row',
@@ -142,13 +151,13 @@ export const styles = StyleSheet.create({
   },
   totalLabel: {
     color: colors.textSecondary,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: fontSize.emphasis,
+    fontFamily: fonts.semiBold,
   },
   totalValue: {
     color: colors.text,
     fontSize: 22,
-    fontWeight: '800',
+    fontFamily: fonts.displayExtraBold,
   },
   errorBox: {
     flexDirection: 'row',
@@ -156,6 +165,8 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.danger,
     flex: 1,
   },
@@ -173,8 +184,8 @@ export const styles = StyleSheet.create({
   },
   primaryText: {
     color: colors.onAccent,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: fontSize.emphasis,
+    fontFamily: fonts.bold,
   },
   secondary: {
     flexDirection: 'row',
@@ -188,8 +199,8 @@ export const styles = StyleSheet.create({
   },
   secondaryText: {
     color: colors.text,
-    fontSize: 15,
-    fontWeight: '600',
+    fontSize: fontSize.body,
+    fontFamily: fonts.semiBold,
   },
   buttonDisabled: {
     opacity: 0.4,
@@ -212,8 +223,9 @@ export const styles = StyleSheet.create({
     gap: 8,
   },
   notifyText: {
+    fontSize: fontSize.body,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   readyButton: {
     flexDirection: 'row',
@@ -232,16 +244,17 @@ export const styles = StyleSheet.create({
   },
   readyButtonText: {
     color: colors.onAccent,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: fontSize.body,
+    fontFamily: fonts.bold,
   },
   readyError: {
     color: colors.danger,
-    fontSize: 13,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
     textAlign: 'center',
   },
   cancelText: {
+    fontSize: fontSize.body,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
 });

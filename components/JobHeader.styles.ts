@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius } from '../lib/theme';
+import { colors, gutter, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   header: {
@@ -26,13 +26,13 @@ export const styles = StyleSheet.create({
     borderRadius: radius.md,
     borderCurve: 'continuous',
     borderWidth: 2,
-    borderColor: colors.accent,
+    borderColor: colors.accentLight,
     paddingHorizontal: 10,
     paddingVertical: 2,
   },
   tagText: {
-    color: colors.accent,
-    fontWeight: '800',
+    color: colors.accentLight,
+    fontFamily: fonts.displayExtraBold,
     fontSize: 32,
     fontVariant: ['tabular-nums'],
   },
@@ -42,7 +42,7 @@ export const styles = StyleSheet.create({
   },
   name: {
     color: colors.text,
-    fontWeight: '800',
+    fontFamily: fonts.displayExtraBold,
     fontSize: 24,
   },
   bikeRow: {
@@ -59,7 +59,7 @@ export const styles = StyleSheet.create({
   },
   detail: {
     flexShrink: 1,
-    fontSize: 15,
+    fontSize: fontSize.body, fontFamily: fonts.regular,
     opacity: 0.85,
   },
   warningPill: {
@@ -68,7 +68,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     marginTop: 2,
-    backgroundColor: 'rgba(11, 15, 20, 0.85)',
+    backgroundColor: 'rgba(21, 27, 36, 0.85)',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -76,8 +76,8 @@ export const styles = StyleSheet.create({
   warning: {
     flexShrink: 1,
     color: colors.danger,
-    fontWeight: '700',
-    fontSize: 14,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.body,
   },
   close: {
     alignSelf: 'flex-start',

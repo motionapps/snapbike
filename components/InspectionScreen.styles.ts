@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius } from '../lib/theme';
+import { colors, gutter, radius, fontSize, fonts } from '../lib/theme';
 
 /** Fixed item row height, so the square image always matches it. */
 const ITEM_ROW_HEIGHT = 76;
@@ -18,9 +18,11 @@ export const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: fonts.displayExtraBold,
   },
   subtitle: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textFaint,
     flex: 1,
   },
@@ -28,15 +30,15 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: 'rgba(255, 90, 95, 0.12)',
+    backgroundColor: 'rgba(196, 79, 91, 0.12)',
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 2,
   },
   issueCounterText: {
     color: colors.danger,
-    fontSize: 12,
-    fontWeight: '800',
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
   },
   progressTrack: {
     height: 4,
@@ -85,8 +87,8 @@ export const styles = StyleSheet.create({
   },
   compactMicText: {
     color: colors.text,
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
   },
   helpButton: {
     position: 'absolute',
@@ -97,14 +99,16 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(255, 90, 95, 0.1)',
+    backgroundColor: 'rgba(196, 79, 91, 0.1)',
     borderRadius: radius.md,
     borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: 'rgba(255, 90, 95, 0.35)',
+    borderColor: 'rgba(196, 79, 91, 0.35)',
     padding: 12,
   },
   errorText: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     flex: 1,
     color: colors.danger,
   },
@@ -114,17 +118,27 @@ export const styles = StyleSheet.create({
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 12,
+    paddingTop: 8,
+  },
+  sectionIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(96, 165, 250, 0.12)',
   },
   sectionTitle: {
     color: colors.text,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: fontSize.title,
+    fontFamily: fonts.bold,
     flexShrink: 1,
   },
   summaryCount: {
     color: colors.textFaint,
-    fontSize: 12,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
     marginLeft: 'auto',
   },
   itemCard: {
@@ -155,12 +169,13 @@ export const styles = StyleSheet.create({
     flex: 1,
   },
   itemTitle: {
+    fontSize: fontSize.emphasis,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   itemHint: {
     color: colors.textFaint,
-    fontSize: 12,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
     marginTop: 1,
   },
   statusRow: {
@@ -178,6 +193,8 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   noteInput: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     backgroundColor: colors.cardRaised,
     borderRadius: radius.sm,
     borderCurve: 'continuous',
@@ -200,7 +217,7 @@ export const styles = StyleSheet.create({
   },
   noteWaveText: {
     color: colors.text,
-    fontSize: 15,
+    fontSize: fontSize.body, fontFamily: fonts.regular,
   },
   allOk: {
     flexDirection: 'row',
@@ -221,12 +238,13 @@ export const styles = StyleSheet.create({
     paddingTop: 18,
   },
   allOkText: {
-    color: colors.accent,
-    fontWeight: '600',
+    fontSize: fontSize.body,
+    color: colors.accentLight,
+    fontFamily: fonts.semiBold,
   },
   emptyText: {
     color: colors.textFaint,
-    fontSize: 13,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   noIssues: {
     flexDirection: 'row',
@@ -235,36 +253,38 @@ export const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   noIssuesText: {
+    fontSize: fontSize.body,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   issueCard: {
     flexDirection: 'row',
     gap: 10,
     alignItems: 'flex-start',
-    backgroundColor: 'rgba(255, 90, 95, 0.08)',
+    backgroundColor: 'rgba(196, 79, 91, 0.08)',
     borderRadius: radius.md,
     borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: 'rgba(255, 90, 95, 0.3)',
+    borderColor: 'rgba(196, 79, 91, 0.3)',
     padding: 12,
   },
   issueText: {
     flex: 1,
   },
   issueTitle: {
+    fontSize: fontSize.emphasis,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   issueSection: {
     color: colors.textFaint,
-    fontWeight: '400',
-    fontSize: 12,
+    fontFamily: fonts.regular,
+    fontSize: fontSize.small,
   },
   issueNote: {
     color: colors.textSecondary,
     marginTop: 2,
-    fontSize: 13,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   createTasks: {
     flexDirection: 'row',
@@ -280,8 +300,9 @@ export const styles = StyleSheet.create({
     opacity: 0.8,
   },
   createTasksText: {
+    fontSize: fontSize.body,
     color: colors.onAccent,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   summaryBox: {
     backgroundColor: colors.card,
@@ -294,13 +315,13 @@ export const styles = StyleSheet.create({
   },
   summaryLabel: {
     color: colors.textFaint,
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
     letterSpacing: 1,
   },
   summaryText: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
     lineHeight: 19,
   },
 });

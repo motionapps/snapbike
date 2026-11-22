@@ -23,11 +23,11 @@ export function CustomerSection({
     return (
       <View style={styles.buttons}>
         <Pressable onPress={onImportBooking} style={styles.button}>
-          <Ionicons name="calendar-outline" size={18} color={colors.accent} />
+          <Ionicons name="calendar-outline" size={18} color={colors.accentLight} />
           <Text style={styles.buttonText}>Hämta bokning</Text>
         </Pressable>
         <Pressable onPress={onDropIn} style={styles.button}>
-          <Ionicons name="person-add-outline" size={18} color={colors.accent} />
+          <Ionicons name="person-add-outline" size={18} color={colors.accentLight} />
           <Text style={styles.buttonText}>Drop-in</Text>
         </Pressable>
       </View>
@@ -40,7 +40,7 @@ export function CustomerSection({
       onPress={onDropIn}
       style={({ pressed }) => [styles.card, pressed && styles.cardPressed]}
     >
-      <Ionicons name="person-circle-outline" size={28} color={colors.accent} />
+      <Ionicons name="person-circle-outline" size={28} color={colors.accentLight} />
       <View style={styles.info}>
         <Text style={styles.name}>{name}</Text>
         <Text style={styles.meta}>

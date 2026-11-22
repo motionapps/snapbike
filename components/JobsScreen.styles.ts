@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius } from '../lib/theme';
+import { colors, gutter, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   root: {
@@ -15,9 +15,11 @@ export const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: fonts.displayExtraBold,
   },
   subtitle: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textFaint,
   },
   newJob: {
@@ -25,16 +27,16 @@ export const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     backgroundColor: colors.accent,
     borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
   },
   newJobText: {
     color: colors.onAccent,
-    fontWeight: '700',
-    fontSize: 13,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.body,
   },
   filterRow: {
     flexDirection: 'row',
@@ -47,8 +49,8 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.card,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 18,
+    paddingVertical: 10,
   },
   filterChipActive: {
     backgroundColor: colors.accent,
@@ -56,8 +58,8 @@ export const styles = StyleSheet.create({
   },
   filterText: {
     color: colors.textSecondary,
-    fontWeight: '600',
-    fontSize: 13,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSize.body,
   },
   filterTextActive: {
     color: colors.onAccent,
@@ -90,7 +92,7 @@ export const styles = StyleSheet.create({
     minWidth: 0,
     color: colors.text,
     paddingVertical: 10,
-    fontSize: 15,
+    fontSize: fontSize.body, fontFamily: fonts.regular,
   },
   errorBox: {
     flexDirection: 'row',
@@ -98,14 +100,16 @@ export const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginHorizontal: gutter,
     marginBottom: 12,
-    backgroundColor: 'rgba(255, 90, 95, 0.1)',
+    backgroundColor: 'rgba(196, 79, 91, 0.1)',
     borderRadius: 14,
     borderCurve: 'continuous',
     borderWidth: 1,
-    borderColor: 'rgba(255, 90, 95, 0.35)',
+    borderColor: 'rgba(196, 79, 91, 0.35)',
     padding: 12,
   },
   errorText: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     flex: 1,
     color: colors.danger,
   },
@@ -125,6 +129,8 @@ export const styles = StyleSheet.create({
     paddingTop: 80,
   },
   emptyText: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textFaint,
   },
 });

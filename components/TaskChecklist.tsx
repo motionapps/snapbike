@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { colors } from '../lib/theme';
 import { Task, productTotal, taskTotal } from '../lib/types';
+import { CategoryCard } from './CategoryCard';
 import { styles } from './TaskChecklist.styles';
 
 const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
@@ -61,8 +62,8 @@ export function ChecklistRow({
     <View style={styles.rowWrap}>
       <View style={styles.behind}>
         <View style={styles.behindSide}>
-          <Ionicons name="checkmark-circle" size={18} color={colors.accent} />
-          <Text style={[styles.behindText, { color: colors.accent }]}>Klar</Text>
+          <Ionicons name="checkmark-circle" size={18} color={colors.accentLight} />
+          <Text style={[styles.behindText, { color: colors.accentLight }]}>Klar</Text>
         </View>
         <View style={styles.behindSide}>
           <Text style={styles.behindText}>Ej klar</Text>
@@ -70,27 +71,29 @@ export function ChecklistRow({
         </View>
       </View>
       <Animated.View style={{ transform: [{ translateX: dx }] }} {...pan.panHandlers}>
-        <Pressable onPress={onOpen} style={styles.row}>
-          <Ionicons
-            name={done ? 'checkmark-circle' : 'ellipse-outline'}
-            size={22}
-            color={done ? colors.accent : colors.textFaint}
-          />
-          <View style={styles.rowText}>
-            <Text style={[styles.rowTitle, done && styles.rowTitleDone]}>{task.title}</Text>
-            {task.products.map((product) => (
-              <Text key={product.id} style={styles.rowProduct}>
-                {product.name}
-              </Text>
-            ))}
-            {task.note ? (
-              <Text style={styles.rowNote} numberOfLines={1}>
-                {task.note}
-              </Text>
-            ) : null}
-          </View>
-          <Text style={styles.rowPrice}>{kr(taskTotal(task))}</Text>
-        </Pressable>
+        <CategoryCard category={task.category}>
+          <Pressable onPress={onOpen} style={styles.row}>
+            <Ionicons
+              name={done ? 'checkmark-circle' : 'ellipse-outline'}
+              size={22}
+              color={done ? colors.accentLight : colors.textFaint}
+            />
+            <View style={styles.rowText}>
+              <Text style={[styles.rowTitle, done && styles.rowTitleDone]}>{task.title}</Text>
+              {task.products.map((product) => (
+                <Text key={product.id} style={styles.rowProduct}>
+                  {product.name}
+                </Text>
+              ))}
+              {task.note ? (
+                <Text style={styles.rowNote} numberOfLines={1}>
+                  {task.note}
+                </Text>
+              ) : null}
+            </View>
+            <Text style={styles.rowPrice}>{kr(taskTotal(task))}</Text>
+          </Pressable>
+        </CategoryCard>
       </Animated.View>
     </View>
   );

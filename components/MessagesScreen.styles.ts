@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius } from '../lib/theme';
+import { colors, gutter, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   root: {
@@ -15,10 +15,12 @@ export const styles = StyleSheet.create({
   title: {
     color: colors.text,
     fontSize: 24,
-    fontWeight: '800',
+    fontFamily: fonts.displayExtraBold,
     flexShrink: 1,
   },
   subtitle: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textFaint,
     flex: 1,
   },
@@ -26,6 +28,8 @@ export const styles = StyleSheet.create({
     alignSelf: 'center',
   },
   empty: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textSecondary,
     textAlign: 'center',
     paddingVertical: 24,
@@ -52,15 +56,17 @@ export const styles = StyleSheet.create({
   },
   rowName: {
     color: colors.text,
-    fontSize: 16,
-    fontWeight: '700',
+    fontSize: fontSize.emphasis,
+    fontFamily: fonts.bold,
     flex: 1,
   },
   rowTime: {
     color: colors.textFaint,
-    fontSize: 12,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   rowBody: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
   thread: {
@@ -86,23 +92,25 @@ export const styles = StyleSheet.create({
   },
   bubbleText: {
     color: colors.text,
-    fontSize: 15,
+    fontSize: fontSize.body, fontFamily: fonts.regular,
   },
   bubbleTextOut: {
     color: colors.onAccent,
-    fontSize: 15,
+    fontSize: fontSize.body, fontFamily: fonts.regular,
   },
   bubbleTime: {
     color: colors.textFaint,
-    fontSize: 11,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   bubbleTimeOut: {
     color: colors.onAccent,
     opacity: 0.6,
-    fontSize: 11,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
     alignSelf: 'flex-end',
   },
   sendError: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.danger,
     paddingHorizontal: gutter + 8,
     paddingBottom: 4,
@@ -125,7 +133,7 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingTop: 10,
     paddingBottom: 10,
-    fontSize: 15,
+    fontSize: fontSize.body, fontFamily: fonts.regular,
     maxHeight: 140,
   },
   sendButton: {

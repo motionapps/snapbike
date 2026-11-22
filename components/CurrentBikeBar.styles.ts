@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors } from '../lib/theme';
+import { colors, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   bar: {
@@ -21,7 +21,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: 'rgba(11, 15, 20, 0.85)',
+    backgroundColor: 'rgba(21, 27, 36, 0.85)',
     borderRadius: 8,
     paddingHorizontal: 10,
     paddingVertical: 7,
@@ -34,7 +34,7 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     marginLeft: 'auto',
-    backgroundColor: 'rgba(11, 15, 20, 0.85)',
+    backgroundColor: 'rgba(21, 27, 36, 0.85)',
     borderRadius: 8,
     paddingHorizontal: 8,
     paddingVertical: 3,
@@ -46,29 +46,29 @@ export const styles = StyleSheet.create({
   },
   statusText: {
     color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 12,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.small,
   },
   commentButtonText: {
     color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 13,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.small,
   },
   tag: {
-    fontWeight: '800',
-    fontSize: 14,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.body,
   },
   name: {
     flexShrink: 1,
-    fontWeight: '700',
-    fontSize: 14,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.body,
   },
   warning: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     flexShrink: 1,
-    backgroundColor: 'rgba(11, 15, 20, 0.85)',
+    backgroundColor: 'rgba(21, 27, 36, 0.85)',
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -76,11 +76,11 @@ export const styles = StyleSheet.create({
   warningText: {
     flexShrink: 1,
     color: colors.danger,
-    fontWeight: '700',
-    fontSize: 13,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.small,
   },
   bike: {
-    fontSize: 14,
+    fontSize: fontSize.body, fontFamily: fonts.regular,
     opacity: 0.85,
   },
 });

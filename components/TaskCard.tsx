@@ -10,6 +10,7 @@ import {
 import { colors } from '../lib/theme';
 import { Task, Product } from '../lib/types';
 import { AddProductModal } from './AddProductModal';
+import { CategoryCard } from './CategoryCard';
 import { styles } from './TaskCard.styles';
 
 const PRODUCT_LABELS: Record<NonNullable<Product['label']>, string> = {
@@ -56,29 +57,30 @@ export function TaskCard({
   const rejected = task.approval === 'nekad';
 
   return (
-    <View style={[styles.card, rejected && styles.cardRejected]}>
+    <CategoryCard category={task.category} style={rejected && styles.cardRejected}>
       <View style={styles.header}>
         <View style={styles.headerText}>
-          <View style={styles.categoryRow}>
-            <Text style={styles.category}>{task.category.toUpperCase()}</Text>
-            {task.severity === 'kritisk' ? (
-              <View style={styles.criticalBadge}>
-                <Ionicons name="alert-circle" size={11} color={colors.danger} />
-                <Text style={styles.criticalText}>KRITISK</Text>
-              </View>
-            ) : null}
-            {task.approval === 'godkänd' ? (
-              <View style={styles.approvedBadge}>
-                <Ionicons name="checkmark" size={11} color={colors.accentDark} />
-                <Text style={styles.approvedText}>GODKÄND</Text>
-              </View>
-            ) : null}
-            {rejected ? (
-              <View style={styles.rejectedBadge}>
-                <Text style={styles.rejectedText}>NEKAD</Text>
-              </View>
-            ) : null}
-          </View>
+          {task.severity === 'kritisk' || task.approval ? (
+            <View style={styles.categoryRow}>
+              {task.severity === 'kritisk' ? (
+                <View style={styles.criticalBadge}>
+                  <Ionicons name="alert-circle" size={13} color={colors.danger} />
+                  <Text style={styles.criticalText}>KRITISK</Text>
+                </View>
+              ) : null}
+              {task.approval === 'godkänd' ? (
+                <View style={styles.approvedBadge}>
+                  <Ionicons name="checkmark" size={13} color={colors.success} />
+                  <Text style={styles.approvedText}>GODKÄND</Text>
+                </View>
+              ) : null}
+              {rejected ? (
+                <View style={styles.rejectedBadge}>
+                  <Text style={styles.rejectedText}>NEKAD</Text>
+                </View>
+              ) : null}
+            </View>
+          ) : null}
           <Text style={styles.title}>{task.title}</Text>
         </View>
         <Text style={[styles.price, rejected && styles.priceStruck]}>{task.price} kr</Text>
@@ -90,18 +92,18 @@ export function TaskCard({
             disabled={voiceState === 'processing'}
           >
             {voiceState === 'processing' ? (
-              <ActivityIndicator size="small" color={colors.accent} />
+              <ActivityIndicator size="small" color={colors.accentLight} />
             ) : (
               <Ionicons
                 name={voiceState === 'recording' ? 'stop' : 'mic-outline'}
-                size={16}
-                color={voiceState === 'recording' ? colors.onAccent : colors.accent}
+                size={22}
+                color={voiceState === 'recording' ? colors.onAccent : colors.accentLight}
               />
             )}
           </Pressable>
         ) : null}
         <Pressable onPress={() => onRemove(task.id)} hitSlop={8} style={styles.remove}>
-          <Ionicons name="close" size={16} color={colors.textFaint} />
+          <Ionicons name="close" size={20} color={colors.textSoft} />
         </Pressable>
       </View>
       {voiceState === 'recording' ? (
@@ -175,13 +177,13 @@ export function TaskCard({
             hitSlop={8}
             style={styles.remove}
           >
-            <Ionicons name="close" size={14} color={colors.textFaint} />
+            <Ionicons name="close" size={18} color={colors.textSoft} />
           </Pressable>
         </View>
       ))}
 
       <Pressable onPress={() => setAdding(true)} style={styles.addProduct}>
-        <Ionicons name="add" size={16} color={colors.accent} />
+        <Ionicons name="add-circle-outline" size={20} color={colors.accentLight} />
         <Text style={styles.addProductText}>Lägg till produkt</Text>
       </Pressable>
       <AddProductModal
@@ -204,7 +206,7 @@ export function TaskCard({
             <Ionicons
               name="checkmark"
               size={16}
-              color={task.approval === 'godkänd' ? colors.onAccent : colors.accent}
+              color={task.approval === 'godkänd' ? colors.onAccent : colors.accentLight}
             />
             <Text
               style={[
@@ -230,6 +232,6 @@ export function TaskCard({
           </Pressable>
         </View>
       ) : null}
-    </View>
+    </CategoryCard>
   );
 }

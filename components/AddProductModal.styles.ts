@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   sheet: {
@@ -16,8 +16,8 @@ export const styles = StyleSheet.create({
   heading: {
     flex: 1,
     color: colors.text,
-    fontWeight: '700',
-    fontSize: 18,
+    fontFamily: fonts.displayBold,
+    fontSize: fontSize.title,
   },
   close: {
     width: 30,
@@ -44,8 +44,9 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 14,
   },
   chipText: {
+    fontSize: fontSize.body,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   searchRow: {
     flexDirection: 'row',
@@ -61,6 +62,8 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   search: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     flex: 1,
     color: colors.text,
     paddingVertical: 11,
@@ -73,10 +76,13 @@ export const styles = StyleSheet.create({
     marginBottom: 12,
   },
   checkLabel: {
+    fontSize: fontSize.body,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   error: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.danger,
     marginHorizontal: 20,
     marginBottom: 10,
@@ -88,6 +94,8 @@ export const styles = StyleSheet.create({
     marginBottom: 10,
   },
   input: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     backgroundColor: colors.card,
     borderRadius: radius.md,
     borderCurve: 'continuous',
@@ -117,8 +125,9 @@ export const styles = StyleSheet.create({
     opacity: 0.4,
   },
   addButtonText: {
+    fontSize: fontSize.body,
     color: colors.onAccent,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   listContent: {
     paddingHorizontal: 20,
@@ -145,14 +154,17 @@ export const styles = StyleSheet.create({
     gap: 2,
   },
   rowTitle: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.text,
   },
   rowMeta: {
     color: colors.textFaint,
-    fontSize: 11,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   rowPrice: {
+    fontSize: fontSize.body,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
 });

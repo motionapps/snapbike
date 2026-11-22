@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   buttons: {
@@ -20,8 +20,9 @@ export const styles = StyleSheet.create({
     paddingVertical: 14,
   },
   buttonText: {
-    color: colors.accent,
-    fontWeight: '600',
+    fontSize: fontSize.body,
+    color: colors.accentLight,
+    fontFamily: fonts.semiBold,
   },
   card: {
     flexDirection: 'row',
@@ -42,12 +43,13 @@ export const styles = StyleSheet.create({
     gap: 2,
   },
   name: {
+    fontSize: fontSize.body,
     color: colors.text,
-    fontWeight: '700',
+    fontFamily: fonts.bold,
   },
   meta: {
     color: colors.textSecondary,
-    fontSize: 12,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   iconButton: {
     padding: 4,

@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius, shadow } from '../lib/theme';
+import { colors, radius, shadow, fonts, fontSize } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   card: {
@@ -28,10 +28,13 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   emptyTitle: {
+    fontSize: fontSize.emphasis,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   emptyHint: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textFaint,
   },
   retakeBadge: {
@@ -45,10 +48,11 @@ export const styles = StyleSheet.create({
     paddingVertical: 7,
     borderRadius: radius.xl,
     borderCurve: 'continuous',
-    backgroundColor: 'rgba(11, 15, 20, 0.65)',
+    backgroundColor: 'rgba(21, 27, 36, 0.65)',
   },
   retakeText: {
+    fontSize: fontSize.body,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
 });

@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius } from '../lib/theme';
+import { colors, gutter, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   buttonRow: {
@@ -23,8 +23,8 @@ export const styles = StyleSheet.create({
   },
   noteButtonText: {
     color: colors.text,
-    fontWeight: '600',
-    fontSize: 12,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSize.small,
   },
   sheet: {
     flex: 1,
@@ -78,8 +78,8 @@ export const styles = StyleSheet.create({
   },
   selectButtonText: {
     color: colors.text,
-    fontWeight: '600',
-    fontSize: 15,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSize.body,
   },
   deleteButton: {
     marginTop: 48,
@@ -95,13 +95,13 @@ export const styles = StyleSheet.create({
   },
   deleteButtonText: {
     color: colors.danger,
-    fontWeight: '600',
-    fontSize: 15,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSize.body,
   },
   actionButtonText: {
     color: colors.onAccent,
-    fontWeight: '700',
-    fontSize: 15,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.body,
   },
   photo: {
     width: '100%',
@@ -120,6 +120,8 @@ export const styles = StyleSheet.create({
     gap: 10,
   },
   overviewEmpty: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
   overviewRow: {
@@ -129,12 +131,13 @@ export const styles = StyleSheet.create({
     borderBottomColor: colors.border,
   },
   overviewTitle: {
+    fontSize: fontSize.emphasis,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   overviewLine: {
     color: colors.textSecondary,
-    fontSize: 13,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   totalRow: {
     flexDirection: 'row',
@@ -143,12 +146,13 @@ export const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
   totalLabel: {
+    fontSize: fontSize.body,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   totalValue: {
     color: colors.text,
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: fontSize.title,
+    fontFamily: fonts.displayExtraBold,
   },
 });

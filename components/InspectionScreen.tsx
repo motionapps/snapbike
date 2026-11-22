@@ -462,14 +462,16 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
                 }}
               >
                 <View style={styles.sectionHeader}>
-                  <Ionicons
-                    name={section.icon as never}
-                    size={16}
-                    color={sectionDone ? colors.accent : colors.textSecondary}
-                  />
+                  <View style={styles.sectionIcon}>
+                    <Ionicons
+                      name={section.icon as never}
+                      size={24}
+                      color={sectionDone ? colors.success : colors.accentLight}
+                    />
+                  </View>
                   <Text style={styles.sectionTitle}>{section.title}</Text>
                   {sectionDone ? (
-                    <Ionicons name="checkmark-circle" size={16} color={colors.accent} />
+                    <Ionicons name="checkmark-circle" size={24} color={colors.success} />
                   ) : null}
                 </View>
 
@@ -522,7 +524,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
                           </Text>
                         </View>
                         <View style={styles.statusRow}>
-                          {statusButton('checkmark', 'ok', colors.accent, true)}
+                          {statusButton('checkmark', 'ok', colors.success, true)}
                           {statusButton('warning', 'issue', colors.danger, true)}
                           {statusButton('remove', 'skip', colors.textSecondary, false)}
                         </View>
@@ -567,7 +569,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
                     <Ionicons
                       name="checkmark-done-outline"
                       size={18}
-                      color={colors.accent}
+                      color={colors.accentLight}
                     />
                     <Text style={styles.allOkText}>Resten av sektionen OK</Text>
                   </Pressable>
@@ -578,11 +580,13 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
 
           <View style={styles.summary}>
             <View style={styles.sectionHeader}>
-              <Ionicons
-                name="flag-outline"
-                size={16}
-                color={done ? colors.accent : colors.textSecondary}
-              />
+              <View style={styles.sectionIcon}>
+                <Ionicons
+                  name="flag-outline"
+                  size={24}
+                  color={done ? colors.success : colors.accentLight}
+                />
+              </View>
               <Text style={styles.sectionTitle}>Sammanfattning</Text>
               <Text style={styles.summaryCount}>
                 {checkedCount}/{itemCount}
@@ -598,7 +602,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
                 <Ionicons
                   name="checkmark-circle-outline"
                   size={28}
-                  color={colors.accent}
+                  color={colors.accentLight}
                 />
                 <Text style={styles.noIssuesText}>
                   {done ? 'Inga anmärkningar' : 'Inga anmärkningar hittills'}
@@ -698,7 +702,7 @@ function StatusButton({
       <Ionicons
         name={icon as never}
         size={23}
-        color={active ? colors.bg : colors.textFaint}
+        color={active ? colors.bg : colors.textSoft}
       />
     </Pressable>
   );

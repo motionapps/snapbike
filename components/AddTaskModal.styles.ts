@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fontSize, fonts } from '../lib/theme';
 
 /** Fixed card height, so the square image always matches it. */
 const ROW_HEIGHT = 76;
@@ -19,8 +19,8 @@ export const styles = StyleSheet.create({
   heading: {
     flex: 1,
     color: colors.text,
-    fontWeight: '700',
-    fontSize: 18,
+    fontFamily: fonts.displayBold,
+    fontSize: fontSize.title,
   },
   close: {
     width: 30,
@@ -44,6 +44,8 @@ export const styles = StyleSheet.create({
     borderColor: colors.border,
   },
   search: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     flex: 1,
     color: colors.text,
     paddingVertical: 11,
@@ -68,12 +70,12 @@ export const styles = StyleSheet.create({
   },
   chipActive: {
     backgroundColor: colors.accent,
-    borderColor: colors.accent,
+    borderColor: colors.accentLight,
   },
   chipText: {
     color: colors.textSecondary,
-    fontWeight: '600',
-    fontSize: 13,
+    fontFamily: fonts.semiBold,
+    fontSize: fontSize.small,
   },
   chipTextActive: {
     color: colors.onAccent,
@@ -113,16 +115,19 @@ export const styles = StyleSheet.create({
     gap: 2,
   },
   rowCategory: {
-    color: colors.accent,
-    fontWeight: '700',
-    fontSize: 10,
+    color: colors.accentLight,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.small,
     letterSpacing: 1,
   },
   rowTitle: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.text,
   },
   rowPrice: {
+    fontSize: fontSize.body,
     color: colors.textSecondary,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
 });

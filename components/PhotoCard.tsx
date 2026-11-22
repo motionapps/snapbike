@@ -31,7 +31,7 @@ export function PhotoCard({ uri, onTakePhoto }: Props) {
       ) : (
         <View style={styles.empty}>
           <View style={styles.iconCircle}>
-            <Ionicons name="camera-outline" size={30} color={colors.accent} />
+            <Ionicons name="camera-outline" size={30} color={colors.accentLight} />
           </View>
           <Text style={styles.emptyTitle}>Fota cykeln</Text>
           <Text style={styles.emptyHint}>Tryck för att öppna kameran</Text>

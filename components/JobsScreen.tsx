@@ -229,7 +229,7 @@ export function JobsScreen({
           {jobs ? `${visible.length} st` : ''}
         </Text>
         <Pressable onPress={onNewJob} style={styles.newJob} hitSlop={8}>
-          <Ionicons name="add" size={16} color={colors.onAccent} />
+          <Ionicons name="add" size={20} color={colors.onAccent} />
           <Text style={styles.newJobText}>Nytt jobb</Text>
         </Pressable>
       </View>
@@ -290,7 +290,7 @@ export function JobsScreen({
 
       {jobs === null && !error ? (
         <View style={styles.loading}>
-          <ActivityIndicator color={colors.accent} />
+          <ActivityIndicator color={colors.accentLight} />
         </View>
       ) : (
         <FlatList
@@ -303,7 +303,7 @@ export function JobsScreen({
             <RefreshControl
               refreshing={refreshing}
               onRefresh={refresh}
-              tintColor={colors.accent}
+              tintColor={colors.accentLight}
             />
           }
           keyboardShouldPersistTaps="handled"

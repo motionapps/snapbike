@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, shadow } from '../lib/theme';
+import { colors, shadow, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   wrap: {
@@ -17,7 +17,7 @@ export const styles = StyleSheet.create({
     width: 84,
     height: 84,
     borderRadius: 42,
-    backgroundColor: 'rgba(255, 69, 58, 0.25)',
+    backgroundColor: 'rgba(229, 72, 77, 0.25)',
   },
   haloHidden: {
     opacity: 0,
@@ -33,12 +33,14 @@ export const styles = StyleSheet.create({
   },
   buttonRecording: {
     backgroundColor: colors.recording,
-    boxShadow: '0 6px 20px rgba(255, 69, 58, 0.35)',
+    boxShadow: '0 6px 20px rgba(229, 72, 77, 0.35)',
   },
   buttonPressed: {
     opacity: 0.85,
   },
   label: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     color: colors.textSecondary,
   },
 });

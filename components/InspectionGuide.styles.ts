@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, radius } from '../lib/theme';
+import { colors, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   card: {
@@ -18,13 +18,13 @@ export const styles = StyleSheet.create({
   },
   heading: {
     color: colors.textFaint,
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
     letterSpacing: 1,
   },
   stepText: {
     color: colors.textFaint,
-    fontSize: 11,
+    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   chips: {
     gap: 6,
@@ -35,8 +35,8 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.border,
     backgroundColor: colors.cardRaised,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
   chipActive: {
     backgroundColor: colors.accent,
@@ -44,16 +44,16 @@ export const styles = StyleSheet.create({
   },
   chipText: {
     color: colors.textSecondary,
-    fontSize: 12,
-    fontWeight: '600',
+    fontSize: fontSize.body,
+    fontFamily: fonts.semiBold,
   },
   chipTextActive: {
     color: colors.onAccent,
   },
   sectionTitle: {
     color: colors.text,
-    fontWeight: '700',
-    fontSize: 14,
+    fontFamily: fonts.bold,
+    fontSize: fontSize.body,
     marginTop: 2,
   },
   itemRow: {
@@ -63,22 +63,24 @@ export const styles = StyleSheet.create({
     paddingLeft: 2,
   },
   bullet: {
-    width: 5,
-    height: 5,
+    width: 6,
+    height: 6,
     borderRadius: 3,
-    backgroundColor: colors.accent,
-    marginTop: 7,
+    backgroundColor: colors.accentLight,
+    marginTop: 8,
   },
   itemText: {
     flex: 1,
-    fontSize: 13,
-    lineHeight: 19,
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
+    lineHeight: 22,
   },
   itemTitle: {
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   itemHint: {
+    fontFamily: fonts.regular,
     color: colors.textFaint,
   },
   navRow: {
@@ -87,9 +89,9 @@ export const styles = StyleSheet.create({
     gap: 8,
   },
   navButton: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.cardRaised,

@@ -94,7 +94,7 @@ export function StatusPill({ status, onChange }: Props) {
                 <View style={[styles.dot, { backgroundColor: statusColors[s] }]} />
                 <Text style={styles.optionText}>{STATUS_LABELS[s]}</Text>
                 {s === status ? (
-                  <Ionicons name="checkmark" size={17} color={colors.accent} />
+                  <Ionicons name="checkmark" size={17} color={colors.accentLight} />
                 ) : null}
               </Pressable>
             ))}

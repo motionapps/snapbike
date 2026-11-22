@@ -51,7 +51,7 @@ export function BookingPickerModal({ visible, onClose, onPick }: Props) {
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         {bookings === null && !error ? (
-          <ActivityIndicator color={colors.accent} style={styles.loading} />
+          <ActivityIndicator color={colors.accentLight} style={styles.loading} />
         ) : (
           <FlatList
             data={bookings ?? []}

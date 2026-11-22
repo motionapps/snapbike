@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors } from '../lib/theme';
+import { colors, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   header: {
@@ -10,15 +10,20 @@ export const styles = StyleSheet.create({
     paddingVertical: 13,
   },
   headerText: {
+    fontSize: fontSize.body,
     flex: 1,
     color: colors.text,
-    fontWeight: '600',
+    fontFamily: fonts.semiBold,
   },
   headerFaint: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     flex: 1,
     color: colors.textSecondary,
   },
   errorText: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
     flex: 1,
     color: colors.danger,
   },
@@ -57,12 +62,12 @@ export const styles = StyleSheet.create({
   rowLabel: {
     width: 130,
     color: colors.textSecondary,
-    fontSize: 16,
+    fontSize: fontSize.emphasis, fontFamily: fonts.regular,
   },
   rowValue: {
     flex: 1,
     color: colors.text,
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: fontSize.emphasis,
+    fontFamily: fonts.semiBold,
   },
 });

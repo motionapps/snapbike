@@ -161,7 +161,7 @@ function CommentButton({
       <Ionicons
         name={filled ? 'chatbubble' : 'chatbubble-outline'}
         size={14}
-        color={filled ? colors.accent : '#FFFFFF'}
+        color={filled ? colors.accentLight : '#FFFFFF'}
       />
       <Text style={styles.commentButtonText}>{label}</Text>
     </Pressable>
