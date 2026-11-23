@@ -65,6 +65,8 @@ type Props = {
   /** The job's status, shown at the end of the row. */
   status: JobStatus | null;
   topInset: number;
+  /** Browser: one row at the right end of the top nav. */
+  compact?: boolean;
   onPress: () => void;
   /** Shows the Verkstadskommentar/Kundkommentar buttons; null hides them. */
   comments: JobComments | null;
@@ -78,6 +80,7 @@ export function CurrentBikeBar({
   bikeNumber,
   status,
   topInset,
+  compact = false,
   onPress,
   comments,
   onOpenComment,
@@ -89,6 +92,56 @@ export function CurrentBikeBar({
   const background = bike ? bikeColorHex(bike.color) : colors.cardRaised;
   const textColor = bike ? textColorOnBike(bike.color) : '#FFFFFF';
   const warning = customerWarning(customer);
+
+  if (compact) {
+    return (
+      <View style={styles.compact}>
+        <Pressable
+          onPress={onPress}
+          style={[styles.row, styles.compactChip, { backgroundColor: background }]}
+        >
+          <Ionicons name="bicycle" size={15} color={textColor} />
+          {bikeNumber ? (
+            <Text style={[styles.tag, { color: textColor }]}>#{bikeNumber}</Text>
+          ) : null}
+          <Text style={[styles.name, { color: textColor }]} numberOfLines={1}>
+            {name || 'Okänd kund'}
+            {bikeText ? <Text style={styles.compactBike}> · {bikeText}</Text> : null}
+          </Text>
+          {warning ? (
+            <View style={styles.warning}>
+              <Ionicons name="warning" size={14} color={colors.danger} />
+              <Text style={styles.warningText} numberOfLines={1}>
+                {warning}
+              </Text>
+            </View>
+          ) : null}
+          {status ? (
+            <View style={styles.status}>
+              <View style={[styles.statusDot, { backgroundColor: statusColors[status] }]} />
+              <Text style={styles.statusText} numberOfLines={1}>
+                {STATUS_LABELS[status]}
+              </Text>
+            </View>
+          ) : null}
+        </Pressable>
+        {comments ? (
+          <>
+            <CommentButton
+              label="Verkstadskommentar"
+              filled={comments.mechanicComment.trim() !== ''}
+              onPress={() => onOpenComment('mechanicComment')}
+            />
+            <CommentButton
+              label="Kundkommentar"
+              filled={comments.customerComment.trim() !== ''}
+              onPress={() => onOpenComment('customerComment')}
+            />
+          </>
+        ) : null}
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.bar, { backgroundColor: background, paddingTop: topInset }]}>

@@ -7,6 +7,26 @@ export const styles = StyleSheet.create({
     paddingBottom: 6,
     gap: 6,
   },
+  // Browser: pushed to the right end of the top nav.
+  compact: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginLeft: 'auto',
+    flexShrink: 1,
+    minWidth: 0,
+  },
+  compactChip: {
+    flexShrink: 1,
+    minWidth: 0,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  compactBike: {
+    fontFamily: fonts.regular,
+    opacity: 0.85,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

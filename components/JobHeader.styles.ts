@@ -1,12 +1,12 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius, fontSize, fonts } from '../lib/theme';
+import { colors, gutter, inset, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 14,
-    paddingHorizontal: gutter,
+    paddingHorizontal: inset,
     paddingTop: 18,
     paddingBottom: 14,
     borderBottomWidth: 1,

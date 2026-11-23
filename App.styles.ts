@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius, fontSize, fonts } from './lib/theme';
+import { colors, gutter, inset, radius, fontSize, fonts } from './lib/theme';
 
 export const styles = StyleSheet.create({
   root: {
@@ -9,10 +9,11 @@ export const styles = StyleSheet.create({
   // Browser nav: mono uppercase labels, the active one underlined (BikeOffice style).
   topNav: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 32,
     paddingTop: 20,
     paddingBottom: 14,
-    paddingHorizontal: gutter,
+    paddingHorizontal: inset,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
   },

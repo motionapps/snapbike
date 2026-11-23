@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius, fontSize, fonts } from '../lib/theme';
+import { colors, gutter, inset, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   sheet: {
@@ -33,7 +33,7 @@ export const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    marginHorizontal: gutter,
+    marginHorizontal: inset,
     marginBottom: 24,
     padding: 14,
     backgroundColor: colors.card,
@@ -50,7 +50,7 @@ export const styles = StyleSheet.create({
     color: colors.textFaint,
   },
   textContent: {
-    paddingHorizontal: gutter,
+    paddingHorizontal: inset,
     paddingBottom: 40,
   },
   text: {

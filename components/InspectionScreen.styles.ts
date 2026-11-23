@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius, fontSize, fonts } from '../lib/theme';
+import { colors, gutter, inset, radius, fontSize, fonts } from '../lib/theme';
 
 /** Fixed item row height, so the square image always matches it. */
 const ITEM_ROW_HEIGHT = 76;
@@ -12,7 +12,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 10,
-    paddingHorizontal: gutter,
+    paddingHorizontal: inset,
     paddingBottom: 10,
   },
   title: {
@@ -49,7 +49,7 @@ export const styles = StyleSheet.create({
     marginBottom: 6,
   },
   lockedBanner: {
-    marginHorizontal: gutter,
+    marginHorizontal: inset,
     marginTop: 4,
     marginBottom: 6,
   },
@@ -76,7 +76,7 @@ export const styles = StyleSheet.create({
   },
   compactMic: {
     height: 25,
-    marginHorizontal: gutter,
+    marginHorizontal: inset,
     marginBottom: 6,
     borderRadius: 12.5,
     backgroundColor: colors.recording,

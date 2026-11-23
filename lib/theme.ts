@@ -81,5 +81,10 @@ export const shadow = {
   button: { boxShadow: '0 6px 16px rgba(37, 99, 235, 0.3)' },
 };
 
-/** Side margin of screens: tight on phones, roomier on tablets/desktop. */
-export const gutter = Dimensions.get('window').width < 500 ? 4 : 20;
+const isPhone = Dimensions.get('window').width < 500;
+
+/** Side margin of screens (cards, lists): tight on phones, roomier on tablets/desktop. */
+export const gutter = isPhone ? 4 : 20;
+
+/** Side margin for headers, text and buttons that sit directly at the screen edge. */
+export const inset = isPhone ? 12 : 20;

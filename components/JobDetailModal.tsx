@@ -216,29 +216,6 @@ export function JobDetailModal({
               />
             </View>
 
-            {job.imagePath ? (
-              <Pressable onPress={() => setZoomUri(jobImageUrl(job.imagePath))}>
-                <Image
-                  source={jobImageUrl(job.imagePath)}
-                  style={styles.photo}
-                  contentFit="cover"
-                  transition={200}
-                />
-              </Pressable>
-            ) : null}
-
-            {job.bike ? (
-              <View style={styles.bikeDetailsCard}>
-                <BikeDetails
-                  state={{ status: 'ready', bike: job.bike }}
-                  onRetry={() => {}}
-                  onEdit={() => {
-                    closeThen(() => onEditBikeDetails(job));
-                  }}
-                />
-              </View>
-            ) : null}
-
             <View style={styles.buttonRow}>
               {nextAction ? (
                 <Pressable
@@ -275,6 +252,29 @@ export function JobDetailModal({
                 </Text>
               </Pressable>
             </View>
+
+            {job.imagePath ? (
+              <Pressable onPress={() => setZoomUri(jobImageUrl(job.imagePath))}>
+                <Image
+                  source={jobImageUrl(job.imagePath)}
+                  style={styles.photo}
+                  contentFit="cover"
+                  transition={200}
+                />
+              </Pressable>
+            ) : null}
+
+            {job.bike ? (
+              <View style={styles.bikeDetailsCard}>
+                <BikeDetails
+                  state={{ status: 'ready', bike: job.bike }}
+                  onRetry={() => {}}
+                  onEdit={() => {
+                    closeThen(() => onEditBikeDetails(job));
+                  }}
+                />
+              </View>
+            ) : null}
 
             <View style={styles.overview}>
               {overviewTasks.length === 0 ? (

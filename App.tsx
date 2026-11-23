@@ -45,6 +45,7 @@ import { MicButton, MicPhase } from './components/MicButton';
 import { DoneButton, LockedBanner, StepLock } from './components/StepDone';
 import { STEP_STATUS, StepTab, stepDone } from './lib/jobSteps';
 import { PhotoCard } from './components/PhotoCard';
+import { ManualBikeModal } from './components/ManualBikeModal';
 import { analyzeBikePhoto, BikeData } from './lib/bikeAnalysis';
 import { classifyItemKind } from './lib/itemKind';
 import { pricesFor } from './lib/prices';
@@ -144,6 +145,7 @@ function jobSignature(s: JobSnapshot): string {
 function snapshotIsEmpty(s: JobSnapshot): boolean {
   return (
     !s.photoUri &&
+    !s.bike &&
     !s.transcript &&
     s.tasks.length === 0 &&
     s.inspectionTasks.length === 0 &&
@@ -205,6 +207,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   const [transcriptOpen, setTranscriptOpen] = useState(false);
   const [showDropIn, setShowDropIn] = useState(false);
   const [showBookings, setShowBookings] = useState(false);
+  const [showManualBike, setShowManualBike] = useState(false);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('idle');
   const [voiceEditId, setVoiceEditId] = useState<string | null>(null);
   const [voiceEditRecording, setVoiceEditRecording] = useState(false);
@@ -753,7 +756,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
           <View style={styles.titleRow}>
             <Text style={styles.title}>SnapBike</Text>
             <Text style={styles.subtitle}>Verkstadsanteckning</Text>
-            {transcript || tasks.length > 0 || photoUri ? (
+            {transcript || tasks.length > 0 || photoUri || bike ? (
               <Pressable onPress={newOrder} style={styles.newOrder} hitSlop={8}>
                 <Ionicons name="add" size={15} color={colors.textSoft} />
                 <Text style={styles.newOrderText}>Ny order</Text>
@@ -768,19 +771,23 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
               style={styles.photoSection}
               onLayout={(e) => (photoSectionY.current = e.nativeEvent.layout.y)}
             >
-              <PhotoCard uri={photoUri} onTakePhoto={takePhoto} />
+              <PhotoCard
+                uri={photoUri}
+                onTakePhoto={takePhoto}
+                onAddManually={bike ? undefined : () => setShowManualBike(true)}
+              />
               {photoUri && itemKind && itemKind !== 'bike' ? (
                 <View style={styles.bikeDetailsCard}>
                   <Text style={styles.itemKindText}>{ITEM_KIND_LABELS[itemKind]}</Text>
                 </View>
               ) : null}
-              {photoUri && bikeAnalysis.status !== 'idle' ? (
+              {(photoUri || bike) && bikeAnalysis.status !== 'idle' ? (
                 <View
                   style={styles.bikeDetailsCard}
                   onLayout={(e) => (bikeDetailsY.current = e.nativeEvent.layout.y)}
                 >
                   <BikeDetails
-                    key={photoUri}
+                    key={photoUri ?? 'manual'}
                     expandNonce={focusBikeNonce}
                     state={bikeAnalysis}
                     onRetry={runBikeAnalysis}
@@ -918,6 +925,17 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
         onClose={() => setShowBookings(false)}
         onPick={importBooking}
       />
+      <ManualBikeModal
+        visible={showManualBike}
+        initial={bike}
+        onClose={() => setShowManualBike(false)}
+        onSave={(data) => {
+          // A manual entry wins over any analysis still running.
+          analysisRun.current++;
+          setItemKind('bike');
+          setBikeAnalysis({ status: 'ready', bike: data });
+        }}
+      />
     </View>
   );
 }
@@ -1036,6 +1054,27 @@ function Root() {
   const currentBike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike.bike : null;
   const hasCurrentBike = order.customer !== null || currentBike !== null;
 
+  const currentBikeBar = (
+    <CurrentBikeBar
+      customer={order.customer}
+      bike={currentBike}
+      bikeNumber={order.bikeNumber}
+      status={currentStatus}
+      topInset={IS_WEB ? 0 : insets.top}
+      compact={IS_WEB}
+      onPress={openCurrentJob}
+      comments={tab === 'note' || tab === 'inspect' || tab === 'jobList' ? comments : null}
+      onOpenComment={(field) =>
+        setBarNote([
+          field === 'customerComment'
+            ? // Written by the customer when booking: read-only.
+            { title: 'Kundkommentar', text: comments.customerComment }
+            : { title: 'Verkstadskommentar', text: comments.mechanicComment, field },
+        ])
+      }
+    />
+  );
+
   return (
     <OrderContext.Provider
       value={{
@@ -1090,28 +1129,11 @@ function Root() {
                 </Pressable>
               );
             })}
+            {hasCurrentBike ? currentBikeBar : null}
           </View>
         ) : null}
 
-        {hasCurrentBike ? (
-          <CurrentBikeBar
-            customer={order.customer}
-            bike={currentBike}
-            bikeNumber={order.bikeNumber}
-            status={currentStatus}
-            topInset={insets.top}
-            onPress={openCurrentJob}
-            comments={tab === 'note' || tab === 'inspect' || tab === 'jobList' ? comments : null}
-            onOpenComment={(field) =>
-              setBarNote([
-                field === 'customerComment'
-                  ? // Written by the customer when booking: read-only.
-                  { title: 'Kundkommentar', text: comments.customerComment }
-                  : { title: 'Verkstadskommentar', text: comments.mechanicComment, field },
-              ])
-            }
-          />
-        ) : null}
+        {hasCurrentBike && !IS_WEB ? currentBikeBar : null}
         <JobNotesModal
           entries={barNote}
           listTitle=""

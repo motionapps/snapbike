@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius, fontSize, fonts } from '../lib/theme';
+import { colors, gutter, inset, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   root: {
@@ -9,7 +9,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 10,
-    paddingHorizontal: gutter,
+    paddingHorizontal: inset,
     paddingBottom: 10,
   },
   title: {
@@ -39,7 +39,7 @@ export const styles = StyleSheet.create({
     fontFamily: fonts.semiBold,
   },
   lockedBanner: {
-    marginHorizontal: gutter,
+    marginHorizontal: inset,
     marginBottom: 8,
   },
   content: {

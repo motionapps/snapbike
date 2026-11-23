@@ -73,10 +73,6 @@ export const styles = StyleSheet.create({
   slot: {
     position: 'relative',
   },
-  slotActive: {
-    zIndex: 10,
-    elevation: 10,
-  },
   suggestions: {
     position: 'absolute',
     top: '100%',

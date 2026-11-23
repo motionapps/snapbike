@@ -1,5 +1,5 @@
 import { StyleSheet } from 'react-native';
-import { colors, gutter, radius, fontSize, fonts } from '../lib/theme';
+import { colors, gutter, inset, radius, fontSize, fonts } from '../lib/theme';
 
 export const styles = StyleSheet.create({
   root: {
@@ -9,7 +9,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'baseline',
     gap: 10,
-    paddingHorizontal: gutter,
+    paddingHorizontal: inset,
     paddingBottom: 14,
   },
   title: {
@@ -41,7 +41,7 @@ export const styles = StyleSheet.create({
   filterRow: {
     flexDirection: 'row',
     gap: 8,
-    paddingHorizontal: gutter,
+    paddingHorizontal: inset,
     paddingBottom: 10,
   },
   filterChip: {
@@ -67,7 +67,7 @@ export const styles = StyleSheet.create({
   searchRow: {
     flexDirection: 'row',
     gap: 8,
-    paddingHorizontal: gutter,
+    paddingHorizontal: inset,
     paddingBottom: 14,
   },
   searchBox: {
@@ -98,7 +98,7 @@ export const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 8,
     alignItems: 'flex-start',
-    marginHorizontal: gutter,
+    marginHorizontal: inset,
     marginBottom: 12,
     backgroundColor: 'rgba(196, 79, 91, 0.1)',
     borderRadius: 14,

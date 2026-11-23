@@ -1,0 +1,1037 @@
+[
+  {
+    "variant": "jevV1",
+    "id": "skeppshult",
+    "run": 0,
+    "ms": 305.96558400000004,
+    "cost": 0.00011797800000000001,
+    "pred": {
+      "color": "gray",
+      "brand": "unknown",
+      "bike_type": "city bike",
+      "gear_front": "none",
+      "gear_back": "hub",
+      "brake_front": "mechanical disc",
+      "brake_back": "roller brake",
+      "damper_front": false,
+      "damper_back": false,
+      "electric": false
+    },
+    "fields": {
+      "color": true,
+      "brand": false,
+      "bike_type": true,
+      "gear_front": true,
+      "gear_back": true,
+      "brake_front": false,
+      "brake_back": false,
+      "damper_front": true,
+      "damper_back": true,
+      "electric": true
+    },
+    "extra": {
+      "usage": {
+        "input_tokens": 2809,
+        "output_tokens": 1051
+      },
+      "answers": {
+        "color": {
+          "type": "choice",
+          "choice": "gray",
+          "confidence": 0.64,
+          "probabilities": {
+            "black": 0.03,
+            "white": 0,
+            "red": 0.07,
+            "blue": 0,
+            "green": 0.15,
+            "yellow": 0,
+            "orange": 0,
+            "purple": 0,
+            "pink": 0,
+            "brown": 0,
+            "gray": 0.66,
+            "silver": 0,
+            "gold": 0,
+            "navy": 0,
+            "maroon": 0.05,
+            "teal": 0.04,
+            "lime": 0,
+            "cyan": 0,
+            "magenta": 0,
+            "beige": 0
+          }
+        },
+        "brand": {
+          "type": "choice",
+          "choice": "unknown",
+          "confidence": 0.24,
+          "probabilities": {
+            "Crescent": 0.01,
+            "Monark": 0.01,
+            "Skeppshult": 0.04,
+            "Kildemoes": 0.01,
+            "Pilen": 0.05,
+            "Sjösala": 0.03,
+            "Ecoride": 0.01,
+            "Lynx": 0.01,
+            "Nishiki": 0.01,
+            "Bianchi": 0,
+            "Trek": 0,
+            "Specialized": 0,
+            "Cannondale": 0,
+            "Giant": 0.01,
+            "Liv": 0.01,
+            "Scott": 0,
+            "Cube": 0,
+            "Merida": 0,
+            "Kona": 0,
+            "Canyon": 0,
+            "Rose": 0,
+            "Orbea": 0,
+            "Cervélo": 0,
+            "Pinarello": 0,
+            "BMC": 0,
+            "Ridley": 0,
+            "Felt": 0,
+            "GT": 0,
+            "Marin": 0,
+            "Santa Cruz": 0,
+            "Norco": 0,
+            "Focus": 0,
+            "Ghost": 0,
+            "Haibike": 0,
+            "Bergamont": 0.02,
+            "Stevens": 0,
+            "Kalkhoff": 0.01,
+            "Riese & Müller": 0.01,
+            "Gazelle": 0.02,
+            "Batavus": 0.02,
+            "Cortina": 0.01,
+            "Babboe": 0.01,
+            "Christiania": 0.01,
+            "Bullitt": 0.01,
+            "Omnium": 0.01,
+            "Tern": 0,
+            "Brompton": 0,
+            "Kross": 0.01,
+            "Polygon": 0,
+            "Electra": 0.01,
+            "Raleigh": 0,
+            "Puch": 0,
+            "Husqvarna": 0.01,
+            "Winther": 0.03,
+            "Centurion": 0,
+            "Mustang": 0.01,
+            "Rex": 0,
+            "Biltema": 0.22,
+            "Superior": 0.01,
+            "Corratec": 0,
+            "Diamant": 0.01,
+            "Victoria": 0.01,
+            "Kettler": 0.02,
+            "Velo de Ville": 0.04,
+            "MATE": 0.01,
+            "Vanmoof": 0.02,
+            "Cowboy": 0.01,
+            "unknown": 0.25
+          }
+        },
+        "bike_type": {
+          "type": "choice",
+          "choice": "city bike",
+          "confidence": 0.92,
+          "probabilities": {
+            "road bike": 0,
+            "mountain bike": 0,
+            "hybrid bike": 0.07,
+            "city bike": 0.93,
+            "kids bike": 0,
+            "cargo bike": 0
+          }
+        },
+        "gear_front": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.82,
+          "probabilities": {
+            "none": 0.91,
+            "external": 0.09
+          }
+        },
+        "gear_back": {
+          "type": "choice",
+          "choice": "hub",
+          "confidence": 0.8,
+          "probabilities": {
+            "hub": 0.9,
+            "external": 0.1
+          }
+        },
+        "brake_front": {
+          "type": "choice",
+          "choice": "mechanical disc",
+          "confidence": 0.31,
+          "probabilities": {
+            "mechanical disc": 0.48,
+            "hydraulic disc": 0.41,
+            "roller brake": 0.03,
+            "mechanical rim": 0.08
+          }
+        },
+        "brake_back": {
+          "type": "choice",
+          "choice": "roller brake",
+          "confidence": 0.24,
+          "probabilities": {
+            "mechanical disc": 0.13,
+            "hydraulic disc": 0.06,
+            "roller brake": 0.39,
+            "mechanical rim": 0.09,
+            "foot brake": 0.33
+          }
+        },
+        "damper_front": {
+          "type": "noul",
+          "noul": 0.1
+        },
+        "damper_back": {
+          "type": "noul",
+          "noul": 0.06
+        },
+        "electric": {
+          "type": "noul",
+          "noul": 0.36
+        }
+      }
+    }
+  },
+  {
+    "variant": "jevV1",
+    "id": "temp1",
+    "run": 0,
+    "ms": 227.39095799999996,
+    "cost": 0.00011222400000000002,
+    "pred": {
+      "color": "black",
+      "brand": "unknown",
+      "bike_type": "city bike",
+      "gear_front": "none",
+      "gear_back": "hub",
+      "brake_front": "mechanical disc",
+      "brake_back": "roller brake",
+      "damper_front": false,
+      "damper_back": false,
+      "electric": false
+    },
+    "fields": {
+      "color": true,
+      "brand": true,
+      "bike_type": true,
+      "gear_front": true,
+      "gear_back": true,
+      "brake_front": false,
+      "brake_back": null,
+      "damper_front": true,
+      "damper_back": true,
+      "electric": true
+    },
+    "extra": {
+      "usage": {
+        "input_tokens": 2672,
+        "output_tokens": 1051
+      },
+      "answers": {
+        "color": {
+          "type": "choice",
+          "choice": "black",
+          "confidence": 0.96,
+          "probabilities": {
+            "black": 0.96,
+            "white": 0,
+            "red": 0,
+            "blue": 0.01,
+            "green": 0,
+            "yellow": 0,
+            "orange": 0,
+            "purple": 0.02,
+            "pink": 0,
+            "brown": 0,
+            "gray": 0,
+            "silver": 0,
+            "gold": 0,
+            "navy": 0.01,
+            "maroon": 0,
+            "teal": 0,
+            "lime": 0,
+            "cyan": 0,
+            "magenta": 0,
+            "beige": 0
+          }
+        },
+        "brand": {
+          "type": "choice",
+          "choice": "unknown",
+          "confidence": 0.19,
+          "probabilities": {
+            "Crescent": 0.07,
+            "Monark": 0.03,
+            "Skeppshult": 0.05,
+            "Kildemoes": 0.01,
+            "Pilen": 0.02,
+            "Sjösala": 0.02,
+            "Ecoride": 0,
+            "Lynx": 0.01,
+            "Nishiki": 0.07,
+            "Bianchi": 0,
+            "Trek": 0,
+            "Specialized": 0,
+            "Cannondale": 0,
+            "Giant": 0.02,
+            "Liv": 0.01,
+            "Scott": 0,
+            "Cube": 0,
+            "Merida": 0,
+            "Kona": 0.01,
+            "Canyon": 0,
+            "Rose": 0,
+            "Orbea": 0,
+            "Cervélo": 0,
+            "Pinarello": 0,
+            "BMC": 0,
+            "Ridley": 0,
+            "Felt": 0,
+            "GT": 0,
+            "Marin": 0,
+            "Santa Cruz": 0,
+            "Norco": 0,
+            "Focus": 0,
+            "Ghost": 0,
+            "Haibike": 0,
+            "Bergamont": 0,
+            "Stevens": 0.01,
+            "Kalkhoff": 0.02,
+            "Riese & Müller": 0,
+            "Gazelle": 0.02,
+            "Batavus": 0.02,
+            "Cortina": 0.01,
+            "Babboe": 0.01,
+            "Christiania": 0.02,
+            "Bullitt": 0.01,
+            "Omnium": 0.02,
+            "Tern": 0,
+            "Brompton": 0,
+            "Kross": 0,
+            "Polygon": 0,
+            "Electra": 0,
+            "Raleigh": 0,
+            "Puch": 0,
+            "Husqvarna": 0.01,
+            "Winther": 0.05,
+            "Centurion": 0.01,
+            "Mustang": 0.01,
+            "Rex": 0,
+            "Biltema": 0.11,
+            "Superior": 0.01,
+            "Corratec": 0,
+            "Diamant": 0.04,
+            "Victoria": 0.01,
+            "Kettler": 0.02,
+            "Velo de Ville": 0.05,
+            "MATE": 0.01,
+            "Vanmoof": 0.01,
+            "Cowboy": 0,
+            "unknown": 0.2
+          }
+        },
+        "bike_type": {
+          "type": "choice",
+          "choice": "city bike",
+          "confidence": 0.57,
+          "probabilities": {
+            "road bike": 0,
+            "mountain bike": 0.01,
+            "hybrid bike": 0.35,
+            "city bike": 0.64,
+            "kids bike": 0,
+            "cargo bike": 0
+          }
+        },
+        "gear_front": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.18,
+          "probabilities": {
+            "none": 0.59,
+            "external": 0.41
+          }
+        },
+        "gear_back": {
+          "type": "choice",
+          "choice": "hub",
+          "confidence": 0.44,
+          "probabilities": {
+            "hub": 0.72,
+            "external": 0.28
+          }
+        },
+        "brake_front": {
+          "type": "choice",
+          "choice": "mechanical disc",
+          "confidence": 0.36,
+          "probabilities": {
+            "mechanical disc": 0.52,
+            "hydraulic disc": 0.31,
+            "roller brake": 0.04,
+            "mechanical rim": 0.13
+          }
+        },
+        "brake_back": {
+          "type": "choice",
+          "choice": "roller brake",
+          "confidence": 0.18,
+          "probabilities": {
+            "mechanical disc": 0.07,
+            "hydraulic disc": 0.02,
+            "roller brake": 0.34,
+            "mechanical rim": 0.25,
+            "foot brake": 0.32
+          }
+        },
+        "damper_front": {
+          "type": "noul",
+          "noul": 0.15
+        },
+        "damper_back": {
+          "type": "noul",
+          "noul": 0.06
+        },
+        "electric": {
+          "type": "noul",
+          "noul": 0.36
+        }
+      }
+    }
+  },
+  {
+    "variant": "jevV1",
+    "id": "temp2",
+    "run": 0,
+    "ms": 221.322583,
+    "cost": 0.00010269000000000001,
+    "pred": {
+      "color": "teal",
+      "brand": "Winther",
+      "bike_type": "city bike",
+      "gear_front": "none",
+      "gear_back": "external",
+      "brake_front": "hydraulic disc",
+      "brake_back": "roller brake",
+      "damper_front": false,
+      "damper_back": false,
+      "electric": true
+    },
+    "fields": {
+      "color": false,
+      "brand": false,
+      "bike_type": false,
+      "gear_front": false,
+      "gear_back": true,
+      "brake_front": true,
+      "brake_back": false,
+      "damper_front": true,
+      "damper_back": true,
+      "electric": true
+    },
+    "extra": {
+      "usage": {
+        "input_tokens": 2445,
+        "output_tokens": 1053
+      },
+      "answers": {
+        "color": {
+          "type": "choice",
+          "choice": "teal",
+          "confidence": 0.74,
+          "probabilities": {
+            "black": 0,
+            "white": 0,
+            "red": 0,
+            "blue": 0.02,
+            "green": 0.06,
+            "yellow": 0,
+            "orange": 0,
+            "purple": 0,
+            "pink": 0,
+            "brown": 0,
+            "gray": 0.02,
+            "silver": 0,
+            "gold": 0,
+            "navy": 0,
+            "maroon": 0,
+            "teal": 0.75,
+            "lime": 0,
+            "cyan": 0.15,
+            "magenta": 0,
+            "beige": 0
+          }
+        },
+        "brand": {
+          "type": "choice",
+          "choice": "Winther",
+          "confidence": 0.24,
+          "probabilities": {
+            "Crescent": 0.02,
+            "Monark": 0.12,
+            "Skeppshult": 0.04,
+            "Kildemoes": 0.08,
+            "Pilen": 0.01,
+            "Sjösala": 0.01,
+            "Ecoride": 0,
+            "Lynx": 0,
+            "Nishiki": 0,
+            "Bianchi": 0,
+            "Trek": 0,
+            "Specialized": 0,
+            "Cannondale": 0,
+            "Giant": 0,
+            "Liv": 0,
+            "Scott": 0,
+            "Cube": 0,
+            "Merida": 0,
+            "Kona": 0,
+            "Canyon": 0,
+            "Rose": 0,
+            "Orbea": 0,
+            "Cervélo": 0,
+            "Pinarello": 0,
+            "BMC": 0,
+            "Ridley": 0,
+            "Felt": 0,
+            "GT": 0,
+            "Marin": 0,
+            "Santa Cruz": 0,
+            "Norco": 0,
+            "Focus": 0,
+            "Ghost": 0,
+            "Haibike": 0,
+            "Bergamont": 0.08,
+            "Stevens": 0,
+            "Kalkhoff": 0.04,
+            "Riese & Müller": 0,
+            "Gazelle": 0,
+            "Batavus": 0.01,
+            "Cortina": 0.02,
+            "Babboe": 0,
+            "Christiania": 0.07,
+            "Bullitt": 0.01,
+            "Omnium": 0.03,
+            "Tern": 0,
+            "Brompton": 0,
+            "Kross": 0,
+            "Polygon": 0,
+            "Electra": 0,
+            "Raleigh": 0,
+            "Puch": 0,
+            "Husqvarna": 0.02,
+            "Winther": 0.25,
+            "Centurion": 0,
+            "Mustang": 0.01,
+            "Rex": 0,
+            "Biltema": 0.08,
+            "Superior": 0.01,
+            "Corratec": 0,
+            "Diamant": 0.01,
+            "Victoria": 0,
+            "Kettler": 0.01,
+            "Velo de Ville": 0.02,
+            "MATE": 0,
+            "Vanmoof": 0.01,
+            "Cowboy": 0,
+            "unknown": 0.04
+          }
+        },
+        "bike_type": {
+          "type": "choice",
+          "choice": "city bike",
+          "confidence": 0.53,
+          "probabilities": {
+            "road bike": 0,
+            "mountain bike": 0,
+            "hybrid bike": 0.39,
+            "city bike": 0.61,
+            "kids bike": 0,
+            "cargo bike": 0
+          }
+        },
+        "gear_front": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.94,
+          "probabilities": {
+            "none": 0.97,
+            "external": 0.03
+          }
+        },
+        "gear_back": {
+          "type": "choice",
+          "choice": "external",
+          "confidence": 0.98,
+          "probabilities": {
+            "hub": 0.01,
+            "external": 0.99
+          }
+        },
+        "brake_front": {
+          "type": "choice",
+          "choice": "hydraulic disc",
+          "confidence": 0.35,
+          "probabilities": {
+            "mechanical disc": 0.47,
+            "hydraulic disc": 0.51,
+            "roller brake": 0.01,
+            "mechanical rim": 0.01
+          }
+        },
+        "brake_back": {
+          "type": "choice",
+          "choice": "roller brake",
+          "confidence": 0.27,
+          "probabilities": {
+            "mechanical disc": 0.17,
+            "hydraulic disc": 0.15,
+            "roller brake": 0.42,
+            "mechanical rim": 0.03,
+            "foot brake": 0.23
+          }
+        },
+        "damper_front": {
+          "type": "noul",
+          "noul": 0.14
+        },
+        "damper_back": {
+          "type": "noul",
+          "noul": 0.03
+        },
+        "electric": {
+          "type": "noul",
+          "noul": 0.98
+        }
+      }
+    }
+  },
+  {
+    "variant": "jevV1",
+    "id": "temp4",
+    "run": 0,
+    "ms": 295.2265000000001,
+    "cost": 0.00020605200000000003,
+    "pred": {
+      "color": "black",
+      "brand": "Trek",
+      "bike_type": "road bike",
+      "gear_front": "none",
+      "gear_back": "external",
+      "brake_front": "hydraulic disc",
+      "brake_back": "hydraulic disc",
+      "damper_front": false,
+      "damper_back": false,
+      "electric": false
+    },
+    "fields": {
+      "color": true,
+      "brand": true,
+      "bike_type": true,
+      "gear_front": false,
+      "gear_back": true,
+      "brake_front": true,
+      "brake_back": true,
+      "damper_front": true,
+      "damper_back": true,
+      "electric": true
+    },
+    "extra": {
+      "usage": {
+        "input_tokens": 4906,
+        "output_tokens": 1054
+      },
+      "answers": {
+        "color": {
+          "type": "choice",
+          "choice": "black",
+          "confidence": 1,
+          "probabilities": {
+            "black": 1,
+            "white": 0,
+            "red": 0,
+            "blue": 0,
+            "green": 0,
+            "yellow": 0,
+            "orange": 0,
+            "purple": 0,
+            "pink": 0,
+            "brown": 0,
+            "gray": 0,
+            "silver": 0,
+            "gold": 0,
+            "navy": 0,
+            "maroon": 0,
+            "teal": 0,
+            "lime": 0,
+            "cyan": 0,
+            "magenta": 0,
+            "beige": 0
+          }
+        },
+        "brand": {
+          "type": "choice",
+          "choice": "Trek",
+          "confidence": 1,
+          "probabilities": {
+            "Crescent": 0,
+            "Monark": 0,
+            "Skeppshult": 0,
+            "Kildemoes": 0,
+            "Pilen": 0,
+            "Sjösala": 0,
+            "Ecoride": 0,
+            "Lynx": 0,
+            "Nishiki": 0,
+            "Bianchi": 0,
+            "Trek": 1,
+            "Specialized": 0,
+            "Cannondale": 0,
+            "Giant": 0,
+            "Liv": 0,
+            "Scott": 0,
+            "Cube": 0,
+            "Merida": 0,
+            "Kona": 0,
+            "Canyon": 0,
+            "Rose": 0,
+            "Orbea": 0,
+            "Cervélo": 0,
+            "Pinarello": 0,
+            "BMC": 0,
+            "Ridley": 0,
+            "Felt": 0,
+            "GT": 0,
+            "Marin": 0,
+            "Santa Cruz": 0,
+            "Norco": 0,
+            "Focus": 0,
+            "Ghost": 0,
+            "Haibike": 0,
+            "Bergamont": 0,
+            "Stevens": 0,
+            "Kalkhoff": 0,
+            "Riese & Müller": 0,
+            "Gazelle": 0,
+            "Batavus": 0,
+            "Cortina": 0,
+            "Babboe": 0,
+            "Christiania": 0,
+            "Bullitt": 0,
+            "Omnium": 0,
+            "Tern": 0,
+            "Brompton": 0,
+            "Kross": 0,
+            "Polygon": 0,
+            "Electra": 0,
+            "Raleigh": 0,
+            "Puch": 0,
+            "Husqvarna": 0,
+            "Winther": 0,
+            "Centurion": 0,
+            "Mustang": 0,
+            "Rex": 0,
+            "Biltema": 0,
+            "Superior": 0,
+            "Corratec": 0,
+            "Diamant": 0,
+            "Victoria": 0,
+            "Kettler": 0,
+            "Velo de Ville": 0,
+            "MATE": 0,
+            "Vanmoof": 0,
+            "Cowboy": 0,
+            "unknown": 0
+          }
+        },
+        "bike_type": {
+          "type": "choice",
+          "choice": "road bike",
+          "confidence": 1,
+          "probabilities": {
+            "road bike": 1,
+            "mountain bike": 0,
+            "hybrid bike": 0,
+            "city bike": 0,
+            "kids bike": 0,
+            "cargo bike": 0
+          }
+        },
+        "gear_front": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 0.92,
+          "probabilities": {
+            "none": 0.96,
+            "external": 0.04
+          }
+        },
+        "gear_back": {
+          "type": "choice",
+          "choice": "external",
+          "confidence": 1,
+          "probabilities": {
+            "hub": 0,
+            "external": 1
+          }
+        },
+        "brake_front": {
+          "type": "choice",
+          "choice": "hydraulic disc",
+          "confidence": 0.79,
+          "probabilities": {
+            "mechanical disc": 0.16,
+            "hydraulic disc": 0.84,
+            "roller brake": 0,
+            "mechanical rim": 0
+          }
+        },
+        "brake_back": {
+          "type": "choice",
+          "choice": "hydraulic disc",
+          "confidence": 0.76,
+          "probabilities": {
+            "mechanical disc": 0.08,
+            "hydraulic disc": 0.81,
+            "roller brake": 0.03,
+            "mechanical rim": 0.02,
+            "foot brake": 0.06
+          }
+        },
+        "damper_front": {
+          "type": "noul",
+          "noul": 0.02
+        },
+        "damper_back": {
+          "type": "noul",
+          "noul": 0.02
+        },
+        "electric": {
+          "type": "noul",
+          "noul": 0.05
+        }
+      }
+    }
+  },
+  {
+    "variant": "jevV1",
+    "id": "temp5",
+    "run": 0,
+    "ms": 206.76433399999996,
+    "cost": 0.00024078600000000002,
+    "pred": {
+      "color": "black",
+      "brand": "Pilen",
+      "bike_type": "city bike",
+      "gear_front": "none",
+      "gear_back": "hub",
+      "brake_front": "mechanical disc",
+      "brake_back": "roller brake",
+      "damper_front": false,
+      "damper_back": false,
+      "electric": true
+    },
+    "fields": {
+      "color": true,
+      "brand": true,
+      "bike_type": true,
+      "gear_front": true,
+      "gear_back": true,
+      "brake_front": true,
+      "brake_back": false,
+      "damper_front": true,
+      "damper_back": true,
+      "electric": true
+    },
+    "extra": {
+      "usage": {
+        "input_tokens": 5733,
+        "output_tokens": 1052
+      },
+      "answers": {
+        "color": {
+          "type": "choice",
+          "choice": "black",
+          "confidence": 1,
+          "probabilities": {
+            "black": 1,
+            "white": 0,
+            "red": 0,
+            "blue": 0,
+            "green": 0,
+            "yellow": 0,
+            "orange": 0,
+            "purple": 0,
+            "pink": 0,
+            "brown": 0,
+            "gray": 0,
+            "silver": 0,
+            "gold": 0,
+            "navy": 0,
+            "maroon": 0,
+            "teal": 0,
+            "lime": 0,
+            "cyan": 0,
+            "magenta": 0,
+            "beige": 0
+          }
+        },
+        "brand": {
+          "type": "choice",
+          "choice": "Pilen",
+          "confidence": 0.99,
+          "probabilities": {
+            "Crescent": 0,
+            "Monark": 0,
+            "Skeppshult": 0,
+            "Kildemoes": 0,
+            "Pilen": 0.99,
+            "Sjösala": 0,
+            "Ecoride": 0,
+            "Lynx": 0,
+            "Nishiki": 0,
+            "Bianchi": 0,
+            "Trek": 0,
+            "Specialized": 0,
+            "Cannondale": 0,
+            "Giant": 0,
+            "Liv": 0,
+            "Scott": 0,
+            "Cube": 0,
+            "Merida": 0,
+            "Kona": 0,
+            "Canyon": 0,
+            "Rose": 0,
+            "Orbea": 0,
+            "Cervélo": 0,
+            "Pinarello": 0,
+            "BMC": 0,
+            "Ridley": 0,
+            "Felt": 0,
+            "GT": 0,
+            "Marin": 0,
+            "Santa Cruz": 0,
+            "Norco": 0,
+            "Focus": 0,
+            "Ghost": 0,
+            "Haibike": 0,
+            "Bergamont": 0,
+            "Stevens": 0,
+            "Kalkhoff": 0,
+            "Riese & Müller": 0,
+            "Gazelle": 0,
+            "Batavus": 0,
+            "Cortina": 0,
+            "Babboe": 0,
+            "Christiania": 0,
+            "Bullitt": 0,
+            "Omnium": 0,
+            "Tern": 0,
+            "Brompton": 0,
+            "Kross": 0,
+            "Polygon": 0,
+            "Electra": 0,
+            "Raleigh": 0,
+            "Puch": 0,
+            "Husqvarna": 0,
+            "Winther": 0,
+            "Centurion": 0,
+            "Mustang": 0,
+            "Rex": 0,
+            "Biltema": 0,
+            "Superior": 0,
+            "Corratec": 0,
+            "Diamant": 0,
+            "Victoria": 0,
+            "Kettler": 0,
+            "Velo de Ville": 0,
+            "MATE": 0,
+            "Vanmoof": 0,
+            "Cowboy": 0,
+            "unknown": 0.01
+          }
+        },
+        "bike_type": {
+          "type": "choice",
+          "choice": "city bike",
+          "confidence": 1,
+          "probabilities": {
+            "road bike": 0,
+            "mountain bike": 0,
+            "hybrid bike": 0,
+            "city bike": 1,
+            "kids bike": 0,
+            "cargo bike": 0
+          }
+        },
+        "gear_front": {
+          "type": "choice",
+          "choice": "none",
+          "confidence": 1,
+          "probabilities": {
+            "none": 1,
+            "external": 0
+          }
+        },
+        "gear_back": {
+          "type": "choice",
+          "choice": "hub",
+          "confidence": 0.9,
+          "probabilities": {
+            "hub": 0.95,
+            "external": 0.05
+          }
+        },
+        "brake_front": {
+          "type": "choice",
+          "choice": "mechanical disc",
+          "confidence": 0.71,
+          "probabilities": {
+            "mechanical disc": 0.78,
+            "hydraulic disc": 0.22,
+            "roller brake": 0,
+            "mechanical rim": 0
+          }
+        },
+        "brake_back": {
+          "type": "choice",
+          "choice": "roller brake",
+          "confidence": 0.41,
+          "probabilities": {
+            "mechanical disc": 0.04,
+            "hydraulic disc": 0.01,
+            "roller brake": 0.53,
+            "mechanical rim": 0.01,
+            "foot brake": 0.41
+          }
+        },
+        "damper_front": {
+          "type": "noul",
+          "noul": 0.08
+        },
+        "damper_back": {
+          "type": "noul",
+          "noul": 0.23
+        },
+        "electric": {
+          "type": "noul",
+          "noul": 0.98
+        }
+      }
+    }
+  }
+]

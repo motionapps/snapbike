@@ -1,0 +1,284 @@
+[
+  {
+    "variant": "openai",
+    "id": "skeppshult",
+    "run": 0,
+    "ms": 6840.090083,
+    "cost": 0.013536,
+    "pred": {
+      "color": "green",
+      "brand": "Skeppshult",
+      "bike_type": "city bike",
+      "gear_front": "none",
+      "gear_back": "hub",
+      "brake_front": "mechanical rim",
+      "brake_back": "foot brake",
+      "damper_front": false,
+      "damper_back": false,
+      "electric": false
+    },
+    "fields": {
+      "color": false,
+      "brand": true,
+      "bike_type": true,
+      "gear_front": true,
+      "gear_back": true,
+      "brake_front": false,
+      "brake_back": true,
+      "damper_front": true,
+      "damper_back": true,
+      "electric": true
+    },
+    "extra": {
+      "input_tokens": 792,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cache_write_tokens_details": {
+          "ttl_12h_tokens": 0,
+          "ttl_30m_tokens": 0
+        },
+        "cached_tokens": 0
+      },
+      "output_tokens": 180,
+      "output_tokens_details": {
+        "reasoning_tokens": 60
+      },
+      "total_tokens": 972
+    }
+  },
+  {
+    "variant": "openai",
+    "id": "temp1",
+    "run": 0,
+    "ms": 3018.754333,
+    "cost": 0.010272,
+    "pred": {
+      "color": "black",
+      "brand": "Unknown",
+      "bike_type": "city bike",
+      "gear_front": "none",
+      "gear_back": "hub",
+      "brake_front": "roller brake",
+      "brake_back": "foot brake",
+      "damper_front": false,
+      "damper_back": false,
+      "electric": false
+    },
+    "fields": {
+      "color": true,
+      "brand": true,
+      "bike_type": true,
+      "gear_front": true,
+      "gear_back": true,
+      "brake_front": false,
+      "brake_back": null,
+      "damper_front": true,
+      "damper_back": true,
+      "electric": true
+    },
+    "extra": {
+      "input_tokens": 719,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cache_write_tokens_details": {
+          "ttl_12h_tokens": 0,
+          "ttl_30m_tokens": 0
+        },
+        "cached_tokens": 0
+      },
+      "output_tokens": 113,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 832
+    }
+  },
+  {
+    "variant": "openai",
+    "id": "temp2",
+    "run": 0,
+    "ms": 4127.8055,
+    "cost": 0.010592,
+    "pred": {
+      "color": "teal",
+      "brand": "Kildemoes",
+      "bike_type": "city bike",
+      "gear_front": "none",
+      "gear_back": "external",
+      "brake_front": "hydraulic disc",
+      "brake_back": "hydraulic disc",
+      "damper_front": false,
+      "damper_back": false,
+      "electric": true
+    },
+    "fields": {
+      "color": false,
+      "brand": true,
+      "bike_type": false,
+      "gear_front": false,
+      "gear_back": true,
+      "brake_front": true,
+      "brake_back": true,
+      "damper_front": true,
+      "damper_back": true,
+      "electric": true
+    },
+    "extra": {
+      "input_tokens": 624,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cache_write_tokens_details": {
+          "ttl_12h_tokens": 0,
+          "ttl_30m_tokens": 0
+        },
+        "cached_tokens": 0
+      },
+      "output_tokens": 140,
+      "output_tokens_details": {
+        "reasoning_tokens": 19
+      },
+      "total_tokens": 764
+    }
+  },
+  {
+    "variant": "openai",
+    "id": "temp3",
+    "run": 0,
+    "ms": 6066.711125,
+    "cost": 0.018984,
+    "pred": {
+      "color": "white",
+      "brand": "Nishiki",
+      "bike_type": "hybrid bike",
+      "gear_front": "external",
+      "gear_back": "external",
+      "brake_front": "hydraulic disc",
+      "brake_back": "hydraulic disc",
+      "damper_front": false,
+      "damper_back": false,
+      "electric": false
+    },
+    "fields": {
+      "color": true,
+      "brand": false,
+      "bike_type": true,
+      "gear_front": true,
+      "gear_back": true,
+      "brake_front": true,
+      "brake_back": true,
+      "damper_front": true,
+      "damper_back": true,
+      "electric": true
+    },
+    "extra": {
+      "input_tokens": 1513,
+      "input_tokens_details": {
+        "cache_write_tokens": 1510,
+        "cache_write_tokens_details": {
+          "ttl_12h_tokens": 0,
+          "ttl_30m_tokens": 1510
+        },
+        "cached_tokens": 0
+      },
+      "output_tokens": 172,
+      "output_tokens_details": {
+        "reasoning_tokens": 52
+      },
+      "total_tokens": 1685
+    }
+  },
+  {
+    "variant": "openai",
+    "id": "temp4",
+    "run": 0,
+    "ms": 4428.0194169999995,
+    "cost": 0.019032,
+    "pred": {
+      "color": "black",
+      "brand": "Trek",
+      "bike_type": "road bike",
+      "gear_front": "external",
+      "gear_back": "external",
+      "brake_front": "hydraulic disc",
+      "brake_back": "hydraulic disc",
+      "damper_front": false,
+      "damper_back": false,
+      "electric": false
+    },
+    "fields": {
+      "color": true,
+      "brand": true,
+      "bike_type": true,
+      "gear_front": true,
+      "gear_back": true,
+      "brake_front": true,
+      "brake_back": true,
+      "damper_front": true,
+      "damper_back": true,
+      "electric": true
+    },
+    "extra": {
+      "input_tokens": 1799,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cache_write_tokens_details": {
+          "ttl_12h_tokens": 0,
+          "ttl_30m_tokens": 0
+        },
+        "cached_tokens": 1796
+      },
+      "output_tokens": 116,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 1915
+    }
+  },
+  {
+    "variant": "openai",
+    "id": "temp5",
+    "run": 0,
+    "ms": 3760.849333000002,
+    "cost": 0.021904,
+    "pred": {
+      "color": "black",
+      "brand": "Pilen",
+      "bike_type": "city bike",
+      "gear_front": "none",
+      "gear_back": "hub",
+      "brake_front": "hydraulic disc",
+      "brake_back": "foot brake",
+      "damper_front": false,
+      "damper_back": false,
+      "electric": true
+    },
+    "fields": {
+      "color": true,
+      "brand": true,
+      "bike_type": true,
+      "gear_front": true,
+      "gear_back": true,
+      "brake_front": true,
+      "brake_back": true,
+      "damper_front": true,
+      "damper_back": true,
+      "electric": true
+    },
+    "extra": {
+      "input_tokens": 2163,
+      "input_tokens_details": {
+        "cache_write_tokens": 0,
+        "cache_write_tokens_details": {
+          "ttl_12h_tokens": 0,
+          "ttl_30m_tokens": 0
+        },
+        "cached_tokens": 2160
+      },
+      "output_tokens": 115,
+      "output_tokens_details": {
+        "reasoning_tokens": 0
+      },
+      "total_tokens": 2278
+    }
+  }
+]

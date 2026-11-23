@@ -7,9 +7,11 @@ import { styles } from './PhotoCard.styles';
 type Props = {
   uri: string | null;
   onTakePhoto: () => void;
+  /** Omitted = no "Lägg till cykel manuellt" link. */
+  onAddManually?: () => void;
 };
 
-export function PhotoCard({ uri, onTakePhoto }: Props) {
+export function PhotoCard({ uri, onTakePhoto, onAddManually }: Props) {
   const { height } = useWindowDimensions();
   const cardHeight = Math.round(height * 0.25);
 
@@ -35,6 +37,11 @@ export function PhotoCard({ uri, onTakePhoto }: Props) {
           </View>
           <Text style={styles.emptyTitle}>Fota cykeln</Text>
           <Text style={styles.emptyHint}>Tryck för att öppna kameran</Text>
+          {onAddManually ? (
+            <Pressable onPress={onAddManually} hitSlop={10}>
+              <Text style={styles.manualLink}>Lägg till cykel manuellt</Text>
+            </Pressable>
+          ) : null}
         </View>
       )}
     </Pressable>

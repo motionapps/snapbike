@@ -37,6 +37,13 @@ export const styles = StyleSheet.create({
     fontFamily: fonts.regular,
     color: colors.textFaint,
   },
+  manualLink: {
+    marginTop: 4,
+    fontSize: fontSize.body,
+    fontFamily: fonts.semiBold,
+    color: colors.accentLight,
+    textDecorationLine: 'underline',
+  },
   retakeBadge: {
     position: 'absolute',
     right: 12,

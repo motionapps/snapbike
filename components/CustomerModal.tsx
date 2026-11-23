@@ -132,15 +132,15 @@ export function CustomerModal({
           contentContainerStyle={[styles.form, webScrollContent]}
           keyboardShouldPersistTaps="handled"
         >
-          <SearchSlot field="firstName" active={searchField}>
+          <SearchSlot layer={3}>
             <Field label="Förnamn" value={customer.firstName} onChange={set('firstName')} autoFocus />
             {suggestionsFor('firstName')}
           </SearchSlot>
-          <SearchSlot field="lastName" active={searchField}>
+          <SearchSlot layer={2}>
             <Field label="Efternamn" value={customer.lastName} onChange={set('lastName')} />
             {suggestionsFor('lastName')}
           </SearchSlot>
-          <SearchSlot field="phone" active={searchField}>
+          <SearchSlot layer={1}>
             <Field
               label="Telefon"
               value={customer.phone}
@@ -197,18 +197,14 @@ export function CustomerModal({
   );
 }
 
-/** Holds a searchable field; the active one sits above its siblings so its suggestions overlay them. */
-function SearchSlot({
-  field,
-  active,
-  children,
-}: {
-  field: SearchField;
-  active: SearchField | null;
-  children: ReactNode;
-}) {
-  const on = field === active;
-  return <View style={[styles.slot, on && styles.slotActive]}>{children}</View>;
+/**
+ * Holds a searchable field. Each slot keeps a fixed layer, higher than the
+ * fields below it, so its suggestions overlay them. The layer must not change
+ * while typing: changing zIndex reorders the native views and the input loses
+ * focus, which dismisses the keyboard.
+ */
+function SearchSlot({ layer, children }: { layer: number; children: ReactNode }) {
+  return <View style={[styles.slot, { zIndex: layer, elevation: layer }]}>{children}</View>;
 }
 
 function Field({

@@ -1,11 +1,14 @@
+## info
+Väldigt lågupplöst.
+
 ## korrekt
-Färg: grå
-Märke: Skeppshult
-Typ: Stadscykel
-Växel fram: ingen
-Växel bak: Nav
-Broms fram: Rullbroms
-Broms bak: Fotbroms
+Färg: vit
+Märke: Bianchi
+Typ: hybrid
+Växel fram: Utvändig
+Växel bak: Utvändig
+Broms fram: Skivbroms
+Broms bak: Skivbroms
 Dämpning fram: nej
 Dämpning bak: nej
 Elcykel: nej
