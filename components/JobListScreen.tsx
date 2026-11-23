@@ -34,6 +34,7 @@ import { ChecklistRow, TaskDetailModal } from './TaskChecklist';
 import { TaskCard } from './TaskCard';
 import { styles } from './JobListScreen.styles';
 import { webScroll, webScrollContent } from '../lib/webEdge';
+import { FitPressable } from './FitPressable';
 
 const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
 
@@ -430,11 +431,12 @@ export function JobListScreen({ active }: { active: boolean }) {
             {busy ? <ActivityIndicator color={colors.textSecondary} /> : null}
             {changed ? (
               <>
-                <PrimaryButton label="Skicka igen" icon="send" disabled={busy} onPress={send} />
+                <PrimaryButton label="Skicka igen" icon="send" disabled={busy} fit onPress={send} />
                 <SecondaryButton
                   label="Muntligt godkänt av kund"
                   icon="call-outline"
                   disabled={busy}
+                  fit
                   onPress={approveVerbally}
                 />
               </>
@@ -622,22 +624,26 @@ function PrimaryButton({
   label,
   icon,
   disabled,
+  fit,
   onPress,
 }: {
   label: string;
   icon: string;
   disabled?: boolean;
+  /** Standalone (not in a row): fitted and centered on wider screens. */
+  fit?: boolean;
   onPress: () => void;
 }) {
+  const Button = fit ? FitPressable : Pressable;
   return (
-    <Pressable
+    <Button
       onPress={onPress}
       disabled={disabled}
       style={[styles.primary, disabled && styles.buttonDisabled]}
     >
       <Ionicons name={icon as never} size={18} color={colors.onAccent} />
       <Text style={styles.primaryText}>{label}</Text>
-    </Pressable>
+    </Button>
   );
 }
 
@@ -645,21 +651,25 @@ function SecondaryButton({
   label,
   icon,
   disabled,
+  fit,
   onPress,
 }: {
   label: string;
   icon: string;
   disabled?: boolean;
+  /** Standalone (not in a row): fitted and centered on wider screens. */
+  fit?: boolean;
   onPress: () => void;
 }) {
+  const Button = fit ? FitPressable : Pressable;
   return (
-    <Pressable
+    <Button
       onPress={onPress}
       disabled={disabled}
       style={[styles.secondary, disabled && styles.buttonDisabled]}
     >
       <Ionicons name={icon as never} size={18} color={colors.text} />
       <Text style={styles.secondaryText}>{label}</Text>
-    </Pressable>
+    </Button>
   );
 }

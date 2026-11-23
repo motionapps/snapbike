@@ -52,7 +52,8 @@ import { MicButton, MicPhase } from './MicButton';
 import { DoneButton, LockedBanner, StepLock, useSetStepDone, useStepLocked } from './StepDone';
 import { WaveText } from './WaveText';
 import { styles } from './InspectionScreen.styles';
-import { webButton, webGrid, webHalf, webScroll, webScrollContent } from '../lib/webEdge';
+import { webGrid, webHalf, webScroll, webScrollContent } from '../lib/webEdge';
+import { FitPressable } from './FitPressable';
 
 /** How the inspection works, behind the info button. Constant so the modal doesn't reset on render. */
 const HELP_ENTRIES = [
@@ -565,9 +566,9 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
                 </View>
 
                 {!sectionDone ? (
-                  <Pressable
+                  <FitPressable
                     onPress={() => markSectionOk(sectionIndex)}
-                    style={[styles.allOk, webButton]}
+                    style={styles.allOk}
                   >
                     <Ionicons
                       name="checkmark-done-outline"
@@ -575,7 +576,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
                       color={colors.accentLight}
                     />
                     <Text style={styles.allOkText}>Resten av sektionen OK</Text>
-                  </Pressable>
+                  </FitPressable>
                 ) : null}
               </View>
             );
@@ -629,10 +630,10 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
             )}
 
             {!stepLocked ? (
-              <Pressable
+              <FitPressable
                 onPress={createTasks}
                 disabled={creatingTasks}
-                style={[styles.createTasks, webButton, creatingTasks && styles.createTasksBusy]}
+                style={[styles.createTasks, creatingTasks && styles.createTasksBusy]}
               >
                 {creatingTasks ? (
                   <ActivityIndicator color={colors.onAccent} />
@@ -646,7 +647,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
                     <Text style={styles.createTasksText}>Klar, skapa jobblista</Text>
                   </>
                 )}
-              </Pressable>
+              </FitPressable>
             ) : null}
 
             {checkedCount > 0 ? (
@@ -662,9 +663,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
 
         {/* Klar is "Klar, skapa jobblista" above; this only shows Lås upp. */}
         {stepLocked ? (
-          <View style={webButton}>
-            <DoneButton tab="inspect" />
-          </View>
+          <DoneButton tab="inspect" />
         ) : null}
       </ScrollView>
       <ImagePreviewModal uri={previewUri} onClose={() => setPreviewUri(null)} />

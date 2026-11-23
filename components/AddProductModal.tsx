@@ -20,6 +20,7 @@ import { searchProducts, SearchProduct } from '../lib/productSearch';
 import { colors } from '../lib/theme';
 import { styles } from './AddProductModal.styles';
 import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
+import { FitPressable } from './FitPressable';
 
 /** Most used products, one tap to add. Placeholders until the real list is decided. */
 const COMMON_PRODUCTS: { name: string; price: number }[] = [
@@ -192,13 +193,13 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
           />
         </View>
         {showAddButton ? (
-          <Pressable
+          <FitPressable
             onPress={add}
             disabled={!manualName}
             style={[styles.addButton, !manualName && styles.addButtonDisabled]}
           >
             <Text style={styles.addButtonText}>Lägg till</Text>
-          </Pressable>
+          </FitPressable>
         ) : null}
         <FlatList style={webScroll}
           data={results}

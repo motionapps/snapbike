@@ -17,6 +17,7 @@ import { Task, productTotal, taskTotal } from '../lib/types';
 import { CategoryCard } from './CategoryCard';
 import { styles } from './TaskChecklist.styles';
 import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
+import { FitPressable } from './FitPressable';
 
 const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
 
@@ -184,7 +185,7 @@ export function TaskDetailModal({
             style={styles.input}
           />
 
-          <Pressable
+          <FitPressable
             onPress={toggleDone}
             style={[styles.doneButton, current.done && styles.undoButton]}
           >
@@ -196,7 +197,7 @@ export function TaskDetailModal({
             <Text style={[styles.doneText, current.done && styles.undoText]}>
               {current.done ? 'Markera som ej klar' : 'Markera som klar'}
             </Text>
-          </Pressable>
+          </FitPressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </Modal>

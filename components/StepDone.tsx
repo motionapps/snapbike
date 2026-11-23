@@ -6,6 +6,7 @@ import { useOrderContext } from '../lib/orderContext';
 import { setJobStatus } from '../lib/supabase';
 import { colors } from '../lib/theme';
 import { styles } from './StepDone.styles';
+import { FitPressable } from './FitPressable';
 
 /** Whether the tab is marked Klar for the current job, i.e. read-only. */
 export function useStepLocked(tab: StepTab): boolean {
@@ -71,7 +72,7 @@ export function DoneButton({ tab }: { tab: StepTab }) {
 
   return (
     <View style={styles.wrap}>
-      <Pressable
+      <FitPressable
         onPress={toggle}
         disabled={!jobId}
         style={({ pressed }) => [
@@ -89,7 +90,7 @@ export function DoneButton({ tab }: { tab: StepTab }) {
         <Text style={[styles.text, done ? styles.textUnlock : styles.textDone]}>
           {done ? 'Lås upp' : 'Klar'}
         </Text>
-      </Pressable>
+      </FitPressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
   );

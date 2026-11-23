@@ -20,9 +20,6 @@ export const webScroll = IS_WEB
 /** On that scroll view's contentContainerStyle: puts the margins back. */
 export const webScrollContent = IS_WEB ? { marginHorizontal: `${EDGE}%` as const } : null;
 
-/** Full-width buttons in the browser: centered, 10% in from each side. */
-export const webButton = IS_WEB ? { marginHorizontal: '10%' as const } : null;
-
 /** Browser: cards two per row; a lone card still takes only half the row. */
 const GRID_GAP = 10;
 export const webGrid = IS_WEB

@@ -14,6 +14,7 @@ import { colors } from '../lib/theme';
 import { Customer, EMPTY_CUSTOMER, customerHasPhone, normalizePhone } from '../lib/types';
 import { styles } from './CustomerModal.styles';
 import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
+import { FitPressable } from './FitPressable';
 
 /** Fields whose text searches existing customers. */
 type SearchField = 'firstName' | 'lastName' | 'phone';
@@ -174,7 +175,7 @@ export function CustomerModal({
               <Text style={styles.hint}>Cykeltaggen måste vara 1–100.</Text>
             ) : null}
           </View>
-          <Pressable
+          <FitPressable
             onPress={save}
             disabled={!valid}
             style={[
@@ -184,7 +185,7 @@ export function CustomerModal({
             ]}
           >
             <Text style={styles.saveText}>Spara kund</Text>
-          </Pressable>
+          </FitPressable>
           {missingPhone ? (
             <Text style={styles.warningText}>Inget korrekt telefonnummer har sparats</Text>
           ) : null}

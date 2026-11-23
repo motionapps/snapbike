@@ -36,6 +36,10 @@ export const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: colors.textFaint,
   },
+  // Without the bike bar, the settings cog takes the right edge itself.
+  topNavPushRight: {
+    marginLeft: 'auto',
+  },
   topNavLabelActive: {
     color: colors.text,
   },

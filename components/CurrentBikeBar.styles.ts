@@ -100,6 +100,8 @@ export const styles = StyleSheet.create({
     fontSize: fontSize.small,
   },
   bike: {
+    // Pulls the bike line up toward the name row above (bar gap is 6).
+    marginTop: -7,
     fontSize: fontSize.body, fontFamily: fonts.regular,
     opacity: 0.85,
   },

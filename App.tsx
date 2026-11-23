@@ -40,6 +40,7 @@ import { OrderContext, useOrderContext } from './lib/orderContext';
 import { clearDraft, loadDraft, saveDraft } from './lib/persist';
 import { JobsScreen } from './components/JobsScreen';
 import { MessagesScreen } from './components/MessagesScreen';
+import { SettingsScreen } from './components/SettingsScreen';
 import { JobListScreen } from './components/JobListScreen';
 import { MicButton, MicPhase } from './components/MicButton';
 import { DoneButton, LockedBanner, StepLock } from './components/StepDone';
@@ -955,7 +956,8 @@ const TABS: { key: Tab; label: string; icon: string; iconActive: string }[] = [
 
 function Root() {
   const insets = useSafeAreaInsets();
-  const [tab, setTab] = useState<Tab>('note');
+  // 'settings' is browser-only and opened from the cog, not a tab.
+  const [tab, setTab] = useState<Tab | 'settings'>('note');
   const [scrollToTop, setScrollToTop] = useState<ScrollToTopRequest>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [inspectionTasks, setInspectionTasks] = useState<Task[]>([]);
@@ -1129,11 +1131,21 @@ function Root() {
                 </Pressable>
               );
             })}
-            {hasCurrentBike ? currentBikeBar : null}
+            <Pressable
+              onPress={() => setTab('settings')}
+              hitSlop={10}
+              style={styles.topNavPushRight}
+            >
+              <Ionicons
+                name={tab === 'settings' ? 'settings' : 'settings-outline'}
+                size={20}
+                color={tab === 'settings' ? colors.text : colors.textFaint}
+              />
+            </Pressable>
           </View>
         ) : null}
 
-        {hasCurrentBike && !IS_WEB ? currentBikeBar : null}
+        {hasCurrentBike ? currentBikeBar : null}
         <JobNotesModal
           entries={barNote}
           listTitle=""
@@ -1172,6 +1184,7 @@ function Root() {
               openRequest={openJobRequest}
             />
           </View>
+          {IS_WEB && tab === 'settings' ? <SettingsScreen /> : null}
         </ScrollToTopContext.Provider>
         </SafeAreaInsetsContext.Provider>
 

@@ -6,6 +6,7 @@ import { colors } from '../lib/theme';
 import { BikeFieldRows } from './BikeDetails';
 import { styles } from './ManualBikeModal.styles';
 import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
+import { FitPressable } from './FitPressable';
 
 const EMPTY_BIKE: BikeData = {
   bike: {
@@ -53,7 +54,7 @@ export function ManualBikeModal({ visible, initial, onClose, onSave }: Props) {
           <View style={styles.card}>
             <BikeFieldRows bike={data.bike} onChange={(bike) => setData({ ...data, bike })} />
           </View>
-          <Pressable
+          <FitPressable
             onPress={() => {
               onSave(data);
               onClose();
@@ -61,7 +62,7 @@ export function ManualBikeModal({ visible, initial, onClose, onSave }: Props) {
             style={({ pressed }) => [styles.save, pressed && styles.pressed]}
           >
             <Text style={styles.saveText}>Spara</Text>
-          </Pressable>
+          </FitPressable>
         </ScrollView>
       </View>
     </Modal>

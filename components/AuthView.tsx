@@ -24,6 +24,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../lib/auth/AuthProvider';
 import { styles } from './AuthView.styles';
+import { useFitButton } from './FitPressable';
 
 const t = {
   auth: {
@@ -72,6 +73,7 @@ type Props = {
 export function AuthView({ onClose }: Props) {
   const { signIn, signUp, verifySignupCode, resendSignupCode, resetPassword } = useAuth();
   // Staff sign in with their existing BikeOffice account, so start on sign-in.
+  const fitButton = useFitButton();
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -279,7 +281,8 @@ export function AuthView({ onClose }: Props) {
               {notice && <Text style={styles.notice}>{notice}</Text>}
 
               <TouchableOpacity
-                style={[styles.button, anyBusy && styles.buttonDisabled]}
+                style={[styles.button, anyBusy && styles.buttonDisabled, fitButton.style]}
+                onLayout={fitButton.onLayout}
                 onPress={handleVerify}
                 activeOpacity={0.8}
                 disabled={anyBusy}
@@ -335,7 +338,8 @@ export function AuthView({ onClose }: Props) {
           {notice && <Text style={styles.notice}>{notice}</Text>}
 
           <TouchableOpacity
-            style={[styles.button, anyBusy && styles.buttonDisabled]}
+            style={[styles.button, anyBusy && styles.buttonDisabled, fitButton.style]}
+            onLayout={fitButton.onLayout}
             onPress={handleSubmit}
             activeOpacity={0.8}
             disabled={anyBusy}

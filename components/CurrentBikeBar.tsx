@@ -74,6 +74,10 @@ type Props = {
 };
 
 /** Thin bar above every tab naming the current customer and bike, tinted in the bike's colour. Tapping it opens the job. */
+// The safe-area top on Dynamic Island iPhones (~59pt) leaves ~11pt of space
+// below the island; dropping it puts the name row directly under the island.
+const ISLAND_CLEARANCE = 11;
+
 export function CurrentBikeBar({
   customer,
   bike,
@@ -144,7 +148,7 @@ export function CurrentBikeBar({
   }
 
   return (
-    <View style={[styles.bar, { backgroundColor: background, paddingTop: topInset }]}>
+    <View style={[styles.bar, { backgroundColor: background, paddingTop: Math.max(topInset - ISLAND_CLEARANCE, 0) }]}>
       <Pressable onPress={onPress} style={styles.row}>
         <Ionicons name="bicycle" size={17} color={textColor} />
         {bikeNumber ? (
