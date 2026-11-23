@@ -33,6 +33,7 @@ import { DoneButton, LockedBanner, StepLock, useSetStepDone, useStepLocked } fro
 import { ChecklistRow, TaskDetailModal } from './TaskChecklist';
 import { TaskCard } from './TaskCard';
 import { styles } from './JobListScreen.styles';
+import { webScroll, webScrollContent } from '../lib/webEdge';
 
 const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
 
@@ -365,9 +366,9 @@ export function JobListScreen({ active }: { active: boolean }) {
       </View>
       <LockedBanner tab="jobList" style={styles.lockedBanner} />
 
-      <ScrollView
+      <ScrollView style={webScroll}
         ref={scrollRef}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 32 }]}
+        contentContainerStyle={[webScrollContent, styles.content, { paddingBottom: insets.bottom + 32 }]}
         keyboardShouldPersistTaps="handled"
       >
         <StepLock tab="jobList" gap={16}>
@@ -427,14 +428,6 @@ export function JobListScreen({ active }: { active: boolean }) {
         {inspectionTasks.length > 0 ? (
           <View style={styles.actions}>
             {busy ? <ActivityIndicator color={colors.textSecondary} /> : null}
-            {!sent ? (
-              <PrimaryButton
-                label={jobId ? 'Skicka till kund' : 'Sparar…'}
-                icon="send"
-                disabled={busy || !jobId}
-                onPress={send}
-              />
-            ) : null}
             {changed ? (
               <>
                 <PrimaryButton label="Skicka igen" icon="send" disabled={busy} onPress={send} />
@@ -446,12 +439,26 @@ export function JobListScreen({ active }: { active: boolean }) {
                 />
               </>
             ) : null}
-            <SecondaryButton
-              label="Förhandsgranska"
-              icon="open-outline"
-              disabled={!jobListSend}
-              onPress={preview}
-            />
+            <View style={styles.actionRow}>
+              {!sent ? (
+                <View style={styles.actionRowItem}>
+                  <PrimaryButton
+                    label={jobId ? 'Skicka till kund' : 'Sparar…'}
+                    icon="send"
+                    disabled={busy || !jobId}
+                    onPress={send}
+                  />
+                </View>
+              ) : null}
+              <View style={styles.actionRowItem}>
+                <SecondaryButton
+                  label="Förhandsgranska"
+                  icon="open-outline"
+                  disabled={!jobListSend}
+                  onPress={preview}
+                />
+              </View>
+            </View>
             {editing ? (
               <Pressable onPress={cancelEdit} disabled={busy} style={styles.cancel} hitSlop={8}>
                 <Text style={styles.cancelText}>Avbryt</Text>

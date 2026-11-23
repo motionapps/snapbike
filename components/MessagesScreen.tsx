@@ -24,6 +24,7 @@ import { useScrollToTop } from '../lib/scrollToTop';
 import { colors } from '../lib/theme';
 import { customerHasPhone } from '../lib/types';
 import { styles } from './MessagesScreen.styles';
+import { webScroll, webScrollContent } from '../lib/webEdge';
 
 const timeFormat = new Intl.DateTimeFormat('sv-SE', {
   day: 'numeric',
@@ -169,7 +170,7 @@ function ConversationList({
   }
 
   return (
-    <ScrollView ref={scrollRef} contentContainerStyle={[styles.list, { paddingBottom: bottomInset + 32 }]}>
+    <ScrollView style={webScroll} ref={scrollRef} contentContainerStyle={[webScrollContent, styles.list, { paddingBottom: bottomInset + 32 }]}>
       {conversations.map((c) => (
         <Pressable key={c.customerId} onPress={() => onOpen(c)} style={styles.row}>
           <View style={styles.rowHeader}>
@@ -243,9 +244,9 @@ function Thread({ customerId, active }: { customerId: string; active: boolean })
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={keyboardOffset}
     >
-      <ScrollView
+      <ScrollView style={webScroll}
         ref={scrollRef}
-        contentContainerStyle={styles.thread}
+        contentContainerStyle={[styles.thread, webScrollContent]}
         keyboardShouldPersistTaps="handled"
         onContentSizeChange={() => scrollRef.current?.scrollToEnd({ animated: false })}
       >

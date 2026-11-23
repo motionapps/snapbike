@@ -173,6 +173,13 @@ export const styles = StyleSheet.create({
   actions: {
     gap: 10,
   },
+  actionRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  actionRowItem: {
+    flex: 1,
+  },
   primary: {
     flexDirection: 'row',
     alignItems: 'center',

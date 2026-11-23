@@ -6,6 +6,38 @@ export const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.bg,
   },
+  // Browser nav: mono uppercase labels, the active one underlined (BikeOffice style).
+  topNav: {
+    flexDirection: 'row',
+    gap: 32,
+    paddingTop: 20,
+    paddingBottom: 14,
+    paddingHorizontal: gutter,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  topNavItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingBottom: 6,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  topNavItemActive: {
+    borderBottomColor: colors.accentLight,
+  },
+  topNavLabel: {
+    fontFamily: 'monospace',
+    fontWeight: '600',
+    fontSize: 13,
+    letterSpacing: 1.5,
+    textTransform: 'uppercase',
+    color: colors.textFaint,
+  },
+  topNavLabelActive: {
+    color: colors.text,
+  },
   centered: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -39,6 +71,15 @@ export const styles = StyleSheet.create({
   pageHidden: {
     display: 'none',
   },
+  // Hidden but still laid out, so its job modal can open from other tabs.
+  pageCollapsed: {
+    position: 'absolute',
+    width: 0,
+    height: 0,
+    overflow: 'hidden',
+    opacity: 0,
+    pointerEvents: 'none',
+  },
   tabBar: {
     flexDirection: 'row',
     borderTopWidth: 1,
@@ -50,6 +91,10 @@ export const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     gap: 3,
+  },
+  // Jobb is a short label, so its tab is narrower and the rest get more room.
+  tabItemNarrow: {
+    flex: 0.6,
   },
   // Klar: rounded square around the icon with a check badge in the corner.
   tabIcon: {
@@ -78,6 +123,9 @@ export const styles = StyleSheet.create({
     color: colors.textFaint,
     fontSize: fontSize.small,
     fontFamily: fonts.semiBold,
+  },
+  tabLabelSmall: {
+    fontSize: fontSize.small - 1,
   },
   tabLabelActive: {
     color: colors.accentLight,

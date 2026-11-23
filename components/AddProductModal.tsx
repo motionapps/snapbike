@@ -19,6 +19,7 @@ import {
 import { searchProducts, SearchProduct } from '../lib/productSearch';
 import { colors } from '../lib/theme';
 import { styles } from './AddProductModal.styles';
+import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
 
 /** Most used products, one tap to add. Placeholders until the real list is decided. */
 const COMMON_PRODUCTS: { name: string; price: number }[] = [
@@ -122,7 +123,7 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
 
   return (
     <Modal visible={visible} animationType="slide" presentationStyle="pageSheet" onRequestClose={close}>
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, webPage]}>
         <View style={styles.header}>
           <Text style={styles.heading}>Lägg till produkt</Text>
           <Pressable onPress={close} hitSlop={8} style={styles.close}>
@@ -199,12 +200,12 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
             <Text style={styles.addButtonText}>Lägg till</Text>
           </Pressable>
         ) : null}
-        <FlatList
+        <FlatList style={webScroll}
           data={results}
           keyExtractor={(item, index) => `${item.articleNumber}-${item.ean}-${index}`}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, webScrollContent]}
           renderItem={({ item }) => (
             <Pressable
               onPress={() => addProduct(item.name, item.sellPrice > 0 ? item.sellPrice : 0)}

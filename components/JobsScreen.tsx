@@ -26,6 +26,7 @@ import { useOrderContext } from '../lib/orderContext';
 import { CommentField } from './JobNotesModal';
 import { JobDetailModal } from './JobDetailModal';
 import { styles } from './JobsScreen.styles';
+import { webScroll, webScrollContent } from '../lib/webEdge';
 
 type Props = {
   active: boolean;
@@ -293,12 +294,15 @@ export function JobsScreen({
           <ActivityIndicator color={colors.accentLight} />
         </View>
       ) : (
+        // Wrapped: with a refreshControl, react-native-web puts the list's
+        // style on both the refresh wrapper and the list.
+        <View style={[styles.listWrap, webScroll]}>
         <FlatList
           ref={listRef}
           data={visible}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, webScrollContent]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -317,6 +321,7 @@ export function JobsScreen({
             </View>
           }
         />
+        </View>
       )}
 
       <JobDetailModal

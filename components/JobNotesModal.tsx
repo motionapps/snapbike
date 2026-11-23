@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 import { colors } from '../lib/theme';
 import { styles } from './JobNotesModal.styles';
+import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
 
 export type CommentField = 'customerComment' | 'mechanicComment';
 
@@ -68,7 +69,7 @@ export function JobNotesModal({ entries, listTitle, onSave, onClose }: Props) {
       onRequestClose={close}
     >
       <KeyboardAvoidingView
-        style={styles.sheet}
+        style={[styles.sheet, webPage]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
@@ -96,7 +97,7 @@ export function JobNotesModal({ entries, listTitle, onSave, onClose }: Props) {
               textAlignVertical="top"
             />
           ) : (
-            <ScrollView contentContainerStyle={styles.textContent}>
+            <ScrollView style={webScroll} contentContainerStyle={[styles.textContent, webScrollContent]}>
               {entry.text ? (
                 <Text style={styles.text} selectable>
                   {entry.text}
@@ -107,7 +108,7 @@ export function JobNotesModal({ entries, listTitle, onSave, onClose }: Props) {
             </ScrollView>
           )
         ) : (
-          <ScrollView contentContainerStyle={styles.list}>
+          <ScrollView style={webScroll} contentContainerStyle={[styles.list, webScrollContent]}>
             {entries?.map((item, index) => (
               <Pressable
                 key={item.title}

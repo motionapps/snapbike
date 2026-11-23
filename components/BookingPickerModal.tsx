@@ -12,6 +12,7 @@ import { fetchJobs } from '../lib/supabase';
 import { colors } from '../lib/theme';
 import { Job } from '../lib/types';
 import { styles } from './BookingPickerModal.styles';
+import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
 
 type Props = {
   visible: boolean;
@@ -40,7 +41,7 @@ export function BookingPickerModal({ visible, onClose, onPick }: Props) {
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, webPage]}>
         <View style={styles.header}>
           <Text style={styles.heading}>Hämta bokning</Text>
           <Pressable onPress={onClose} hitSlop={8} style={styles.close}>
@@ -53,10 +54,10 @@ export function BookingPickerModal({ visible, onClose, onPick }: Props) {
         {bookings === null && !error ? (
           <ActivityIndicator color={colors.accentLight} style={styles.loading} />
         ) : (
-          <FlatList
+          <FlatList style={webScroll}
             data={bookings ?? []}
             keyExtractor={(item) => item.id}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, webScrollContent]}
             ListEmptyComponent={
               <Text style={styles.empty}>Inga bokningar just nu</Text>
             }

@@ -52,6 +52,7 @@ import { MicButton, MicPhase } from './MicButton';
 import { DoneButton, LockedBanner, StepLock, useSetStepDone, useStepLocked } from './StepDone';
 import { WaveText } from './WaveText';
 import { styles } from './InspectionScreen.styles';
+import { webButton, webGrid, webHalf, webScroll, webScrollContent } from '../lib/webEdge';
 
 /** How the inspection works, behind the info button. Constant so the modal doesn't reset on render. */
 const HELP_ENTRIES = [
@@ -406,14 +407,14 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
         </Pressable>
       ) : null}
 
-      <ScrollView
+      <ScrollView style={webScroll}
         ref={scrollRef}
         onScroll={(e) => {
           const away = e.nativeEvent.contentOffset.y > micCardBottom.current;
           if (away !== micScrolledAway) setMicScrolledAway(away);
         }}
         scrollEventThrottle={32}
-        contentContainerStyle={[
+        contentContainerStyle={[webScrollContent, 
           styles.content,
           { paddingBottom: insets.bottom + 24 },
         ]}
@@ -475,6 +476,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
                   ) : null}
                 </View>
 
+                <View style={webGrid}>
                 {section.items.map((item) => {
                   const result = results[item.id];
                   const imageUri = inspectionImageUrl(item.id, item.title);
@@ -502,7 +504,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
                     />
                   );
                   return (
-                    <View key={item.id} style={styles.itemCard}>
+                    <View key={item.id} style={[styles.itemCard, webHalf]}>
                       <View style={styles.itemRow}>
                         <Pressable
                           onPress={() => setPreviewUri(imageUri)}
@@ -560,11 +562,12 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
                     </View>
                   );
                 })}
+                </View>
 
                 {!sectionDone ? (
                   <Pressable
                     onPress={() => markSectionOk(sectionIndex)}
-                    style={styles.allOk}
+                    style={[styles.allOk, webButton]}
                   >
                     <Ionicons
                       name="checkmark-done-outline"
@@ -629,7 +632,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
               <Pressable
                 onPress={createTasks}
                 disabled={creatingTasks}
-                style={[styles.createTasks, creatingTasks && styles.createTasksBusy]}
+                style={[styles.createTasks, webButton, creatingTasks && styles.createTasksBusy]}
               >
                 {creatingTasks ? (
                   <ActivityIndicator color={colors.onAccent} />
@@ -658,7 +661,11 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
         </StepLock>
 
         {/* Klar is "Klar, skapa jobblista" above; this only shows Lås upp. */}
-        {stepLocked ? <DoneButton tab="inspect" /> : null}
+        {stepLocked ? (
+          <View style={webButton}>
+            <DoneButton tab="inspect" />
+          </View>
+        ) : null}
       </ScrollView>
       <ImagePreviewModal uri={previewUri} onClose={() => setPreviewUri(null)} />
       <JobNotesModal

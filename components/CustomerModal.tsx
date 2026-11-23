@@ -13,6 +13,7 @@ import { searchCustomers } from '../lib/supabase';
 import { colors } from '../lib/theme';
 import { Customer, EMPTY_CUSTOMER, customerHasPhone, normalizePhone } from '../lib/types';
 import { styles } from './CustomerModal.styles';
+import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
 
 /** Fields whose text searches existing customers. */
 type SearchField = 'firstName' | 'lastName' | 'phone';
@@ -120,15 +121,15 @@ export function CustomerModal({
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, webPage]}>
         <View style={styles.header}>
           <Text style={styles.heading}>Drop-in kund</Text>
           <Pressable onPress={onClose} hitSlop={8} style={styles.close}>
             <Ionicons name="close" size={20} color={colors.textSecondary} />
           </Pressable>
         </View>
-        <ScrollView
-          contentContainerStyle={styles.form}
+        <ScrollView style={webScroll}
+          contentContainerStyle={[styles.form, webScrollContent]}
           keyboardShouldPersistTaps="handled"
         >
           <SearchSlot field="firstName" active={searchField}>

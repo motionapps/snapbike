@@ -86,6 +86,7 @@ import {
   uid,
 } from './lib/types';
 import { styles } from './App.styles';
+import { webPage, webScroll, webScrollContent } from './lib/webEdge';
 
 const ITEM_KIND_LABELS: Record<ItemKind, string> = {
   bike: 'Cykel',
@@ -737,10 +738,10 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <ScrollView
+        <ScrollView style={webScroll}
           ref={scrollRef}
           contentInsetAdjustmentBehavior="automatic"
-          contentContainerStyle={[
+          contentContainerStyle={[webScrollContent, 
             styles.content,
             {
               paddingTop: Platform.OS === 'android' ? insets.top + 16 : 16,
@@ -923,12 +924,15 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
 
 type Tab = 'note' | 'inspect' | 'jobList' | 'messages' | 'jobs';
 
+// In the browser the tabs sit on top as a text nav, like BikeOffice's header.
+const IS_WEB = Platform.OS === 'web';
+
 const TABS: { key: Tab; label: string; icon: string; iconActive: string }[] = [
   { key: 'jobs', label: 'Jobb', icon: 'file-tray-full-outline', iconActive: 'file-tray-full' },
   { key: 'note', label: 'Mottagning', icon: 'mic-outline', iconActive: 'mic' },
   { key: 'inspect', label: 'Besiktning', icon: 'clipboard-outline', iconActive: 'clipboard' },
   { key: 'jobList', label: 'Jobblista', icon: 'list-outline', iconActive: 'list' },
-  { key: 'messages', label: 'Meddelanden', icon: 'chatbubbles-outline', iconActive: 'chatbubbles' },
+  { key: 'messages', label: 'Meddelande', icon: 'chatbubbles-outline', iconActive: 'chatbubbles' },
 ];
 
 function Root() {
@@ -1062,8 +1066,32 @@ function Root() {
         setCurrentStatus,
       }}
     >
-      <View style={styles.root}>
+      <View style={[styles.root, webPage]}>
         <StatusBar style="light" />
+
+        {IS_WEB ? (
+          <View style={styles.topNav}>
+            {TABS.map((item) => {
+              const isActive = tab === item.key;
+              const done = item.key in STEP_STATUS && stepDone(item.key as StepTab, currentStatus);
+              return (
+                <Pressable
+                  key={item.key}
+                  onPress={() => {
+                    if (isActive) setScrollToTop({ tab: item.key, nonce: Date.now() });
+                    else setTab(item.key);
+                  }}
+                  style={[styles.topNavItem, isActive && styles.topNavItemActive]}
+                >
+                  <Text style={[styles.topNavLabel, isActive && styles.topNavLabelActive]}>
+                    {item.label}
+                  </Text>
+                  {done ? <Ionicons name="checkmark" size={12} color={colors.accentLight} /> : null}
+                </Pressable>
+              );
+            })}
+          </View>
+        ) : null}
 
         {hasCurrentBike ? (
           <CurrentBikeBar
@@ -1109,7 +1137,7 @@ function Root() {
           <View style={[styles.page, tab !== 'messages' && styles.pageHidden]}>
             <MessagesScreen active={tab === 'messages'} />
           </View>
-          <View style={[styles.page, tab !== 'jobs' && styles.pageHidden]}>
+          <View style={[styles.page, tab !== 'jobs' && styles.pageCollapsed]}>
             <JobsScreen
               active={tab === 'jobs'}
               onStartCheckIn={startCheckIn}
@@ -1125,7 +1153,8 @@ function Root() {
         </ScrollToTopContext.Provider>
         </SafeAreaInsetsContext.Provider>
 
-        <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom - 16, 8) }]}>
+        {IS_WEB ? null : (
+        <View style={[styles.tabBar, { paddingBottom: Math.max(insets.bottom - 22, 6) }]}>
           {TABS.map((item) => {
             const isActive = tab === item.key;
             const done = item.key in STEP_STATUS && stepDone(item.key as StepTab, currentStatus);
@@ -1137,7 +1166,7 @@ function Root() {
                   if (isActive) setScrollToTop({ tab: item.key, nonce: Date.now() });
                   else setTab(item.key);
                 }}
-                style={styles.tabItem}
+                style={[styles.tabItem, item.key === 'jobs' && styles.tabItemNarrow]}
               >
                 <View style={[styles.tabIcon, done && styles.tabIconDone]}>
                   <Ionicons
@@ -1151,13 +1180,21 @@ function Root() {
                     </View>
                   ) : null}
                 </View>
-                <Text style={[styles.tabLabel, isActive && styles.tabLabelActive]}>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.tabLabel,
+                    item.key === 'messages' && styles.tabLabelSmall,
+                    isActive && styles.tabLabelActive,
+                  ]}
+                >
                   {item.label}
                 </Text>
               </Pressable>
             );
           })}
         </View>
+        )}
       </View>
     </OrderContext.Provider>
   );

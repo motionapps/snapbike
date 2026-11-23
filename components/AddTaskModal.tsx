@@ -15,6 +15,7 @@ import { ImagePreviewModal } from './ImagePreviewModal';
 import { colors } from '../lib/theme';
 import { PriceItem } from '../lib/types';
 import { styles } from './AddTaskModal.styles';
+import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
 
 type Props = {
   visible: boolean;
@@ -56,7 +57,7 @@ export function AddTaskModal({ visible, prices, onClose, onPick }: Props) {
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, webPage]}>
         <View style={styles.header}>
           <Text style={styles.heading}>Lägg till jobb</Text>
           <Pressable onPress={onClose} hitSlop={8} style={styles.close}>
@@ -106,12 +107,12 @@ export function AddTaskModal({ visible, prices, onClose, onPick }: Props) {
             );
           })}
         </ScrollView>
-        <FlatList
+        <FlatList style={webScroll}
           data={filtered}
           keyExtractor={(item) => `${item.category}-${item.title}`}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, webScrollContent]}
           renderItem={({ item }) => (
             <Pressable
               onPress={() => {

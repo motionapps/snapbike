@@ -16,6 +16,7 @@ import { colors } from '../lib/theme';
 import { Task, productTotal, taskTotal } from '../lib/types';
 import { CategoryCard } from './CategoryCard';
 import { styles } from './TaskChecklist.styles';
+import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
 
 const kr = (n: number) => `${n.toLocaleString('sv-SE')} kr`;
 
@@ -24,7 +25,7 @@ const SWIPE_THRESHOLD = 80;
 
 /**
  * A task on the work checklist: swipe right = klar, swipe left = ej klar,
- * tap = details.
+ * tap the circle = toggle klar, tap elsewhere = details.
  */
 export function ChecklistRow({
   task,
@@ -73,11 +74,14 @@ export function ChecklistRow({
       <Animated.View style={{ transform: [{ translateX: dx }] }} {...pan.panHandlers}>
         <CategoryCard category={task.category}>
           <Pressable onPress={onOpen} style={styles.row}>
-            <Ionicons
-              name={done ? 'checkmark-circle' : 'ellipse-outline'}
-              size={22}
-              color={done ? colors.accentLight : colors.textFaint}
-            />
+            {/* Tapping the circle toggles klar, as an alternative to swiping. */}
+            <Pressable onPress={() => onSetDone(!done)} hitSlop={10}>
+              <Ionicons
+                name={done ? 'checkmark-circle' : 'ellipse-outline'}
+                size={22}
+                color={done ? colors.accentLight : colors.textFaint}
+              />
+            </Pressable>
             <View style={styles.rowText}>
               <Text style={[styles.rowTitle, done && styles.rowTitleDone]}>{task.title}</Text>
               {task.products.map((product) => (
@@ -138,7 +142,7 @@ export function TaskDetailModal({
   return (
     <Modal visible={task !== null} animationType="slide" presentationStyle="pageSheet" onRequestClose={close}>
       <KeyboardAvoidingView
-        style={styles.sheet}
+        style={[styles.sheet, webPage]}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={styles.header}>
@@ -148,7 +152,7 @@ export function TaskDetailModal({
           </Pressable>
         </View>
 
-        <ScrollView contentContainerStyle={styles.body} keyboardShouldPersistTaps="handled">
+        <ScrollView style={webScroll} contentContainerStyle={[styles.body, webScrollContent]} keyboardShouldPersistTaps="handled">
           <View style={styles.card}>
             <View style={styles.line}>
               <Text style={styles.lineLabel}>{current.category || 'Arbete'}</Text>

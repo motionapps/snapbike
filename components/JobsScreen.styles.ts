@@ -118,6 +118,9 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  listWrap: {
+    flex: 1,
+  },
   listContent: {
     paddingHorizontal: gutter,
     paddingBottom: 24,

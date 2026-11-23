@@ -22,6 +22,7 @@ import { CommentField, JobNotesModal, NoteEntry } from './JobNotesModal';
 import { StatusPill } from './StatusPill';
 import { ZoomableImageModal } from './ZoomableImageModal';
 import { styles } from './JobDetailModal.styles';
+import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
 
 type Props = {
   job: Job | null;
@@ -166,7 +167,7 @@ export function JobDetailModal({
     >
       {job ? (
         <KeyboardAvoidingView
-          style={styles.sheet}
+          style={[styles.sheet, webPage]}
           behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         >
           <JobHeader
@@ -175,8 +176,8 @@ export function JobDetailModal({
             onPress={() => closeThen(() => onEditCustomer(job))}
           />
 
-          <ScrollView
-            contentContainerStyle={styles.content}
+          <ScrollView style={webScroll}
+            contentContainerStyle={[styles.content, webScrollContent]}
             keyboardShouldPersistTaps="handled"
           >
             <StatusPill
@@ -320,7 +321,7 @@ export function JobDetailModal({
           />
         </KeyboardAvoidingView>
       ) : (
-        <View style={styles.sheet} />
+        <View style={[styles.sheet, webPage]} />
       )}
     </Modal>
   );

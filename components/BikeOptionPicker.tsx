@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { colors } from '../lib/theme';
 import { styles } from './BikeOptionPicker.styles';
+import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
 
 export type PickerRequest =
   | {
@@ -52,7 +53,7 @@ export function BikeOptionPicker({ request, onClose }: Props) {
       presentationStyle="pageSheet"
       onRequestClose={onClose}
     >
-      <View style={styles.sheet}>
+      <View style={[styles.sheet, webPage]}>
         <View style={styles.header}>
           <Text style={styles.heading}>{request?.title}</Text>
           <Pressable onPress={onClose} hitSlop={12} style={styles.close}>
@@ -61,7 +62,7 @@ export function BikeOptionPicker({ request, onClose }: Props) {
         </View>
 
         {request?.kind === 'options' ? (
-          <ScrollView contentContainerStyle={styles.list}>
+          <ScrollView style={webScroll} contentContainerStyle={[styles.list, webScrollContent]}>
             {request.options.map((option) => {
               const selected = option === request.value;
               return (
