@@ -406,7 +406,7 @@ function TaskRow({
   return (
     <View style={styles.task}>
       <View style={styles.taskHead}>
-        <Image source={taskImageUrl(task.title)} style={styles.partImage} contentFit="contain" />
+        <Image source={taskImageUrl(task.title, task.partId)} style={styles.partImage} contentFit="contain" />
         <Text style={styles.taskTitle}>{task.title}</Text>
         <Text style={styles.taskPrice}>{kr(taskTotal(task))}</Text>
       </View>

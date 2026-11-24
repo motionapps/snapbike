@@ -18,25 +18,20 @@ import {
 } from '../lib/inStockCache';
 import { searchProducts, SearchProduct } from '../lib/productSearch';
 import { colors } from '../lib/theme';
+import { StandardProduct } from '../lib/types';
 import { styles } from './AddProductModal.styles';
 import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
 import { FitPressable } from './FitPressable';
 
-/** Most used products, one tap to add. Placeholders until the real list is decided. */
-const COMMON_PRODUCTS: { name: string; price: number }[] = [
-  { name: 'Marathon Plus däck', price: 0 },
-  { name: 'Marathon däck', price: 0 },
-  { name: 'Road Cruiser däck', price: 0 },
-  { name: 'Slang', price: 0 },
-];
-
 type Props = {
   visible: boolean;
+  /** The task's standard products (assets/price-model), shown as one-tap chips. */
+  standardProducts: StandardProduct[];
   onClose: () => void;
-  onAdd: (name: string, price: number) => void;
+  onAdd: (name: string, price: number, quantity?: number) => void;
 };
 
-export function AddProductModal({ visible, onClose, onAdd }: Props) {
+export function AddProductModal({ visible, standardProducts, onClose, onAdd }: Props) {
   const [query, setQuery] = useState('');
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
@@ -108,8 +103,8 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
     onClose();
   };
 
-  const addProduct = (productName: string, productPrice: number) => {
-    onAdd(productName, productPrice);
+  const addProduct = (productName: string, productPrice: number, quantity?: number) => {
+    onAdd(productName, productPrice, quantity);
     reset();
   };
 
@@ -131,6 +126,7 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
             <Ionicons name="close" size={20} color={colors.textSecondary} />
           </Pressable>
         </View>
+        {standardProducts.length > 0 ? (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -138,16 +134,25 @@ export function AddProductModal({ visible, onClose, onAdd }: Props) {
           style={styles.commonScroll}
           contentContainerStyle={styles.commonContent}
         >
-          {COMMON_PRODUCTS.map((product) => (
+          {standardProducts.map((product) => (
             <Pressable
               key={product.name}
-              onPress={() => addProduct(product.name, product.price)}
+              onPress={() =>
+                addProduct(
+                  product.name,
+                  product.price ?? 0,
+                  product.quantity > 1 ? product.quantity : undefined
+                )
+              }
               style={({ pressed }) => [styles.chip, pressed && styles.rowPressed]}
             >
-              <Text style={styles.chipText}>{product.name}</Text>
+              <Text style={styles.chipText}>
+                {`${product.quantity > 1 ? `${product.quantity} st ` : ''}${product.name}${product.price !== undefined ? ` · ${product.price} kr` : ''}`}
+              </Text>
             </Pressable>
           ))}
         </ScrollView>
+        ) : null}
         <View style={styles.searchRow}>
           <Ionicons name="search" size={17} color={colors.textFaint} />
           <TextInput

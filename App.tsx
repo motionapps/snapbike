@@ -44,12 +44,13 @@ import { SettingsScreen } from './components/SettingsScreen';
 import { JobListScreen } from './components/JobListScreen';
 import { MicButton, MicPhase } from './components/MicButton';
 import { DoneButton, LockedBanner, StepLock } from './components/StepDone';
+import { FitPressable } from './components/FitPressable';
 import { STEP_STATUS, StepTab, stepDone } from './lib/jobSteps';
 import { PhotoCard } from './components/PhotoCard';
 import { ManualBikeModal } from './components/ManualBikeModal';
 import { analyzeBikePhoto, BikeData } from './lib/bikeAnalysis';
 import { classifyItemKind } from './lib/itemKind';
-import { pricesFor } from './lib/prices';
+import { pricesFor, taskFromPriceItem } from './lib/prices';
 import { BikeAnalysisState, BikeDetails } from './components/BikeDetails';
 import { analyzeTranscript, hasOpenAiKey, refineTask, transcribeAudio } from './lib/llm-communication/api';
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from './lib/speech';
@@ -483,15 +484,6 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     return () => clearTimeout(timer);
   }, [focusBikeNonce]);
 
-  const setApproval = useCallback(
-    (taskId: string, approval: 'godkänd' | 'nekad' | undefined) => {
-      setTasks((current) =>
-        current.map((task) => (task.id === taskId ? { ...task, approval } : task))
-      );
-    },
-    []
-  );
-
   const takePhoto = useCallback(async () => {
     const permission = await ImagePicker.requestCameraPermissionsAsync();
     if (!permission.granted) {
@@ -680,11 +672,11 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     setTasks((current) => current.filter((task) => task.id !== taskId));
   }, []);
 
-  const addProduct = useCallback((taskId: string, name: string, price: number) => {
+  const addProduct = useCallback((taskId: string, name: string, price: number, quantity?: number) => {
     setTasks((current) =>
       current.map((task) =>
         task.id === taskId
-          ? { ...task, products: [...task.products, { id: uid(), name, price }] }
+          ? { ...task, products: [...task.products, { id: uid(), name, price, quantity }] }
           : task
       )
     );
@@ -719,16 +711,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
   }, []);
 
   const pickTask = useCallback((item: PriceItem) => {
-    setTasks((current) => [
-      ...current,
-      {
-        id: uid(),
-        title: item.title,
-        category: item.category,
-        price: item.price,
-        products: [],
-      },
-    ]);
+    setTasks((current) => [...current, taskFromPriceItem(item)]);
     setShowAddTask(false);
   }, []);
 
@@ -866,16 +849,15 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
                         : undefined
                     }
                     onVoiceEdit={toggleTaskVoice}
-                    onSetApproval={setApproval}
                   />
                 ))}
               </View>
             ) : null}
 
-            <Pressable onPress={() => setShowAddTask(true)} style={styles.addTask}>
+            <FitPressable onPress={() => setShowAddTask(true)} style={styles.addTask}>
               <Ionicons name="add-circle-outline" size={20} color={colors.accentLight} />
               <Text style={styles.addTaskText}>{STRINGS.addActionManually}</Text>
-            </Pressable>
+            </FitPressable>
 
             {tasks.length > 0 ? (
               <View style={styles.footer}>
@@ -895,7 +877,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
 
           </StepLock>
 
-          <DoneButton tab="note" />
+          <DoneButton tab="note" alignRight />
 
           {saveStatus === 'error' ? (
             <Pressable onPress={retrySave} style={styles.saveStatus}>
@@ -1145,7 +1127,8 @@ function Root() {
           </View>
         ) : null}
 
-        {hasCurrentBike ? currentBikeBar : null}
+        {/* Settings shows the bar in its own title row instead. */}
+        {hasCurrentBike && tab !== 'settings' ? currentBikeBar : null}
         <JobNotesModal
           entries={barNote}
           listTitle=""
@@ -1184,7 +1167,7 @@ function Root() {
               openRequest={openJobRequest}
             />
           </View>
-          {IS_WEB && tab === 'settings' ? <SettingsScreen /> : null}
+          {IS_WEB && tab === 'settings' ? <SettingsScreen headerRight={hasCurrentBike ? currentBikeBar : null} /> : null}
         </ScrollToTopContext.Provider>
         </SafeAreaInsetsContext.Provider>
 

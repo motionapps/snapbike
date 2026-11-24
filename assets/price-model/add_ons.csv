@@ -1,0 +1,6 @@
+add_on_id,name,conditions,price,note
+electric,Elcykel - tillägg,electric=yes,99,Grundservice på elcykel med navmotor fram/bak
+full_chain_guard,Heltäckande kedjeskydd - tillägg,gears=hub,119,Cykel med heltäckande kedjeskydd
+cargo,Lådcykeltillägg,bike_type=cargo,199,Låd-/lastcykel
+cargo_electric,Tillägg – eldrift på låd-/lastcykel,bike_type=cargo,399,Låd-/lastcykel med eldrift
+express,Expresstillägg (klart inom 1 tim),,99,Bara när personalen säger express eller klart inom en timme

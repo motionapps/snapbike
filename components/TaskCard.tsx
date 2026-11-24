@@ -9,7 +9,9 @@ import {
 } from 'react-native';
 import { colors } from '../lib/theme';
 import { Task, Product } from '../lib/types';
+import { standardProductsFor } from '../lib/prices';
 import { AddProductModal } from './AddProductModal';
+import { FitPressable } from './FitPressable';
 import { CategoryCard } from './CategoryCard';
 import { styles } from './TaskCard.styles';
 
@@ -22,7 +24,7 @@ const PRODUCT_LABELS: Record<NonNullable<Product['label']>, string> = {
 type Props = {
   task: Task;
   onRemove: (taskId: string) => void;
-  onAddProduct: (taskId: string, name: string, price: number) => void;
+  onAddProduct: (taskId: string, name: string, price: number, quantity?: number) => void;
   onRemoveProduct: (taskId: string, productId: string) => void;
   onUpdateProduct: (taskId: string, productId: string, price: number) => void;
   /** Röstredigering av jobbet: 'recording' = spelar in, 'processing' = AI:n jobbar. */
@@ -182,15 +184,16 @@ export function TaskCard({
         </View>
       ))}
 
-      <Pressable onPress={() => setAdding(true)} style={styles.addProduct}>
+      <FitPressable onPress={() => setAdding(true)} style={styles.addProduct}>
         <Ionicons name="add-circle-outline" size={20} color={colors.accentLight} />
         <Text style={styles.addProductText}>Lägg till produkt</Text>
-      </Pressable>
+      </FitPressable>
       <AddProductModal
         visible={adding}
+        standardProducts={standardProductsFor(task.title)}
         onClose={() => setAdding(false)}
-        onAdd={(name, price) => {
-          onAddProduct(task.id, name, price);
+        onAdd={(name, price, quantity) => {
+          onAddProduct(task.id, name, price, quantity);
           setAdding(false);
         }}
       />

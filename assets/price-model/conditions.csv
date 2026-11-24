@@ -1,0 +1,21 @@
+condition,label
+position=front,fram
+position=rear,bak
+position=both,fram+bak
+mounting=loose,löst hjul
+hub_motor=yes,navmotor
+brake_type=disc,skivbroms
+brake_type=rim,fälgbroms
+brake_system=hydraulic,hydraulisk
+dynamo=yes,dynamo
+fender_type=simple,enkla
+fender_type=complex,svårare
+fender_type=no_stays,utan stag
+routing=internal,intern dragning
+gears=hub,navväxel
+gears=external,utanpåliggande växlar
+electric=yes,elcykel
+bike_type=racer,racer
+bike_type=cargo,lådcykel
+item=trolley,barnvagn
+item=part,lös del

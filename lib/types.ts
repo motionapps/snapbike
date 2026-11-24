@@ -31,6 +31,8 @@ export type Task = {
   done?: boolean;
   /** Mechanic's comment from the work checklist. */
   note?: string;
+  /** The price model part the task works on (assets/price-model/parts.csv); picks its image. */
+  partId?: string;
 };
 
 /**
@@ -92,16 +94,35 @@ export const EMPTY_ORDER: OrderInfo = {
 export const ITEM_KINDS = ['bike', 'part', 'trolley', 'other'] as const;
 export type ItemKind = (typeof ITEM_KINDS)[number];
 
+/** A product that always goes with a price row (assets/price-model/standard_products.csv). */
+export type StandardProduct = {
+  name: string;
+  quantity: number;
+  /** Fixed unit price; without it the stock price is used. */
+  price?: number;
+  /** Added to the job automatically (Standardslang); otherwise only when needed (Eker). */
+  auto: boolean;
+};
+
+/** One bookable row from the price model: a part's action, a service package or an add-on. */
 export type PriceItem = {
+  kind: 'job' | 'package' | 'add_on';
+  /** Card label: the part's top-level group (Hjul, Broms, …), "Service" or "Tillägg". */
   category: string;
+  /** Generated name, e.g. "Byt bromsbelägg (skivbroms)"; unique across the price model. */
   title: string;
   price: number;
-  /** The price list's bikeType column: all_bikes, electric, racer, cargo, hub, external, part, trolley, other. */
-  bikeType: string;
-  /** has_product column: whether the job gets product suggestions at all. */
+  /** Only for kind 'job'. */
+  partId?: string;
+  actionId?: string;
+  /** e.g. { gears: 'hub', brake_type: 'disc' }; empty = always applies. */
+  conditions: Record<string, string>;
+  /** Free extra text from prices.csv's label column, e.g. "inkl. demontering". */
+  label?: string;
+  /** Whether the job gets product suggestions at all. */
   hasProduct: boolean;
-  /** has_standard_products column: suggest only the row's products in snapbike_standard_products.csv. */
-  hasStandardProducts: boolean;
+  /** When set, only these products are suggested; the auto ones are added automatically. */
+  standardProducts: StandardProduct[];
 };
 
 /** Workshop lifecycle, mirrors the snapbike_job_status enum on Supabase. */

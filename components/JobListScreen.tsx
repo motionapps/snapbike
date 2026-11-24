@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
+import { taskFromPriceItem } from '../lib/prices';
 import {
   ActivityIndicator,
   Linking,
@@ -180,10 +181,10 @@ export function JobListScreen({ active }: { active: boolean }) {
   );
 
   const addProduct = useCallback(
-    (taskId: string, name: string, price: number) =>
+    (taskId: string, name: string, price: number, quantity?: number) =>
       changeTask(taskId, (task) => ({
         ...task,
-        products: [...task.products, { id: uid(), name, price }],
+        products: [...task.products, { id: uid(), name, price, quantity }],
       })),
     [changeTask]
   );
@@ -216,10 +217,10 @@ export function JobListScreen({ active }: { active: boolean }) {
 
   const receptionHandlers = {
     onRemove: (taskId: string) => setTasks((current) => current.filter((t) => t.id !== taskId)),
-    onAddProduct: (taskId: string, name: string, price: number) =>
+    onAddProduct: (taskId: string, name: string, price: number, quantity?: number) =>
       changeReceptionTask(taskId, (task) => ({
         ...task,
-        products: [...task.products, { id: uid(), name, price }],
+        products: [...task.products, { id: uid(), name, price, quantity }],
       })),
     onUpdateProduct: (taskId: string, productId: string, price: number) =>
       changeReceptionTask(taskId, (task) => ({
@@ -243,10 +244,7 @@ export function JobListScreen({ active }: { active: boolean }) {
 
   const pickTask = useCallback(
     (item: PriceItem) => {
-      setInspectionTasks((current) => [
-        ...current,
-        { id: uid(), title: item.title, category: item.category, price: item.price, products: [] },
-      ]);
+      setInspectionTasks((current) => [...current, taskFromPriceItem(item)]);
       setShowAddTask(false);
     },
     [setInspectionTasks]

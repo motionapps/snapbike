@@ -39,30 +39,38 @@ Projektet **cykelnatur** (`diwlgaiijdclojyeuvle`, eu-north-1) används:
 
 ## Prislistan
 
-`lib/priceCsv.ts` är genererad från `assets/snapbike_prices.csv`. Kolumnen
-`bikeType` styr vilka rader som visas (se `pricesFor` i `lib/prices.ts`):
-`all_bikes`, `electric`, `racer`, `cargo`, `hub`, `external` för cyklar,
-`part` för lösa delar, `trolley` för barnvagnar, `other` för övrigt.
+Prismodellen ligger i `assets/price-model/` (en kopia av
+`prototypes/price-model/` där modellen utvecklas). Den paketeras i appen som
+`lib/priceModelCsv.ts` och visas skrivskyddad under Inställningar → Priser.
+Inga fält är citerade, så använd inga kommatecken i värdena.
 
-`has_product` (true/false): om AI:n ska föreslå produkter för jobbet alls.
-`has_standard_products` (true/false): då föreslås bara jobbets standardprodukter
-från `assets/snapbike_standard_products.csv`, en rad per produkt:
-
-- `Beskrivning` – exakt som i prislistan
-- `Produkt` – produktnamnet AI:n söker på i lagret
-- `Antal` – hur många (t.ex. 2 däck)
-- `Pris` – valfritt styckpris. Om satt används det i stället för lagerpriset,
-  och arbetet blir prislistans pris minus produkterna (t.ex. 2499 − 2×1000 = 499)
-- `Artikelnummer` – valfritt; om satt söker AI:n på det i stället för namnet
+- `parts.csv` – delträdet: `part_id, parent_id, name, inspection_items`.
+  Toppdelarna (Hjul, Broms, Drivlina …) blir jobbets kategori/etikett.
+  `inspection_items` (`front:front-rim|rear:rear-rim`) placerar jobbet på
+  besiktningens kontrollpunkter; en del utan egna ärver närmaste förälders.
+- `actions.csv` – åtgärderna (Byt, Justera, Rikta …).
+- `prices.csv` – `part_id, action_id, conditions, label, price, has_product`.
+  Jobbnamnet byggs som åtgärd + del + villkorens etiketter + `label`, t.ex.
+  "Byt bromsbelägg (skivbroms)". `has_product=false` = inga produktförslag.
+- `conditions.csv` – svensk etikett per villkor (`brake_type=disc` → skivbroms).
+  Cykelvillkor (`gears`, `electric`, `bike_type`) döljer rader som inte passar
+  den analyserade cykeln; `item=trolley` gäller barnvagnar.
+- `standard_products.csv` – produkter som hör till en prisrad (samma part,
+  action och conditions). `price` är ett valfritt fast styckpris.
+  `auto=true` läggs alltid till (Standardslang); `auto=false` föreslås bara vid
+  behov (Eker vid hjulriktning).
+- `packages.csv` – servicepaket; `covers` listar `part.action` som ingår.
+- `add_ons.csv` – tillägg (Elcykel, Lådcykel, Express …).
 
 Om någon av CSV:erna ändras, regenerera med:
 
 ```bash
 node -e "
 const fs = require('fs');
-const gen = (src, out, name) => fs.writeFileSync(out, '// Auto-generated from ' + src + ' — regenerate with the snippet in README\\nexport const ' + name + ' = \\\`' + fs.readFileSync(src, 'utf8').trim() + '\\\`;\\n');
-gen('assets/snapbike_prices.csv', 'lib/priceCsv.ts', 'PRICE_CSV');
-gen('assets/snapbike_standard_products.csv', 'lib/standardProductsCsv.ts', 'STANDARD_PRODUCTS_CSV');
+const dir = 'assets/price-model/';
+const files = { parts: 'parts', actions: 'actions', prices: 'prices', standardProducts: 'standard_products', packages: 'packages', addOns: 'add_ons', conditions: 'conditions' };
+const body = Object.entries(files).map(([key, f]) => '  ' + key + ': \\\`' + fs.readFileSync(dir + f + '.csv', 'utf8').trim() + '\\\`,').join('\\n');
+fs.writeFileSync('lib/priceModelCsv.ts', '// Auto-generated from assets/price-model/*.csv — regenerate with the snippet in README\\nexport const PRICE_MODEL_CSV = {\\n' + body + '\\n};\\n');
 "
 ```
 

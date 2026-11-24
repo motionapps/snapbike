@@ -21,6 +21,9 @@ export const styles = StyleSheet.create({
   wrap: {
     gap: 8,
   },
+  wrapRight: {
+    alignSelf: 'flex-end',
+  },
   button: {
     flexDirection: 'row',
     alignItems: 'center',

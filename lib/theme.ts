@@ -19,6 +19,8 @@ export const colors = {
   accentLight: '#60A5FA',
   onAccent: '#FFFFFF',
   success: '#49A868',
+  /** Active-filter outline, check and text (@hermodex/ui --ok, dark). */
+  ok: '#00E5A0',
   danger: '#C44F5B',
   warning: '#C4A14F',
   recording: '#E5484D',
@@ -53,15 +55,19 @@ export const fonts = {
   displayExtraBold: 'Archivo_800ExtraBold',
 };
 
-/** Card accent per price-list category, from the BikeOffice 15-color palette. */
+/**
+ * Card accent per category, from the BikeOffice 15-color palette. The price
+ * model's top groups (Hjul, Broms, …, Service, Tillägg) come first; the old
+ * price list's categories stay so tasks saved before keep their colour.
+ */
 const CATEGORY_GROUPS: [string, string[]][] = [
-  ['#4F89C4', ['hjulservice', 'hjulriktning']],
-  ['#C4A14F', ['servicepaket', 'elcykel', 'försäkring']],
+  ['#4F89C4', ['hjul', 'hjulservice', 'hjulriktning']],
+  ['#C4A14F', ['service', 'servicepaket', 'elcykel', 'försäkring']],
   ['#4FC4A1', ['drivlina']],
-  ['#C4724F', ['bromsservice']],
+  ['#C4724F', ['broms', 'bromsservice']],
   ['#89C44F', ['växelservice']],
   ['#724FC4', ['däck och slang']],
-  ['#C44F5B', ['montering', 'tillägg', 'byte']],
+  ['#C44F5B', ['tillbehör', 'tillägg', 'montering', 'byte']],
 ];
 
 export function categoryColor(category: string): string {

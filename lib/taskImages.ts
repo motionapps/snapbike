@@ -131,8 +131,62 @@ const JOB_RULES: [RegExp, ImageKey][] = [
   [/gänginsats|gänginstats/, 'threadInsert'],
 ];
 
-/** The picture for a task or inspection item title, falling back to a tool kit. */
-export function taskImageUrl(title: string): string {
+/** Price model part (assets/price-model/parts.csv) → picture. Parts left out use the title. */
+const PART_IMAGES: Record<string, ImageKey> = {
+  wheel: 'wheel',
+  tire: 'tyre',
+  tubeless: 'tubeless',
+  tube: 'tube',
+  spokes: 'spoke',
+  hub: 'hub',
+  brake: 'caliper',
+  brake_disc: 'rotor',
+  brake_cable: 'brakeCable',
+  brake_lever: 'caliper',
+  drivetrain: 'crankset',
+  chain: 'chain',
+  cassette: 'cassette',
+  jockey_wheels: 'pulleys',
+  chainring: 'chainring',
+  crankset: 'crankset',
+  crank_arm: 'crankArm',
+  bottom_bracket: 'bottomBracket',
+  pedals: 'pedals',
+  derailleur: 'derailleur',
+  derailleur_hanger: 'hanger',
+  hub_gear: 'hubGear',
+  shifter: 'shifter',
+  shift_cable: 'shiftCable',
+  cockpit: 'handlebar',
+  handlebar: 'handlebar',
+  bar_tape: 'barTape',
+  stem: 'stem',
+  headset: 'headset',
+  grips: 'grips',
+  frame: 'frame',
+  saddle: 'saddle',
+  kickstand: 'kickstand',
+  accessories: 'rack',
+  fender: 'mudguard',
+  rack: 'rack',
+  light: 'frontLight',
+  chain_guard: 'chainGuard',
+  skirt_guard: 'skirtGuard',
+  basket: 'basket',
+  child_seat: 'childSeat',
+  lock: 'lock',
+  electric: 'ebikeMotor',
+  display: 'display',
+};
+
+/**
+ * The picture for a task: its price model part when known (brake pads are left
+ * to the title, which tells disc from rim), otherwise the title, falling back
+ * to a tool kit.
+ */
+export function taskImageUrl(title: string, partId?: string): string {
+  const partKey = partId ? PART_IMAGES[partId] : undefined;
+  if (partKey) return IMAGE_HOST + IMAGES[partKey];
   const text = title.toLowerCase();
   const hit = JOB_RULES.find(([pattern]) => pattern.test(text));
   return IMAGE_HOST + IMAGES[hit ? hit[1] : 'tools'];
@@ -176,4 +230,11 @@ const INSPECTION_IMAGES: Record<string, ImageKey> = {
 export function inspectionImageUrl(itemId: string, title: string): string {
   const key = INSPECTION_IMAGES[itemId];
   return key ? IMAGE_HOST + IMAGES[key] : taskImageUrl(title);
+}
+
+/** The picture on a category chip: a top part id, or 'packages' / 'add_ons'. */
+export function categoryImageUrl(id: string): string {
+  if (id === 'packages') return IMAGE_HOST + IMAGES.chainLube;
+  const key = PART_IMAGES[id];
+  return IMAGE_HOST + IMAGES[key ?? 'tools'];
 }

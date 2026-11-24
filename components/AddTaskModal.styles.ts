@@ -1,9 +1,6 @@
 import { StyleSheet } from 'react-native';
 import { colors, radius, fontSize, fonts } from '../lib/theme';
 
-/** Fixed card height, so the square image always matches it. */
-const ROW_HEIGHT = 76;
-
 export const styles = StyleSheet.create({
   sheet: {
     flex: 1,
@@ -50,84 +47,42 @@ export const styles = StyleSheet.create({
     color: colors.text,
     paddingVertical: 11,
   },
-  chipScroll: {
-    flexGrow: 0,
-    flexShrink: 0,
-    marginBottom: 12,
-  },
-  chipRow: {
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    gap: 8,
-  },
-  chip: {
-    backgroundColor: colors.card,
-    borderRadius: 999,
-    borderWidth: 1,
-    borderColor: colors.border,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-  },
-  chipActive: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accentLight,
-  },
-  chipText: {
-    color: colors.textSecondary,
-    fontFamily: fonts.semiBold,
-    fontSize: fontSize.small,
-  },
-  chipTextActive: {
-    color: colors.onAccent,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 40,
-    gap: 8,
-  },
+  /** A job row inside the tree: product photo, action + detail, price. */
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
-    backgroundColor: colors.card,
-    borderRadius: radius.md,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-    height: ROW_HEIGHT,
-    paddingRight: 14,
+    paddingVertical: 6,
+    paddingRight: 4,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
   rowPressed: {
     backgroundColor: colors.cardRaised,
   },
-  // The image fills the full card height, square, flush with the card edge.
   rowImageButton: {
-    width: ROW_HEIGHT - 2, // card height minus its 1px top and bottom border
-    alignSelf: 'stretch',
+    width: 48,
+    height: 48,
+    borderRadius: radius.sm,
+    overflow: 'hidden',
     backgroundColor: '#fff',
   },
   rowImage: {
     flex: 1,
   },
-  rowText: {
-    flex: 1,
-    gap: 2,
-  },
-  rowCategory: {
-    color: colors.accentLight,
-    fontFamily: fonts.bold,
-    fontSize: fontSize.small,
-    letterSpacing: 1,
-  },
   rowTitle: {
+    flex: 1,
     fontSize: fontSize.body,
     fontFamily: fonts.regular,
     color: colors.text,
   },
+  rowDetail: {
+    color: colors.textSecondary,
+    fontSize: fontSize.small,
+  },
   rowPrice: {
     fontSize: fontSize.body,
-    color: colors.textSecondary,
+    color: colors.text,
     fontFamily: fonts.semiBold,
   },
 });

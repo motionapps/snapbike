@@ -221,19 +221,29 @@ type MessageParam = {
 };
 
 const WHEEL_RULES =
-  'DEBITERINGSREGEL HJUL: Punktering, slangbyte och däckbyte är samma ' +
-  'arbetsmoment. Använd raden "Däckbyte per hjul fram" eller "Däckbyte per ' +
-  'hjul bak" som arbete (ett jobb per hjul) och lägg slang och/eller däck som ' +
-  'produkter på det jobbet. Debitera ALDRIG två arbeten för samma hjul (t.ex. ' +
-  'både "Punktering fram inkl. standardslang" och "Däckbyte per hjul fram").';
+  'DEBITERINGSREGEL HJUL: Punktering eller slangbyte → raden "Byt slang" ' +
+  '(standardslangen läggs till som produkt). Däckbyte, med eller utan ny ' +
+  'slang → "Byt däck" (ett jobb per hjul), eller "Byt däck (fram+bak)" när ' +
+  'båda hjulen byts, med däck och vid behov slang som produkter. För löst ' +
+  'hjul eller barnvagn: motsvarande rad "(löst hjul)" eller "(barnvagn)". ' +
+  'Debitera ALDRIG både "Byt slang" och "Byt däck" för samma hjul.';
 
 const PRODUCT_RULES =
   'PRODUKTREGEL: Prislistans kolumn Produkter styr produktförslagen. "nej" = ' +
   'föreslå INGA produkter för jobbet (tom lista). "ja" = föreslå produkter ' +
   'fritt enligt reglerna ovan. Annars listar kolumnen jobbets standardprodukter ' +
-  '(t.ex. "2 st Routa W244 35-622 | ..."): föreslå då ENDAST dem, sök upp var ' +
-  'och en med search_stock (på artikelnumret om det finns, annars namnet) för ' +
-  'exakt namn, artikelnummer, pris och lagersaldo, och ange antalet som quantity.';
+  '(t.ex. "2 st Schwalbe Marathon | ..."): föreslå då ENDAST dem och ange antalet ' +
+  'som quantity. "läggs till automatiskt" = ta alltid med den. "bara vid behov" ' +
+  '= ta bara med den när jobbet kräver det (t.ex. Eker när ekrar behöver bytas ' +
+  'vid hjulriktning) och ange då antalet som nämns. En standardprodukt med ' +
+  '"fast pris" får exakt det priset och behöver ingen lagersökning; övriga söker ' +
+  'du upp med search_stock för exakt namn, artikelnummer, pris och lagersaldo.';
+
+const CONDITION_RULES =
+  'VILLKOR: Text i parentes efter en rad (t.ex. "(skivbroms)", "(navväxel)", ' +
+  '"(fram)", "(löst hjul)") är villkor för när raden gäller. Välj den mest ' +
+  'specifika rad vars villkor stämmer med cykeln och jobbet; finns ingen ' +
+  'sådan, välj raden utan parentes.';
 
 const systemPrompt = (prices: PriceItem[]) =>
   'Du är assistent på en cykelverkstad. Du får en transkriberad röstanteckning ' +
@@ -256,6 +266,8 @@ const systemPrompt = (prices: PriceItem[]) =>
   WHEEL_RULES +
   '\n\n' +
   PRODUCT_RULES +
+  '\n\n' +
+  CONDITION_RULES +
   '\n\nNär du är klar: anropa create_task_list exakt en gång med hela jobblistan.\n\n' +
   SERVICE_GUIDE +
   '\n\nPRISLISTA:\n' +
@@ -273,6 +285,8 @@ const refinePrompt = (prices: PriceItem[]) =>
   WHEEL_RULES +
   '\n\n' +
   PRODUCT_RULES +
+  '\n\n' +
+  CONDITION_RULES +
   '\n\nNär du är klar: anropa update_task exakt en gång med hela det ' +
   'uppdaterade jobbet.\n\n' +
   SERVICE_GUIDE +

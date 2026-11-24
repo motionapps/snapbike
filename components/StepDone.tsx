@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ReactNode, useState } from 'react';
-import { Pressable, StyleProp, Text, View, ViewStyle } from 'react-native';
+import { Pressable, StyleProp, Text, useWindowDimensions, View, ViewStyle } from 'react-native';
 import { STEP_STATUS, StepTab, stepDone } from '../lib/jobSteps';
 import { useOrderContext } from '../lib/orderContext';
 import { setJobStatus } from '../lib/supabase';
-import { colors } from '../lib/theme';
+import { colors, PHONE_MAX_WIDTH } from '../lib/theme';
 import { styles } from './StepDone.styles';
 import { FitPressable } from './FitPressable';
 
@@ -51,12 +51,14 @@ export function useSetStepDone(tab: StepTab) {
 }
 
 /** Klar / Lås upp at the bottom of a tab: moves the job's status on or back. */
-export function DoneButton({ tab }: { tab: StepTab }) {
+/** alignRight: on wider screens the fitted button sits at the right edge instead of centred. */
+export function DoneButton({ tab, alignRight = false }: { tab: StepTab; alignRight?: boolean }) {
   const { order, goToInspection, goToJobList } = useOrderContext();
   const [error, setError] = useState('');
   const done = useStepLocked(tab);
   const setStepDone = useSetStepDone(tab);
   const jobId = order.bookingId;
+  const { width } = useWindowDimensions();
 
   const toggle = () => {
     setError('');
@@ -71,7 +73,7 @@ export function DoneButton({ tab }: { tab: StepTab }) {
   };
 
   return (
-    <View style={styles.wrap}>
+    <View style={[styles.wrap, alignRight && width >= PHONE_MAX_WIDTH && styles.wrapRight]}>
       <FitPressable
         onPress={toggle}
         disabled={!jobId}
