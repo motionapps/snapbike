@@ -50,7 +50,7 @@ import { PhotoCard } from './components/PhotoCard';
 import { ManualBikeModal } from './components/ManualBikeModal';
 import { analyzeBikePhoto, BikeData } from './lib/bikeAnalysis';
 import { classifyItemKind } from './lib/itemKind';
-import { pricesFor, taskFromPriceItem } from './lib/prices';
+import { pricesFor, setTaskSide, taskFromPriceItem } from './lib/prices';
 import { BikeAnalysisState, BikeDetails } from './components/BikeDetails';
 import { analyzeTranscript, hasOpenAiKey, refineTask, transcribeAudio } from './lib/llm-communication/api';
 import { startWebSpeech, stopWebSpeech, webSpeechAvailable } from './lib/speech';
@@ -84,6 +84,7 @@ import {
   Task,
   OrderInfo,
   PriceItem,
+  Side,
   approvedTotal,
   tasksTotal,
   uid,
@@ -710,6 +711,12 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     );
   }, []);
 
+  const setSide = useCallback((taskId: string, side: Side) => {
+    setTasks((current) =>
+      current.map((task) => (task.id === taskId ? setTaskSide(task, side) : task))
+    );
+  }, []);
+
   const pickTask = useCallback((item: PriceItem) => {
     setTasks((current) => [...current, taskFromPriceItem(item)]);
     setShowAddTask(false);
@@ -849,6 +856,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
                         : undefined
                     }
                     onVoiceEdit={toggleTaskVoice}
+                    onSetSide={setSide}
                   />
                 ))}
               </View>

@@ -1,6 +1,6 @@
 import { BikeData } from './bikeAnalysis';
 import { PRICE_MODEL_CSV } from './priceModelCsv';
-import { ItemKind, PriceItem, Product, StandardProduct, Task, uid } from './types';
+import { ItemKind, PriceItem, Product, Side, StandardProduct, Task, uid } from './types';
 
 // The price model lives in assets/price-model/*.csv (see README). No field is quoted.
 
@@ -72,11 +72,10 @@ function conditionLabels(conditions: Record<string, string>): string[] {
   );
 }
 
-const conditionKey = (text: string) => text.split(';').filter(Boolean).sort().join(';');
-
+/** Standard products belong to part + action and apply to all its rows. */
 const STANDARD_PRODUCTS = new Map<string, StandardProduct[]>();
 parseCsv(PRICE_MODEL_CSV.standardProducts).forEach((row) => {
-  const key = `${row.part_id}|${row.action_id}|${conditionKey(row.conditions)}`;
+  const key = `${row.part_id}|${row.action_id}`;
   const list = STANDARD_PRODUCTS.get(key) ?? [];
   list.push({
     name: row.product,
@@ -87,7 +86,36 @@ parseCsv(PRICE_MODEL_CSV.standardProducts).forEach((row) => {
   STANDARD_PRODUCTS.set(key, list);
 });
 
-const JOB_ITEMS: PriceItem[] = parseCsv(PRICE_MODEL_CSV.prices).map((row) => {
+/** The part (or nearest ancestor) whose inspection items place a row. */
+function inspectionPart(partId: string | undefined): PricePart | undefined {
+  let part = partId ? PART_BY_ID.get(partId) : undefined;
+  while (part && part.inspectionItems.length === 0 && part.parentId) {
+    part = PART_BY_ID.get(part.parentId);
+  }
+  return part;
+}
+
+/**
+ * A row has sides when its part has front/rear inspection items and the row
+ * doesn't name a side itself. A loose wheel or loose part is just one piece.
+ */
+function hasSides(item: PriceItem): boolean {
+  const { position, mounting, item: kind } = item.conditions;
+  if (position || mounting === 'loose' || kind === 'part') return false;
+  return !!inspectionPart(item.partId)?.inspectionItems.some(({ side }) => side);
+}
+
+const withoutPosition = (conditions: Record<string, string>) =>
+  Object.entries(conditions)
+    .filter(([key]) => key !== 'position')
+    .map(([key, value]) => `${key}=${value}`)
+    .sort()
+    .join(';');
+
+const rowKey = (item: PriceItem, conditions = item.conditions) =>
+  `${item.partId}|${item.actionId}|${withoutPosition(conditions)}`;
+
+const ALL_JOB_ITEMS: PriceItem[] = parseCsv(PRICE_MODEL_CSV.prices).map((row) => {
   const part = PART_BY_ID.get(row.part_id);
   const partName = part?.name ?? row.part_id;
   const conditions = parseConditions(row.conditions);
@@ -107,10 +135,26 @@ const JOB_ITEMS: PriceItem[] = parseCsv(PRICE_MODEL_CSV.prices).map((row) => {
     conditions,
     label: row.label || undefined,
     hasProduct: row.has_product === 'true',
-    standardProducts:
-      STANDARD_PRODUCTS.get(`${row.part_id}|${row.action_id}|${conditionKey(row.conditions)}`) ?? [],
+    standardProducts: STANDARD_PRODUCTS.get(`${row.part_id}|${row.action_id}`) ?? [],
   };
 });
+
+/**
+ * Sided rows get a fram+bak price: twice the price, unless a position=both row
+ * for the same part, action and conditions overrides it (Byt däck 499). The
+ * override row is folded into its sided row and not listed on its own.
+ */
+const SIDED_KEYS = new Set(ALL_JOB_ITEMS.filter(hasSides).map((item) => rowKey(item)));
+const isBothOverride = (item: PriceItem) =>
+  item.conditions.position === 'both' && SIDED_KEYS.has(rowKey(item));
+const BOTH_OVERRIDES = new Map(
+  ALL_JOB_ITEMS.filter(isBothOverride).map((item) => [rowKey(item), item.price])
+);
+const JOB_ITEMS: PriceItem[] = ALL_JOB_ITEMS.filter((item) => !isBothOverride(item)).map((item) =>
+  hasSides(item)
+    ? { ...item, bothPrice: BOTH_OVERRIDES.get(rowKey(item)) ?? item.price * 2 }
+    : item
+);
 
 export type ServicePackage = PriceItem & { covers: string[] };
 
@@ -150,9 +194,31 @@ export const PRICE_LIST: PriceItem[] = [...JOB_ITEMS, ...PACKAGES, ...ADD_ONS];
 
 const PRICE_BY_TITLE = new Map(PRICE_LIST.map((item) => [item.title, item]));
 
+/** "fram", "bak", "fram+bak" (conditions.csv). */
+export const sideLabel = (side: Side) => CONDITION_LABELS.get(`position=${side}`) ?? side;
+
+/** "Byt slang" + rear → "Byt slang (bak)"; "Byt slang (barnvagn)" → "Byt slang (barnvagn, bak)". */
+const sideTitle = (title: string, side: Side) =>
+  title.endsWith(')') ? `${title.slice(0, -1)}, ${sideLabel(side)})` : `${title} (${sideLabel(side)})`;
+
+/** The price row a task was made from, its side stripped from the title. */
+function itemForTask(task: Pick<Task, 'title' | 'side'>): PriceItem | undefined {
+  const exact = PRICE_BY_TITLE.get(task.title);
+  if (exact || !task.side) return exact;
+  const label = sideLabel(task.side);
+  const base = task.title.endsWith(`, ${label})`)
+    ? `${task.title.slice(0, -(label.length + 3))})`
+    : task.title.replace(` (${label})`, '');
+  return PRICE_BY_TITLE.get(base);
+}
+
 /** The standard products of the price row a task was made from (none if it has no row). */
-export const standardProductsFor = (title: string): StandardProduct[] =>
-  PRICE_BY_TITLE.get(title)?.standardProducts ?? [];
+export const standardProductsFor = (task: Pick<Task, 'title' | 'side'>): StandardProduct[] =>
+  itemForTask(task)?.standardProducts ?? [];
+
+/** Whether the task's row needs fram/bak/fram+bak. */
+export const needsSide = (task: Pick<Task, 'title' | 'side'>) =>
+  itemForTask(task)?.bothPrice !== undefined;
 
 /** Conditions that describe the whole bike; a known bike hides rows that don't fit. */
 const BIKE_CONDITIONS = ['gears', 'electric', 'bike_type'];
@@ -248,39 +314,46 @@ export function priceCsvFor(items: PriceItem[]): string {
       })
       .join(' | ');
   };
+  // Sided rows: "299 (fram+bak 499)"; the AI sets the side, the code the title.
+  const priceCell = (item: PriceItem) =>
+    item.bothPrice !== undefined ? `${item.price} (fram+bak ${item.bothPrice})` : `${item.price}`;
   return [
     'Servicetyp;Beskrivning;Pris;Produkter',
-    ...items.map((item) => `${item.category};${item.title};${item.price};${productsCell(item)}`),
+    ...items.map((item) => `${item.category};${item.title};${priceCell(item)};${productsCell(item)}`),
   ].join('\n');
 }
 
-const standardProduct = (std: StandardProduct): Product => ({
-  id: uid(),
-  name: std.name,
-  price: std.price ?? 0,
-  quantity: std.quantity > 1 ? std.quantity : undefined,
-});
+const standardProduct = (std: StandardProduct, side?: Side): Product => {
+  const quantity = std.quantity * (side === 'both' ? 2 : 1);
+  return {
+    id: uid(),
+    name: std.name,
+    price: std.price ?? 0,
+    quantity: quantity > 1 ? quantity : undefined,
+  };
+};
 
 /**
  * The inspection checklist ids a row fixes, from its part (or nearest ancestor
- * with any). Side-tagged ids need the row's side: "fram+bak" takes both, no
- * side takes none rather than guess.
+ * with any). Side-tagged ids need a side (the task's, else the row's): "fram+bak"
+ * takes both, no side takes none rather than guess.
  */
-function inspectionItemIdsFor(item: PriceItem): string[] {
-  let part = item.partId ? PART_BY_ID.get(item.partId) : undefined;
-  while (part && part.inspectionItems.length === 0 && part.parentId) {
-    part = PART_BY_ID.get(part.parentId);
-  }
+function inspectionItemIdsFor(item: PriceItem, side?: Side): string[] {
+  const part = inspectionPart(item.partId);
   if (!part) return [];
-  const position = item.conditions.position;
+  const position = side ?? item.conditions.position;
   return part.inspectionItems
     .filter(({ side }) => !side || side === position || position === 'both')
     .map(({ id }) => id);
 }
 
-const autoProducts = (item: PriceItem) => item.standardProducts.filter((p) => p.auto).map(standardProduct);
+const autoProducts = (item: PriceItem, side?: Side) =>
+  item.standardProducts.filter((p) => p.auto).map((p) => standardProduct(p, side));
 
-/** A new task for a price row picked by hand; its auto standard products come along. */
+/**
+ * A new task for a price row picked by hand; its auto standard products come
+ * along. A sided row starts without a side; the task card asks for it.
+ */
 export function taskFromPriceItem(item: PriceItem): Task {
   return {
     id: uid(),
@@ -301,16 +374,22 @@ export function taskFromPriceItem(item: PriceItem): Task {
  * from the part.
  */
 export function applyProductRules(task: Task): Task {
-  const item = PRICE_BY_TITLE.get(task.title);
+  const item = itemForTask(task);
   if (!item) return task;
+  // A sided row's side sets its title, price and inspection items; other rows have none.
+  const side = item.bothPrice !== undefined ? task.side : undefined;
   const base: Task = {
     ...task,
+    title: side ? sideTitle(item.title, side) : item.title,
+    side,
     category: item.category,
-    price: item.price,
+    price: side === 'both' ? item.bothPrice! : item.price,
     partId: item.partId,
-    inspectionItemIds: task.inspectionItemIds?.length
-      ? task.inspectionItemIds
-      : inspectionItemIdsFor(item),
+    inspectionItemIds: side
+      ? inspectionItemIdsFor(item, side)
+      : task.inspectionItemIds?.length
+        ? task.inspectionItemIds
+        : inspectionItemIdsFor(item),
   };
   if (!item.hasProduct) return { ...base, products: [] };
   const standard = item.standardProducts;
@@ -339,5 +418,11 @@ export function applyProductRules(task: Task): Task {
       },
     ];
   });
-  return { ...base, products: [...autoProducts(item), ...products] };
+  return { ...base, products: [...autoProducts(item, side), ...products] };
+}
+
+/** Sets a task's side (fram/bak/fram+bak) and reprices it. */
+export function setTaskSide(task: Task, side: Side): Task {
+  const item = itemForTask(task);
+  return item ? applyProductRules({ ...task, title: item.title, side }) : task;
 }

@@ -101,6 +101,30 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
     () => new Set(template.flatMap((section) => section.items.map((item) => item.id))),
     [template]
   );
+  // Mottagning flows into Besiktning: each agreed task's inspection items get a
+  // "Mottagning" line, and items with no result yet start as remarks.
+  const receptionLines = useMemo(() => {
+    const lines: Record<string, string[]> = {};
+    for (const task of tasks) {
+      for (const id of task.inspectionItemIds ?? []) {
+        if (!itemIds.has(id)) continue;
+        (lines[id] ??= []).push(task.note?.trim() ? `${task.title} – ${task.note.trim()}` : task.title);
+      }
+    }
+    return lines;
+  }, [tasks, itemIds]);
+  // A finished (locked) Besiktning is left as it is.
+  const stepLocked = useStepLocked('inspect');
+  useEffect(() => {
+    if (stepLocked) return;
+    const missing = Object.keys(receptionLines).filter((id) => !results[id]);
+    if (missing.length === 0) return;
+    setResults((current) => {
+      const next = { ...current };
+      for (const id of missing) next[id] ??= { status: 'issue', note: '' };
+      return next;
+    });
+  }, [receptionLines, results, setResults, stepLocked]);
   const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
   const [phase, setPhase] = useState<MicPhase>('idle');
   const [micError, setMicError] = useState('');
@@ -318,7 +342,6 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
   const done = checkedCount === itemCount;
 
   const setInspectionDone = useSetStepDone('inspect');
-  const stepLocked = useStepLocked('inspect');
 
   // Klar, skapa jobblista: make the Jobblista from the remarks, mark
   // Besiktning Klar and jump to the Jobblista tab.
@@ -532,6 +555,14 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
                           {statusButton('remove', 'skip', colors.textSecondary, false)}
                         </View>
                       </View>
+                      {receptionLines[item.id] ? (
+                        <View style={styles.receptionRow}>
+                          <Text style={styles.receptionLabel}>MOTTAGNING</Text>
+                          <Text style={styles.receptionText}>
+                            {receptionLines[item.id].join(' · ')}
+                          </Text>
+                        </View>
+                      ) : null}
                       {result && result.status !== 'skip' ? (
                         <View style={styles.noteWrap}>
                           <TextInput

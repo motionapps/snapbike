@@ -204,6 +204,22 @@ export const styles = StyleSheet.create({
     padding: 10,
     minHeight: 40,
   },
+  receptionRow: {
+    marginHorizontal: 12,
+    marginBottom: 8,
+    gap: 2,
+  },
+  receptionLabel: {
+    fontSize: fontSize.small,
+    fontFamily: fonts.bold,
+    color: colors.textSecondary,
+    letterSpacing: 0.5,
+  },
+  receptionText: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.regular,
+    color: colors.text,
+  },
   noteWrap: {
     margin: 12,
     marginTop: 0,

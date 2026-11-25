@@ -29,7 +29,15 @@ function PriceRow({ item }: { item: PriceItem }) {
       ? `Ingår: ${(item as ServicePackage).covers.join(', ')}`
       : item.kind === 'add_on'
         ? (item as AddOn).note
-        : standardText(item);
+        : [
+            // Only an override is worth showing; otherwise fram+bak is twice the price.
+            item.bothPrice !== undefined && item.bothPrice !== item.price * 2
+              ? `fram+bak ${item.bothPrice} kr`
+              : '',
+            standardText(item),
+          ]
+            .filter(Boolean)
+            .join(' · ');
   return (
     <View style={styles.row}>
       <View style={styles.rowText}>

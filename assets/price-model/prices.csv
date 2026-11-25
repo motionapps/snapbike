@@ -5,6 +5,7 @@ tire,replace,mounting=loose,,329,true
 tubeless,mount,,,699,false
 tubeless,refill,,,299,false
 tube,replace,,,299,true
+tube,replace,position=both,,499,true
 tube,replace,mounting=loose,,229,true
 tube,replace,item=trolley,,199,true
 wheel,align,,,499,true

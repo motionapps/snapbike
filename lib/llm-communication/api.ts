@@ -7,11 +7,11 @@ import {
   InspectionState,
   InspectionStatus,
 } from '../inspection';
-import { applyProductRules, priceCsvFor } from '../prices';
+import { applyProductRules, priceCsvFor, sideLabel } from '../prices';
 import { SERVICE_GUIDE } from '../servicePackage';
 import { searchInStock } from '../inStockCache';
 import { searchProducts } from '../productSearch';
-import { Task, PriceItem, uid } from '../types';
+import { Task, PriceItem, Side, uid } from '../types';
 
 const OPENAI_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '';
 const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY ?? '';
@@ -140,6 +140,13 @@ const JOB_ITEM_SCHEMA = {
         required: ['name', 'price'],
       },
     },
+    side: {
+      type: 'string',
+      enum: ['fram', 'bak', 'fram+bak'],
+      description:
+        'Krävs för rader vars Pris har "(fram+bak …)": vilket hjul/vilken broms ' +
+        'jobbet gäller. Utelämna om det inte framgår vilken sida – gissa aldrig.',
+    },
     inspectionItemIds: {
       type: 'array',
       items: { type: 'string' },
@@ -199,7 +206,14 @@ type ToolTask = {
   price: number;
   severity?: 'kritisk' | 'normal';
   products: ToolProduct[];
+  side?: 'fram' | 'bak' | 'fram+bak';
   inspectionItemIds?: string[];
+};
+
+const SIDES: Record<NonNullable<ToolTask['side']>, Side> = {
+  fram: 'front',
+  bak: 'rear',
+  'fram+bak': 'both',
 };
 
 type ContentBlock = {
@@ -223,10 +237,13 @@ type MessageParam = {
 const WHEEL_RULES =
   'DEBITERINGSREGEL HJUL: Punktering eller slangbyte → raden "Byt slang" ' +
   '(standardslangen läggs till som produkt). Däckbyte, med eller utan ny ' +
-  'slang → "Byt däck" (ett jobb per hjul), eller "Byt däck (fram+bak)" när ' +
-  'båda hjulen byts, med däck och vid behov slang som produkter. För löst ' +
+  'slang → "Byt däck", med däck och vid behov slang som produkter. För löst ' +
   'hjul eller barnvagn: motsvarande rad "(löst hjul)" eller "(barnvagn)". ' +
-  'Debitera ALDRIG både "Byt slang" och "Byt däck" för samma hjul.';
+  'Debitera ALDRIG både "Byt slang" och "Byt däck" för samma hjul.\n\n' +
+  'SIDA: Rader vars Pris har "(fram+bak …)" gäller fram- eller bakhjul ' +
+  '(fram- eller bakbroms). Använd radens Beskrivning oförändrad och ange ' +
+  'side: "fram", "bak" eller "fram+bak" (båda = ETT jobb, inte två). ' +
+  'Priset för sidan räknas ut av appen.';
 
 const PRODUCT_RULES =
   'PRODUKTREGEL: Prislistans kolumn Produkter styr produktförslagen. "nej" = ' +
@@ -485,6 +502,7 @@ export async function refineTask(
       category: task.category,
       price: task.price,
       severity: task.severity,
+      side: task.side ? sideLabel(task.side) : undefined,
       products: task.products.map((product) => ({
         name: product.name,
         price: product.price,
@@ -507,10 +525,13 @@ export async function refineTask(
   if (!input.task) {
     throw new Error('Claude returnerade inget uppdaterat jobb.');
   }
+  const refined = applyProductRules(mapTask(input.task));
   return {
-    ...applyProductRules(mapTask(input.task)),
+    ...refined,
     id: task.id,
-    inspectionItemIds: task.inspectionItemIds,
+    // A new side moves the task to that wheel's inspection items.
+    inspectionItemIds:
+      refined.side && refined.side !== task.side ? refined.inspectionItemIds : task.inspectionItemIds,
   };
 }
 
@@ -521,6 +542,7 @@ function mapTask(task: ToolTask): Task {
     category: task.category,
     price: task.price,
     severity: task.severity,
+    side: task.side ? SIDES[task.side] : undefined,
     inspectionItemIds: (task.inspectionItemIds ?? []).filter((id) =>
       VALID_ITEM_IDS.has(id)
     ),

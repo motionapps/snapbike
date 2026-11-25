@@ -1,4 +1,4 @@
-// Auto-generated from assets/price-model/*.csv — regenerate with the snippet in README
+// Auto-generated from assets/price-model/*.csv — regenerate with the snippet in assets/price-model/README.md
 export const PRICE_MODEL_CSV = {
   parts: `part_id,parent_id,name,inspection_items
 wheel,,Hjul,front:front-rim|rear:rear-rim
@@ -67,6 +67,7 @@ tire,replace,mounting=loose,,329,true
 tubeless,mount,,,699,false
 tubeless,refill,,,299,false
 tube,replace,,,299,true
+tube,replace,position=both,,499,true
 tube,replace,mounting=loose,,229,true
 tube,replace,item=trolley,,199,true
 wheel,align,,,499,true
@@ -150,25 +151,19 @@ lock,open,,+ 100 kr per klinga,449,false
 other,repair,,gänginsats,400,false
 other,mount,,kr per min minst 20 min,25,true
 other,troubleshoot,,besiktning skadad cykel inkl. offert till försäkringsbolag,499,false`,
-  standardProducts: `part_id,action_id,conditions,product,quantity,price,auto
-tire,replace,,Schwalbe Road Cruiser,1,,false
-tire,replace,,Schwalbe Marathon,1,,false
-tire,replace,,Schwalbe Marathon Plus,1,,false
-tire,replace,position=both,Schwalbe Road Cruiser,2,,false
-tire,replace,position=both,Schwalbe Marathon,2,,false
-tire,replace,position=both,Schwalbe Marathon Plus,2,,false
-tire,replace,position=both,Routa W248 42-622,2,,false
-tire,replace,position=both,Routa W124 42-622,2,,false
-tire,replace,position=both,Routa W244 35-622,2,,false
-tire,replace,position=both,Routa W122 35-622,2,,false
-tire,replace,position=both,Routa W244 Ebike 35-622,2,,false
-tire,replace,position=both,Routa W248 E-Bike 42-622,2,,false
-tube,replace,,Standardslang,1,100,true
-tube,replace,mounting=loose,Standardslang,1,100,true
-tube,replace,item=trolley,Standardslang,1,100,true
-wheel,align,,Eker,1,33,false
-wheel,align,mounting=loose,Eker,1,33,false
-wheel,align,hub_motor=yes,Eker,1,33,false`,
+  standardProducts: `part_id,action_id,product,quantity,price,auto
+tire,replace,Schwalbe Road Cruiser,1,,false
+tire,replace,Schwalbe Marathon,1,,false
+tire,replace,Schwalbe Marathon Plus,1,,false
+tire,replace,Routa W248 42-622,1,,false
+tire,replace,Routa W124 42-622,1,,false
+tire,replace,Routa W244 35-622,1,,false
+tire,replace,Routa W122 35-622,1,,false
+tire,replace,Routa W244 Ebike 35-622,1,,false
+tire,replace,Routa W248 E-Bike 42-622,1,,false
+tube,replace,Standardslang,1,100,true
+wheel,align,Eker,1,33,false
+tire,replace,Standardslang,1,100,false`,
   packages: `package_id,name,conditions,price,covers
 basic_hub,Grundservice Fotbromsade cyklar,gears=hub,599,derailleur.adjust|brake.adjust|chain.clean_lube|hub.adjust|headset.adjust
 basic_external,Grundservice Utanpåliggande växlar,gears=external,699,derailleur.adjust|brake.adjust|chain.clean_lube|hub.adjust|headset.adjust

@@ -8,8 +8,8 @@ import {
   View,
 } from 'react-native';
 import { colors } from '../lib/theme';
-import { Task, Product } from '../lib/types';
-import { standardProductsFor } from '../lib/prices';
+import { Side, Task, Product } from '../lib/types';
+import { needsSide, sideLabel, standardProductsFor } from '../lib/prices';
 import { AddProductModal } from './AddProductModal';
 import { FitPressable } from './FitPressable';
 import { CategoryCard } from './CategoryCard';
@@ -32,7 +32,11 @@ type Props = {
   onVoiceEdit?: (taskId: string) => void;
   /** Visa kundens godkänn/neka-knappar (offertläge). */
   onSetApproval?: (taskId: string, approval: 'godkänd' | 'nekad' | undefined) => void;
+  /** Picks fram/bak/fram+bak on a sided task that has none yet. */
+  onSetSide?: (taskId: string, side: Side) => void;
 };
+
+const SIDES: Side[] = ['front', 'rear', 'both'];
 
 export function TaskCard({
   task,
@@ -43,6 +47,7 @@ export function TaskCard({
   voiceState,
   onVoiceEdit,
   onSetApproval,
+  onSetSide,
 }: Props) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -112,6 +117,16 @@ export function TaskCard({
         <Text style={styles.voiceHint}>
           Prata in ändringen, t.ex. "föreslå andra Pirelli 28 mm" – tryck stopp när du är klar.
         </Text>
+      ) : null}
+
+      {onSetSide && !task.side && needsSide(task) ? (
+        <View style={styles.approvalRow}>
+          {SIDES.map((side) => (
+            <Pressable key={side} onPress={() => onSetSide(task.id, side)} style={styles.approveBtn}>
+              <Text style={styles.approveLabel}>{sideLabel(side)}</Text>
+            </Pressable>
+          ))}
+        </View>
       ) : null}
 
       {task.products.map((product) => (
@@ -190,7 +205,7 @@ export function TaskCard({
       </FitPressable>
       <AddProductModal
         visible={adding}
-        standardProducts={standardProductsFor(task.title)}
+        standardProducts={standardProductsFor(task)}
         onClose={() => setAdding(false)}
         onAdd={(name, price, quantity) => {
           onAddProduct(task.id, name, price, quantity);

@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
-import { taskFromPriceItem } from '../lib/prices';
+import { setTaskSide, taskFromPriceItem } from '../lib/prices';
 import {
   ActivityIndicator,
   Linking,
@@ -27,6 +27,7 @@ import {
   taskTotal,
   tasksTotal,
   uid,
+  Side,
 } from '../lib/types';
 import { AddTaskModal } from './AddTaskModal';
 import { CategoryCard } from './CategoryCard';
@@ -207,6 +208,11 @@ export function JobListScreen({ active }: { active: boolean }) {
     [changeTask]
   );
 
+  const setSide = useCallback(
+    (taskId: string, side: Side) => changeTask(taskId, (task) => setTaskSide(task, side)),
+    [changeTask]
+  );
+
   // Mottagning tasks are edited here too; they were agreed at Mottagning, so
   // a change keeps their approval.
   const changeReceptionTask = useCallback(
@@ -216,6 +222,8 @@ export function JobListScreen({ active }: { active: boolean }) {
   );
 
   const receptionHandlers = {
+    onSetSide: (taskId: string, side: Side) =>
+      changeReceptionTask(taskId, (task) => setTaskSide(task, side)),
     onRemove: (taskId: string) => setTasks((current) => current.filter((t) => t.id !== taskId)),
     onAddProduct: (taskId: string, name: string, price: number, quantity?: number) =>
       changeReceptionTask(taskId, (task) => ({
@@ -328,6 +336,7 @@ export function JobListScreen({ active }: { active: boolean }) {
         onRemoveProduct={removeProduct}
         onUpdateProduct={updateProduct}
         onSetApproval={sent ? setApproval : undefined}
+        onSetSide={setSide}
       />
     );
 

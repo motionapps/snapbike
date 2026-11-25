@@ -33,7 +33,12 @@ export type Task = {
   note?: string;
   /** The price model part the task works on (assets/price-model/parts.csv); picks its image. */
   partId?: string;
+  /** Which wheel/brake a sided row is for; unset on a sided row = not chosen yet. */
+  side?: Side;
 };
+
+/** fram, bak or fram+bak (position=… in conditions.csv). */
+export type Side = 'front' | 'rear' | 'both';
 
 /**
  * Arbetsordermetadata runt cykeln. Lokalt i appen tills vidare – redo att
@@ -123,6 +128,8 @@ export type PriceItem = {
   hasProduct: boolean;
   /** When set, only these products are suggested; the auto ones are added automatically. */
   standardProducts: StandardProduct[];
+  /** Set on rows with sides (fram/bak): the fram+bak price. */
+  bothPrice?: number;
 };
 
 /** Workshop lifecycle, mirrors the snapbike_job_status enum on Supabase. */

@@ -1,19 +1,13 @@
-part_id,action_id,conditions,product,quantity,price,auto
-tire,replace,,Schwalbe Road Cruiser,1,,false
-tire,replace,,Schwalbe Marathon,1,,false
-tire,replace,,Schwalbe Marathon Plus,1,,false
-tire,replace,position=both,Schwalbe Road Cruiser,2,,false
-tire,replace,position=both,Schwalbe Marathon,2,,false
-tire,replace,position=both,Schwalbe Marathon Plus,2,,false
-tire,replace,position=both,Routa W248 42-622,2,,false
-tire,replace,position=both,Routa W124 42-622,2,,false
-tire,replace,position=both,Routa W244 35-622,2,,false
-tire,replace,position=both,Routa W122 35-622,2,,false
-tire,replace,position=both,Routa W244 Ebike 35-622,2,,false
-tire,replace,position=both,Routa W248 E-Bike 42-622,2,,false
-tube,replace,,Standardslang,1,100,true
-tube,replace,mounting=loose,Standardslang,1,100,true
-tube,replace,item=trolley,Standardslang,1,100,true
-wheel,align,,Eker,1,33,false
-wheel,align,mounting=loose,Eker,1,33,false
-wheel,align,hub_motor=yes,Eker,1,33,false
+part_id,action_id,product,quantity,price,auto
+tire,replace,Schwalbe Road Cruiser,1,,false
+tire,replace,Schwalbe Marathon,1,,false
+tire,replace,Schwalbe Marathon Plus,1,,false
+tire,replace,Routa W248 42-622,1,,false
+tire,replace,Routa W124 42-622,1,,false
+tire,replace,Routa W244 35-622,1,,false
+tire,replace,Routa W122 35-622,1,,false
+tire,replace,Routa W244 Ebike 35-622,1,,false
+tire,replace,Routa W248 E-Bike 42-622,1,,false
+tube,replace,Standardslang,1,100,true
+wheel,align,Eker,1,33,false
+tire,replace,Standardslang,1,100,false
