@@ -289,6 +289,7 @@ export function BikeDetails({ state, onRetry, onChange, onEdit, expandNonce }: P
       >
         {/* Absolutely positioned so it lays out at its natural height. */}
         <View style={styles.content} onLayout={onContentLayout}>
+          <View style={styles.divider} />
           <BikeFieldRows bike={bike} onChange={update} />
         </View>
       </Animated.View>

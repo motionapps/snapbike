@@ -55,6 +55,11 @@ export const styles = StyleSheet.create({
     fontSize: fontSize.emphasis,
     fontFamily: fonts.regular,
   },
+  dropdownDetail: {
+    color: colors.textSecondary,
+    fontSize: fontSize.small,
+    fontFamily: fonts.regular,
+  },
   dropdownTextSelected: {
     fontFamily: fonts.bold,
   },

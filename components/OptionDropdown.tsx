@@ -3,6 +3,7 @@ import { ReactNode, RefObject, useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  KeyboardTypeOptions,
   Modal,
   Platform,
   Pressable,
@@ -10,8 +11,10 @@ import {
   StyleProp,
   Text,
   TextInput,
+  TextInputProps,
   TextStyle,
   View,
+  ViewStyle,
   useWindowDimensions,
 } from 'react-native';
 import { colors } from '../lib/theme';
@@ -25,6 +28,8 @@ export type DropdownOption = {
   label: string;
   /** Shown before the label, e.g. a colour swatch. */
   leading?: ReactNode;
+  /** Secondary text at the right, e.g. a customer's phone number. */
+  detail?: string;
 };
 
 /**
@@ -66,7 +71,11 @@ type Keys = {
   onEscape: () => void;
 };
 
-/** Arrow up/down, Enter and Escape while a list is open. React Native only reports these keys on web. */
+/**
+ * Arrow up/down, Enter and Escape while a list is open; left/right still move the caret in a field.
+ * React Native only reports these keys on web. Listens in the capture phase, because
+ * react-native-web's TextInput stops keydown from bubbling to window.
+ */
 function useDropdownKeys(active: boolean, keys: Keys) {
   const latest = useRef(keys);
   latest.current = keys;
@@ -87,8 +96,8 @@ function useDropdownKeys(active: boolean, keys: Keys) {
         onEscape();
       }
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
+    window.addEventListener('keydown', onKeyDown, true);
+    return () => window.removeEventListener('keydown', onKeyDown, true);
   }, [active]);
 }
 
@@ -148,6 +157,7 @@ function DropdownRows({ options, value, highlight, onPick, pickOnPressIn }: Rows
             <Text style={[styles.dropdownText, selected && styles.dropdownTextSelected]}>
               {option.label}
             </Text>
+            {option.detail ? <Text style={styles.dropdownDetail}>{option.detail}</Text> : null}
             {selected ? <Ionicons name="checkmark" size={20} color={colors.accentLight} /> : null}
           </Pressable>
         );
@@ -244,6 +254,8 @@ export function OptionDropdown({ anchor, options, value, mode = 'list', onPick, 
               placeholder="Filtrera…"
               placeholderTextColor={colors.textFaint}
               autoCorrect={false}
+        // The browser's own saved entries would cover our list.
+        autoComplete="off"
               autoFocus
               returnKeyType="done"
             />
@@ -260,8 +272,22 @@ type SuggestProps = {
   onChangeText: (text: string) => void;
   /** Suggestions; any text is still allowed. */
   options: DropdownOption[];
+  /**
+   * Default: the options are filtered by the typed text and picking one sets the text to its value.
+   * false: the options are already the matches (e.g. a server search) and are shown as given.
+   */
+  filter?: boolean;
+  /** Replaces setting the text, e.g. to fill a whole customer from the picked option. */
+  onPick?: (value: string) => void;
   placeholder?: string;
   style?: StyleProp<TextStyle>;
+  /** The field's wrapper; default flex: 1, for a field in a row. */
+  containerStyle?: StyleProp<ViewStyle>;
+  /** Moves the list, which by default lines up with BikeDetails' rows. */
+  listStyle?: StyleProp<ViewStyle>;
+  keyboardType?: KeyboardTypeOptions;
+  autoCapitalize?: TextInputProps['autoCapitalize'];
+  autoFocus?: boolean;
 };
 
 /** Typed characters before suggestions show. */
@@ -275,7 +301,20 @@ const SUGGEST_HEIGHT = 250;
  * The field keeps focus. Its parents must not clip it, and the row holding it must sit above
  * the rows after it (zIndex).
  */
-export function SuggestInput({ value, onChangeText, options, placeholder, style }: SuggestProps) {
+export function SuggestInput({
+  value,
+  onChangeText,
+  options,
+  filter = true,
+  onPick,
+  placeholder,
+  style,
+  containerStyle,
+  listStyle,
+  keyboardType,
+  autoCapitalize,
+  autoFocus,
+}: SuggestProps) {
   const inputRef = useRef<TextInput>(null);
   const [focused, setFocused] = useState(false);
   /** Escape or a pick hides the list until the text changes again. */
@@ -286,17 +325,19 @@ export function SuggestInput({ value, onChangeText, options, placeholder, style 
   useEffect(() => () => clearTimeout(blurTimer.current), []);
 
   const typed = value.trim();
+  const matches = filter
+    ? matchOptions(options, typed).filter((option) => normalize(option.label) !== normalize(typed))
+    : options;
   const shown =
     focused && !dismissed && normalize(typed).length >= SUGGEST_MIN
-      ? matchOptions(options, typed)
-          .filter((option) => normalize(option.label) !== normalize(typed))
-          .slice(0, SUGGEST_MAX)
+      ? matches.slice(0, SUGGEST_MAX)
       : [];
   const open = shown.length > 0;
 
   const pick = (picked: string) => {
     clearTimeout(blurTimer.current);
-    onChangeText(picked);
+    if (onPick) onPick(picked);
+    else onChangeText(picked);
     setDismissed(true);
     setHighlight(-1);
     inputRef.current?.blur();
@@ -317,7 +358,7 @@ export function SuggestInput({ value, onChangeText, options, placeholder, style 
   });
 
   return (
-    <View style={styles.suggestWrap}>
+    <View style={[styles.suggestWrap, containerStyle]}>
       <TextInput
         ref={inputRef}
         style={style}
@@ -337,11 +378,16 @@ export function SuggestInput({ value, onChangeText, options, placeholder, style 
         }}
         placeholder={placeholder}
         placeholderTextColor={colors.textFaint}
+        keyboardType={keyboardType}
+        autoCapitalize={autoCapitalize}
+        autoFocus={autoFocus}
         autoCorrect={false}
+        // The browser's own saved entries would cover our list.
+        autoComplete="off"
         returnKeyType="done"
       />
       {open ? (
-        <View style={[styles.dropdown, styles.suggestList, { maxHeight: SUGGEST_HEIGHT }]}>
+        <View style={[styles.dropdown, styles.suggestList, listStyle, { maxHeight: SUGGEST_HEIGHT }]}>
           <DropdownRows
             options={shown}
             value={value}

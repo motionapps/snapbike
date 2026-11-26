@@ -44,6 +44,17 @@ export const styles = StyleSheet.create({
     color: colors.accentLight,
     textDecorationLine: 'underline',
   },
+  manualDone: {
+    marginTop: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  manualDoneText: {
+    fontSize: fontSize.body,
+    fontFamily: fonts.semiBold,
+    color: colors.success,
+  },
   retakeBadge: {
     position: 'absolute',
     right: 12,

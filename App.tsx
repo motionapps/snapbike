@@ -17,6 +17,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -772,6 +774,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
                 uri={photoUri}
                 onTakePhoto={takePhoto}
                 onAddManually={bike ? undefined : () => setShowManualBike(true)}
+                addedManually={!!bike}
               />
               {photoUri && itemKind && itemKind !== 'bike' ? (
                 <View style={styles.bikeDetailsCard}>
@@ -1027,32 +1030,49 @@ function Root() {
   }, [tab, order.bookingId]);
   const [loadRequest, setLoadRequest] = useState<LoadRequest | null>(null);
 
+  // Fades the new view in after the job modal has closed and switched tab.
+  const pageFade = useRef(new Animated.Value(1)).current;
+  const fadeInPage = useCallback(() => {
+    pageFade.setValue(0);
+    Animated.timing(pageFade, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: Platform.OS !== 'web',
+    }).start();
+  }, [pageFade]);
+
   const startCheckIn = useCallback((job: Job) => {
     setLoadRequest({ job, nonce: Date.now() });
     setTab('note');
-  }, []);
+    fadeInPage();
+  }, [fadeInPage]);
 
   // Edit button on the job's bike details: Mottagning with Mer information open.
   const editBikeDetails = useCallback((job: Job) => {
     setLoadRequest({ job, nonce: Date.now(), focusBikeDetails: true });
     setTab('note');
-  }, []);
+    fadeInPage();
+  }, [fadeInPage]);
 
   // Tapping the job modal's header: Mottagning with the customer modal open.
   const editCustomer = useCallback((job: Job) => {
     setLoadRequest({ job, nonce: Date.now(), editCustomer: true });
     setTab('note');
-  }, []);
+    fadeInPage();
+  }, [fadeInPage]);
 
   const startInspection = useCallback((job: Job) => {
     setLoadRequest({ job, nonce: Date.now() });
     setTab('inspect');
-  }, []);
+    fadeInPage();
+  }, [fadeInPage]);
 
   const openJobList = useCallback((job: Job) => {
     setLoadRequest({ job, nonce: Date.now() });
     setTab('jobList');
-  }, []);
+    fadeInPage();
+  }, [fadeInPage]);
 
   const startNewJob = useCallback(() => {
     setLoadRequest({ job: null, nonce: Date.now() });
@@ -1187,6 +1207,7 @@ function Root() {
         >
         <ScrollToTopContext.Provider value={scrollToTop}>
 
+          <Animated.View style={[styles.page, { opacity: pageFade }]}>
           <View style={[styles.page, tab !== 'note' && styles.pageHidden]}>
             <Screen loadRequest={loadRequest} />
           </View>
@@ -1214,6 +1235,7 @@ function Root() {
             />
           </View>
           {IS_WEB && tab === 'settings' ? <SettingsScreen headerRight={hasCurrentBike ? currentBikeBar : null} /> : null}
+          </Animated.View>
         </ScrollToTopContext.Provider>
         </SafeAreaInsetsContext.Provider>
 

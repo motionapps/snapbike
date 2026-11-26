@@ -9,9 +9,11 @@ type Props = {
   onTakePhoto: () => void;
   /** Omitted = no "Lägg till cykel manuellt" link. */
   onAddManually?: () => void;
+  /** Shows a green check in place of the manual link once info was added by hand. */
+  addedManually?: boolean;
 };
 
-export function PhotoCard({ uri, onTakePhoto, onAddManually }: Props) {
+export function PhotoCard({ uri, onTakePhoto, onAddManually, addedManually }: Props) {
   const { height } = useWindowDimensions();
   const cardHeight = Math.round(height * 0.25);
 
@@ -41,6 +43,11 @@ export function PhotoCard({ uri, onTakePhoto, onAddManually }: Props) {
             <Pressable onPress={onAddManually} hitSlop={10}>
               <Text style={styles.manualLink}>Lägg till cykel manuellt</Text>
             </Pressable>
+          ) : addedManually ? (
+            <View style={styles.manualDone}>
+              <Ionicons name="checkmark-circle" size={16} color={colors.success} />
+              <Text style={styles.manualDoneText}>Information tillagd manuellt</Text>
+            </View>
           ) : null}
         </View>
       )}

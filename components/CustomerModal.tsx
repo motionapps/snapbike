@@ -15,6 +15,7 @@ import { Customer, EMPTY_CUSTOMER, customerHasPhone, normalizePhone } from '../l
 import { styles } from './CustomerModal.styles';
 import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
 import { FitPressable } from './FitPressable';
+import { DropdownOption, SuggestInput } from './OptionDropdown';
 
 /** Fields whose text searches existing customers. */
 type SearchField = 'firstName' | 'lastName' | 'phone';
@@ -79,20 +80,28 @@ export function CustomerModal({
     setMatches([]);
   };
 
-  const suggestionsFor = (field: SearchField) =>
-    searchField === field && matches.length > 0 ? (
-      <View style={styles.suggestions}>
-        {matches.map((match, index) => (
-          <Pressable key={match.phone || index} onPress={() => pick(match)} style={styles.suggestion}>
-            <Ionicons name="person-outline" size={14} color={colors.textFaint} />
-            <Text style={styles.suggestionName} numberOfLines={1}>
-              {[match.firstName, match.lastName].filter(Boolean).join(' ')}
-            </Text>
-            <Text style={styles.suggestionPhone}>{match.phone}</Text>
-          </Pressable>
-        ))}
-      </View>
-    ) : null;
+  // The option value is the match's index, so a pick fills the whole customer.
+  // Searching by phone puts the number first and the name at the right.
+  const matchOptions = (field: SearchField): DropdownOption[] =>
+    matches.map((match, index) => {
+      const name = [match.firstName, match.lastName].filter(Boolean).join(' ');
+      const phoneFirst = field === 'phone' && !!match.phone;
+      return {
+        value: String(index),
+        label: phoneFirst ? match.phone : name || match.phone,
+        detail: phoneFirst ? name : match.phone,
+        leading: <Ionicons name="person-outline" size={16} color={colors.textFaint} />,
+      };
+    });
+  const searchProps = (field: SearchField) => ({
+    value: customer[field],
+    onChange: set(field),
+    options: searchField === field ? matchOptions(field) : [],
+    onPick: (value: string) => {
+      const match = matches[Number(value)];
+      if (match) pick(match);
+    },
+  });
 
   const bikeNum = Number(bikeNumber);
   const bikeInvalid =
@@ -134,22 +143,18 @@ export function CustomerModal({
           keyboardShouldPersistTaps="handled"
         >
           <SearchSlot layer={3}>
-            <Field label="Förnamn" value={customer.firstName} onChange={set('firstName')} autoFocus />
-            {suggestionsFor('firstName')}
+            <Field label="Förnamn" {...searchProps('firstName')} autoFocus />
           </SearchSlot>
           <SearchSlot layer={2}>
-            <Field label="Efternamn" value={customer.lastName} onChange={set('lastName')} />
-            {suggestionsFor('lastName')}
+            <Field label="Efternamn" {...searchProps('lastName')} />
           </SearchSlot>
           <SearchSlot layer={1}>
             <Field
               label="Telefon"
-              value={customer.phone}
-              onChange={set('phone')}
+              {...searchProps('phone')}
               placeholder="07x-xxx xx xx"
               keyboardType="phone-pad"
             />
-            {suggestionsFor('phone')}
           </SearchSlot>
           <Field
             label="E-post"
@@ -208,10 +213,13 @@ function SearchSlot({ layer, children }: { layer: number; children: ReactNode })
   return <View style={[styles.slot, { zIndex: layer, elevation: layer }]}>{children}</View>;
 }
 
+/** A labelled field; with options it suggests existing customers in the shared dropdown. */
 function Field({
   label,
   value,
   onChange,
+  options,
+  onPick,
   placeholder,
   keyboardType,
   autoFocus,
@@ -219,10 +227,34 @@ function Field({
   label: string;
   value: string;
   onChange: (text: string) => void;
+  options?: DropdownOption[];
+  onPick?: (value: string) => void;
   placeholder?: string;
   keyboardType?: KeyboardTypeOptions;
   autoFocus?: boolean;
 }) {
+  const autoCapitalize = keyboardType === 'email-address' ? 'none' : 'words';
+  if (options) {
+    return (
+      <View style={styles.field}>
+        <Text style={styles.label}>{label}</Text>
+        <SuggestInput
+          style={styles.input}
+          containerStyle={styles.suggestField}
+          listStyle={styles.suggestList}
+          value={value}
+          onChangeText={onChange}
+          options={options}
+          filter={false}
+          onPick={onPick}
+          placeholder={placeholder}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          autoFocus={autoFocus}
+        />
+      </View>
+    );
+  }
   return (
     <View style={styles.field}>
       <Text style={styles.label}>{label}</Text>
@@ -233,7 +265,7 @@ function Field({
         placeholder={placeholder}
         placeholderTextColor={colors.textFaint}
         keyboardType={keyboardType}
-        autoCapitalize={keyboardType === 'email-address' ? 'none' : 'words'}
+        autoCapitalize={autoCapitalize}
         autoCorrect={false}
         autoFocus={autoFocus}
       />

@@ -51,6 +51,12 @@ export const styles = StyleSheet.create({
     right: 0,
     paddingBottom: 8,
   },
+  divider: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: 16,
+    marginBottom: 4,
+    backgroundColor: colors.border,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',

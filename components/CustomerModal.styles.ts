@@ -73,38 +73,14 @@ export const styles = StyleSheet.create({
   slot: {
     position: 'relative',
   },
-  suggestions: {
-    position: 'absolute',
-    top: '100%',
+  // SuggestInput in a column: sized by its field, not flex: 1.
+  suggestField: {
+    flex: 0,
+  },
+  // The shared dropdown, flush under the field.
+  suggestList: {
     left: 0,
-    right: 0,
     marginTop: 4,
-    boxShadow: '0 6px 16px rgba(0, 0, 0, 0.45)',
-    backgroundColor: colors.cardRaised,
-    borderRadius: radius.sm,
-    borderCurve: 'continuous',
-    borderWidth: 1,
-    borderColor: colors.border,
-    overflow: 'hidden',
-  },
-  suggestion: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: colors.border,
-  },
-  suggestionName: {
-    fontSize: fontSize.body,
-    flex: 1,
-    color: colors.text,
-    fontFamily: fonts.semiBold,
-  },
-  suggestionPhone: {
-    color: colors.textSecondary,
-    fontSize: fontSize.small, fontFamily: fonts.regular,
   },
   saveButton: {
     alignItems: 'center',
