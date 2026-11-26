@@ -177,6 +177,11 @@ export const styles = StyleSheet.create({
     color: statusColors.inspected,
     fontFamily: fonts.semiBold,
   },
+  imageLink: {
+    color: colors.accentLight,
+    fontFamily: fonts.semiBold,
+    textDecorationLine: 'underline',
+  },
   categoryRow: {
     flexDirection: 'row',
     alignItems: 'center',

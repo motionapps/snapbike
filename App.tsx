@@ -38,6 +38,7 @@ import { CustomerSection } from './components/CustomerSection';
 import { InspectionScreen } from './components/InspectionScreen';
 import { InspectionGuide } from './components/InspectionGuide';
 import { TaskCard } from './components/TaskCard';
+import { TaskCardGrid } from './components/TaskCardGrid';
 import { OrderContext, useOrderContext } from './lib/orderContext';
 import { EMPTY_STEP_EMPLOYEES, fetchStepEmployees, StepEmployees } from './lib/employees';
 import { StaffProvider } from './components/StaffProvider';
@@ -86,6 +87,7 @@ import {
   JobComments,
   JobListSendState,
   ItemKind,
+  NewProduct,
   Task,
   OrderInfo,
   PriceItem,
@@ -680,11 +682,11 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     setTasks((current) => current.filter((task) => task.id !== taskId));
   }, []);
 
-  const addProduct = useCallback((taskId: string, name: string, price: number, quantity?: number) => {
+  const addProduct = useCallback((taskId: string, product: NewProduct) => {
     setTasks((current) =>
       current.map((task) =>
         task.id === taskId
-          ? { ...task, products: [...task.products, { id: uid(), name, price, quantity }] }
+          ? { ...task, products: [...task.products, { ...product, id: uid() }] }
           : task
       )
     );
@@ -849,26 +851,28 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
             {tasks.length > 0 ? (
               <View style={styles.tasksSection}>
                 <Text style={styles.sectionHeading}>Jobb</Text>
-                {tasks.map((task) => (
-                  <TaskCard
-                    key={task.id}
-                    task={task}
-                    onRemove={removeTask}
-                    onAddProduct={addProduct}
-                    onRemoveProduct={removeProduct}
-                    onUpdateProduct={updateProduct}
-                    voiceState={
-                      voiceEditId === task.id
-                        ? voiceEditRecording
-                          ? 'recording'
-                          : 'processing'
-                        : undefined
-                    }
-                    onVoiceEdit={toggleTaskVoice}
-                    onSetSide={setSide}
-                    bike={bikeAnalysis.status === 'ready' ? bikeAnalysis.bike.bike : null}
-                  />
-                ))}
+                <TaskCardGrid gap={12}>
+                  {tasks.map((task) => (
+                    <TaskCard
+                      key={task.id}
+                      task={task}
+                      onRemove={removeTask}
+                      onAddProduct={addProduct}
+                      onRemoveProduct={removeProduct}
+                      onUpdateProduct={updateProduct}
+                      voiceState={
+                        voiceEditId === task.id
+                          ? voiceEditRecording
+                            ? 'recording'
+                            : 'processing'
+                          : undefined
+                      }
+                      onVoiceEdit={toggleTaskVoice}
+                      onSetSide={setSide}
+                      bike={bikeAnalysis.status === 'ready' ? bikeAnalysis.bike.bike : null}
+                    />
+                  ))}
+                </TaskCardGrid>
               </View>
             ) : null}
 

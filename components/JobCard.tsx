@@ -11,7 +11,9 @@ import {
 } from 'react-native';
 import { jobImageUrl } from '../lib/supabase';
 import { colors } from '../lib/theme';
+import { bikeLabel } from '../lib/bikeLabels';
 import { Job, JobStatus, jobTotal } from '../lib/types';
+import { bikeColorHex, textColorOnBike } from './CurrentBikeBar';
 import { StatusPill } from './StatusPill';
 import { styles } from './JobCard.styles';
 
@@ -34,6 +36,9 @@ export const JobCard = memo(function JobCard({
   onPress,
 }: Props) {
   const imageUrl = jobImageUrl(job.imagePath);
+  // No photo: the placeholder takes the bike's colour and names brand and type.
+  const bike = job.bike?.bike ?? null;
+  const placeholderText = bike ? textColorOnBike(bike.color) : colors.textFaint;
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
   const progress = useRef(new Animated.Value(0)).current;
@@ -84,8 +89,24 @@ export const JobCard = memo(function JobCard({
               transition={150}
             />
           ) : (
-            <View style={[styles.thumb, styles.thumbEmpty]}>
-              <Ionicons name="bicycle" size={96} color={colors.textFaint} />
+            <View
+              style={[
+                styles.thumb,
+                styles.thumbEmpty,
+                bike && { backgroundColor: bikeColorHex(bike.color) },
+              ]}
+            >
+              <Ionicons name="bicycle" size={96} color={placeholderText} />
+              {bike?.brand ? (
+                <Text style={[styles.thumbBrand, { color: placeholderText }]} numberOfLines={1}>
+                  {bike.brand}
+                </Text>
+              ) : null}
+              {bike ? (
+                <Text style={[styles.thumbType, { color: placeholderText }]} numberOfLines={1}>
+                  {bikeLabel(bike.bike_type)}
+                </Text>
+              ) : null}
             </View>
           )}
           <Text style={styles.name} numberOfLines={1}>

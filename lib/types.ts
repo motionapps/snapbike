@@ -14,7 +14,16 @@ export type Product = {
   label?: 'samma' | 'likvärdig' | 'billigare';
   /** How many of the product the job needs; undefined = 1. */
   quantity?: number;
+  /** EAN from the product search; CSN names its images after it. */
+  ean?: string;
+  /** Supplier slug from the product search (folder of its images on techlara.se). */
+  supplier?: string;
+  /** The image host holds a photo for it (backend's FTP image index). */
+  hasImage?: boolean;
 };
+
+/** A product before it gets an id in a task. */
+export type NewProduct = Omit<Product, 'id'>;
 
 export type Task = {
   id: string;

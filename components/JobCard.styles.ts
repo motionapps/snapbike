@@ -34,6 +34,17 @@ export const styles = StyleSheet.create({
   thumbEmpty: {
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 12,
+  },
+  thumbBrand: {
+    fontSize: Math.round(fontSize.body * 1.4),
+    fontFamily: fonts.semiBold,
+    marginTop: 4,
+  },
+  thumbType: {
+    fontSize: Math.round(fontSize.small * 1.4),
+    fontFamily: fonts.regular,
+    opacity: 0.85,
   },
   info: {
     flex: 1,

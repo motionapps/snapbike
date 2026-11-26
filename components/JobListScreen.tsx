@@ -19,6 +19,7 @@ import { useScrollToTop } from '../lib/scrollToTop';
 import { colors } from '../lib/theme';
 import {
   PriceItem,
+  NewProduct,
   Task,
   approvedTotal,
   jobTotal,
@@ -35,6 +36,7 @@ import { DoneButton, LockedBanner, StepLock, useSetStepDone, useStepLocked } fro
 import { StepEmployeePicker, useEnsureStepEmployee } from './StepEmployee';
 import { ChecklistRow, TaskDetailModal } from './TaskChecklist';
 import { TaskCard } from './TaskCard';
+import { TaskCardGrid } from './TaskCardGrid';
 import { styles } from './JobListScreen.styles';
 import { webScroll, webScrollContent } from '../lib/webEdge';
 import { FitPressable } from './FitPressable';
@@ -186,10 +188,10 @@ export function JobListScreen({ active }: { active: boolean }) {
   );
 
   const addProduct = useCallback(
-    (taskId: string, name: string, price: number, quantity?: number) =>
+    (taskId: string, product: NewProduct) =>
       changeTask(taskId, (task) => ({
         ...task,
-        products: [...task.products, { id: uid(), name, price, quantity }],
+        products: [...task.products, { ...product, id: uid() }],
       })),
     [changeTask]
   );
@@ -229,10 +231,10 @@ export function JobListScreen({ active }: { active: boolean }) {
     onSetSide: (taskId: string, side: Side) =>
       changeReceptionTask(taskId, (task) => setTaskSide(task, side)),
     onRemove: (taskId: string) => setTasks((current) => current.filter((t) => t.id !== taskId)),
-    onAddProduct: (taskId: string, name: string, price: number, quantity?: number) =>
+    onAddProduct: (taskId: string, product: NewProduct) =>
       changeReceptionTask(taskId, (task) => ({
         ...task,
-        products: [...task.products, { id: uid(), name, price, quantity }],
+        products: [...task.products, { ...product, id: uid() }],
       })),
     onUpdateProduct: (taskId: string, productId: string, price: number) =>
       changeReceptionTask(taskId, (task) => ({
@@ -348,6 +350,9 @@ export function JobListScreen({ active }: { active: boolean }) {
       <TaskCard key={task.id} task={task} bike={bike} {...receptionHandlers} />
     );
 
+  // Cards go side by side on big screens.
+  const cardGrid = (items: ReactNode[]) => <TaskCardGrid gap={10}>{items}</TaskCardGrid>;
+
   const statusText = jobListSend?.verbalApprovalAt
     ? `Muntligt godkänt ${timeFormat.format(new Date(jobListSend.verbalApprovalAt))}`
     : jobListSend?.sentAt
@@ -389,7 +394,7 @@ export function JobListScreen({ active }: { active: boolean }) {
         {tasks.length > 0 ? (
           // Open: this is what the mechanic works from (closed only for the customer).
           <Section title="Redan godkända vid mottagning" sum={tasksTotal(tasks)} initiallyOpen>
-            {tasks.map(renderReceptionTask)}
+            {cardGrid(tasks.map(renderReceptionTask))}
           </Section>
         ) : null}
 
@@ -400,16 +405,16 @@ export function JobListScreen({ active }: { active: boolean }) {
               sum={approvedTotal(split.tasks)}
               initiallyOpen
             >
-              {split.tasks.map(renderTask)}
+              {cardGrid(split.tasks.map(renderTask))}
             </Section>
           ) : null
         ) : (
           <>
             <Section title="Tidigare godkänt" sum={approvedTotal(split.previous)}>
-              {split.previous.map(renderTask)}
+              {cardGrid(split.previous.map(renderTask))}
             </Section>
             <Section title="Tilläggsorder" sum={approvedTotal(split.addOn)} initiallyOpen>
-              {split.addOn.map(renderTask)}
+              {cardGrid(split.addOn.map(renderTask))}
             </Section>
           </>
         )}

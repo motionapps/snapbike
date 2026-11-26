@@ -16,9 +16,9 @@ import {
   searchInStock,
   subscribeInStock,
 } from '../lib/inStockCache';
-import { searchProducts, SearchProduct } from '../lib/productSearch';
+import { productFromSearch, searchProducts, SearchProduct } from '../lib/productSearch';
 import { colors } from '../lib/theme';
-import { StandardProduct } from '../lib/types';
+import { NewProduct, StandardProduct } from '../lib/types';
 import { styles } from './AddProductModal.styles';
 import { webPage, webScroll, webScrollContent } from '../lib/webEdge';
 import { FitPressable } from './FitPressable';
@@ -28,7 +28,7 @@ type Props = {
   /** The task's standard products (assets/price-model), shown as one-tap chips. */
   standardProducts: StandardProduct[];
   onClose: () => void;
-  onAdd: (name: string, price: number, quantity?: number) => void;
+  onAdd: (product: NewProduct) => void;
 };
 
 export function AddProductModal({ visible, standardProducts, onClose, onAdd }: Props) {
@@ -103,8 +103,8 @@ export function AddProductModal({ visible, standardProducts, onClose, onAdd }: P
     onClose();
   };
 
-  const addProduct = (productName: string, productPrice: number, quantity?: number) => {
-    onAdd(productName, productPrice, quantity);
+  const addProduct = (product: NewProduct) => {
+    onAdd(product);
     reset();
   };
 
@@ -114,7 +114,7 @@ export function AddProductModal({ visible, standardProducts, onClose, onAdd }: P
 
   const add = () => {
     if (!manualName) return;
-    addProduct(manualName, Number(price.replace(',', '.')) || 0);
+    addProduct({ name: manualName, price: Number(price.replace(',', '.')) || 0 });
   };
 
   return (
@@ -138,11 +138,11 @@ export function AddProductModal({ visible, standardProducts, onClose, onAdd }: P
             <Pressable
               key={product.name}
               onPress={() =>
-                addProduct(
-                  product.name,
-                  product.price ?? 0,
-                  product.quantity > 1 ? product.quantity : undefined
-                )
+                addProduct({
+                  name: product.name,
+                  price: product.price ?? 0,
+                  quantity: product.quantity > 1 ? product.quantity : undefined,
+                })
               }
               style={({ pressed }) => [styles.chip, pressed && styles.rowPressed]}
             >
@@ -214,7 +214,7 @@ export function AddProductModal({ visible, standardProducts, onClose, onAdd }: P
           contentContainerStyle={[styles.listContent, webScrollContent]}
           renderItem={({ item }) => (
             <Pressable
-              onPress={() => addProduct(item.name, item.sellPrice > 0 ? item.sellPrice : 0)}
+              onPress={() => addProduct(productFromSearch(item, inStockOnly ? 1 : 0))}
               style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
             >
               <View style={styles.rowText}>

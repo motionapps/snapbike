@@ -9,11 +9,13 @@ import {
 } from 'react-native';
 import { confirmDestructive } from '../lib/confirm';
 import { colors } from '../lib/theme';
-import { Side, Task, Product, taskTotal } from '../lib/types';
+import { NewProduct, Side, Task, Product, taskTotal } from '../lib/types';
+import { productImageUrl } from '../lib/productSearch';
 import { BikeData } from '../lib/bikeAnalysis';
 import { needsSide, sideLabel, standardProductsFor, taskWarnings } from '../lib/prices';
 import { AddProductModal } from './AddProductModal';
 import { FitPressable } from './FitPressable';
+import { ImagePreviewModal } from './ImagePreviewModal';
 import { CategoryCard } from './CategoryCard';
 import { styles } from './TaskCard.styles';
 
@@ -26,7 +28,7 @@ const PRODUCT_LABELS: Record<NonNullable<Product['label']>, string> = {
 type Props = {
   task: Task;
   onRemove: (taskId: string) => void;
-  onAddProduct: (taskId: string, name: string, price: number, quantity?: number) => void;
+  onAddProduct: (taskId: string, product: NewProduct) => void;
   onRemoveProduct: (taskId: string, productId: string) => void;
   onUpdateProduct: (taskId: string, productId: string, price: number) => void;
   /** Röstredigering av jobbet: 'recording' = spelar in, 'processing' = AI:n jobbar. */
@@ -57,6 +59,7 @@ export function TaskCard({
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState('');
+  const [previewUri, setPreviewUri] = useState<string | null>(null);
 
   const commitPrice = () => {
     if (editingId) {
@@ -155,7 +158,9 @@ export function TaskCard({
         </View>
       ) : null}
 
-      {task.products.map((product) => (
+      {task.products.map((product) => {
+        const imageUrl = productImageUrl(product);
+        return (
         <View key={product.id} style={styles.productRow}>
           <Ionicons name="cube-outline" size={15} color={colors.textSecondary} />
           <View style={styles.productInfo}>
@@ -163,7 +168,7 @@ export function TaskCard({
               {product.quantity ? `${product.quantity} st ` : ''}
               {product.name}
             </Text>
-            {product.label || product.stock !== undefined ? (
+            {product.label || product.stock !== undefined || imageUrl ? (
               <Text style={styles.productMeta}>
                 {product.label ? PRODUCT_LABELS[product.label] : null}
                 {product.label && product.stock !== undefined ? ' · ' : null}
@@ -176,6 +181,12 @@ export function TaskCard({
                     {product.stock > 0
                       ? 'I lager'
                       : 'Beställningsvara'}
+                  </Text>
+                ) : null}
+                {imageUrl && (product.label || product.stock !== undefined) ? ' · ' : null}
+                {imageUrl ? (
+                  <Text style={styles.imageLink} onPress={() => setPreviewUri(imageUrl)}>
+                    Bild
                   </Text>
                 ) : null}
               </Text>
@@ -223,11 +234,12 @@ export function TaskCard({
             <Ionicons name="close" size={18} color={colors.textSoft} />
           </Pressable>
         </View>
-      ))}
+        );
+      })}
 
       {task.products.length > 0 ? (
         <View style={styles.totalRow}>
-          <Text style={styles.totalLabel}>Totalt jobb + produkter</Text>
+          <Text style={styles.totalLabel}>Totalt:</Text>
           <Text style={[styles.totalPrice, rejected && styles.priceStruck]}>
             {taskTotal(task).toLocaleString('sv-SE')} kr
           </Text>
@@ -238,12 +250,13 @@ export function TaskCard({
         <Ionicons name="add-circle-outline" size={20} color={colors.accentLight} />
         <Text style={styles.addProductText}>Lägg till produkt</Text>
       </FitPressable>
+      <ImagePreviewModal uri={previewUri} onClose={() => setPreviewUri(null)} />
       <AddProductModal
         visible={adding}
         standardProducts={standardProductsFor(task)}
         onClose={() => setAdding(false)}
-        onAdd={(name, price, quantity) => {
-          onAddProduct(task.id, name, price, quantity);
+        onAdd={(product) => {
+          onAddProduct(task.id, product);
           setAdding(false);
         }}
       />

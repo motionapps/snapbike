@@ -10,8 +10,8 @@ import {
 import { applyProductRules, priceCsvFor, sideLabel } from '../prices';
 import { SERVICE_GUIDE } from '../servicePackage';
 import { searchInStock } from '../inStockCache';
-import { searchProducts } from '../productSearch';
-import { Task, PriceItem, Side, uid } from '../types';
+import { productFromSearch, searchProducts, SearchProduct } from '../productSearch';
+import { NewProduct, Task, PriceItem, Side, uid } from '../types';
 
 const OPENAI_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY ?? '';
 const ANTHROPIC_KEY = process.env.EXPO_PUBLIC_ANTHROPIC_API_KEY ?? '';
@@ -319,16 +319,25 @@ const refinePrompt = (prices: PriceItem[]) =>
 const MAX_TOOL_ROUNDS = 8;
 
 /**
+ * Every search hit by article number. The model only returns the article
+ * number, so a picked product gets its EAN, supplier and image flag from here.
+ */
+const hitByArticle = new Map<string, NewProduct>();
+
+/**
  * search_stock: the store's in-stock products (cached on the phone) first; if
  * none match, BikeOffice product search, whose hits are order items.
  */
 async function searchStock(query: string): Promise<string> {
-  const toResult = (stock: number) => (p: { name: string; articleNumber: string; sellPrice: number }) => ({
-    name: p.name,
-    articleNumber: p.articleNumber,
-    price: p.sellPrice > 0 ? p.sellPrice : 0,
-    stock,
-  });
+  const toResult = (stock: number) => (p: SearchProduct) => {
+    hitByArticle.set(p.articleNumber, productFromSearch(p, stock));
+    return {
+      name: p.name,
+      articleNumber: p.articleNumber,
+      price: p.sellPrice > 0 ? p.sellPrice : 0,
+      stock,
+    };
+  };
   const inStock = searchInStock(query, 12);
   if (inStock.length > 0) return JSON.stringify(inStock.map(toResult(1)));
   try {
@@ -502,6 +511,10 @@ export async function refineTask(
   instruction: string,
   prices: PriceItem[]
 ): Promise<Task> {
+  // Products kept as they were may not be searched again; keep their details.
+  task.products.forEach(({ id: _id, ...product }) => {
+    if (product.articleNumber) hitByArticle.set(product.articleNumber, product);
+  });
   const payload = JSON.stringify({
     jobb: {
       title: task.title,
@@ -552,15 +565,21 @@ function mapTask(task: ToolTask): Task {
     inspectionItemIds: (task.inspectionItemIds ?? []).filter((id) =>
       VALID_ITEM_IDS.has(id)
     ),
-    products: (task.products ?? []).map((product) => ({
-      id: uid(),
-      name: product.name,
-      price: product.price,
-      articleNumber: product.articleNumber,
-      stock: product.stock,
-      label: product.label,
-      quantity: product.quantity && product.quantity > 1 ? product.quantity : undefined,
-    })),
+    products: (task.products ?? []).map((product) => {
+      const hit = product.articleNumber ? hitByArticle.get(product.articleNumber) : undefined;
+      return {
+        id: uid(),
+        name: product.name,
+        price: product.price,
+        articleNumber: product.articleNumber,
+        stock: product.stock,
+        label: product.label,
+        quantity: product.quantity && product.quantity > 1 ? product.quantity : undefined,
+        ean: hit?.ean,
+        supplier: hit?.supplier,
+        hasImage: hit?.hasImage,
+      };
+    }),
   };
 }
 

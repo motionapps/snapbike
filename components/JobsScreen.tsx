@@ -13,6 +13,7 @@ import {
   useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { jobCardColumns } from '../lib/cardColumns';
 import {
   deleteJob,
   fetchJobs,
@@ -80,14 +81,6 @@ function sortJobs(jobs: Job[], sort: SortKey): Job[] {
   });
 }
 
-/** Cards per row: one on phones, more on wider screens. */
-function columnsFor(width: number): number {
-  // A 15–16" MacBook (up to ~1730 px wide) gets two; only bigger screens get three.
-  if (width >= 1900) return 3;
-  if (width >= 700) return 2;
-  return 1;
-}
-
 function matchesFilter(job: Job, filter: Filter): boolean {
   if (filter === 'active') {
     return job.status !== 'ready' && job.status !== 'delivered';
@@ -132,7 +125,7 @@ export function JobsScreen({
   const [sort, setSort] = useState<SortKey>('createdDesc');
   const [sortAnchor, setSortAnchor] = useState<DropdownAnchor | null>(null);
   const sortButtonRef = useRef<View>(null);
-  const columns = columnsFor(useWindowDimensions().width);
+  const columns = jobCardColumns(useWindowDimensions().width);
   const listRef = useRef<FlatList<Job | null>>(null);
   useScrollToTop('jobs', () => listRef.current?.scrollToOffset({ offset: 0, animated: true }));
   const [query, setQuery] = useState('');
