@@ -103,10 +103,23 @@ export function JobDetailModal({
     onClose();
   };
 
+  // On iOS, hiding the confirm modal and this sheet at once leaves the sheet
+  // stuck on screen: the sheet closes only once the confirm modal is gone.
+  const pendingDelete = useRef<string | null>(null);
+
+  const finishDelete = () => {
+    const id = pendingDelete.current;
+    pendingDelete.current = null;
+    if (!id) return;
+    close();
+    onDelete(id);
+  };
+
   const deleteJob = () => {
     if (!job) return;
-    close();
-    onDelete(job.id);
+    pendingDelete.current = job.id;
+    setConfirmingDelete(false);
+    if (Platform.OS !== 'ios') finishDelete();
   };
 
   const nextAction = ((): NextAction | null => {
@@ -348,6 +361,7 @@ export function JobDetailModal({
             transparent
             animationType="fade"
             onRequestClose={() => setConfirmingDelete(false)}
+            onDismiss={finishDelete}
           >
             <Pressable style={styles.confirmBackdrop} onPress={() => setConfirmingDelete(false)}>
               <Pressable style={styles.confirmCard} onPress={() => {}}>
