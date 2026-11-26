@@ -18,6 +18,7 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { confirmDestructive } from '../lib/confirm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   analyzeInspection,
@@ -391,16 +392,12 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
       void runCreateTasks();
       return;
     }
-    const title = 'Du har redan skapat en jobblista';
-    const message = 'Är du säker på att du vill skapa den igen?';
-    if (Platform.OS === 'web') {
-      if (window.confirm(`${title}. ${message}`)) void runCreateTasks();
-      return;
-    }
-    Alert.alert(title, message, [
-      { text: 'Avbryt', style: 'cancel' },
-      { text: 'Skapa igen', style: 'destructive', onPress: () => void runCreateTasks() },
-    ]);
+    confirmDestructive(
+      'Du har redan skapat en jobblista',
+      'Är du säker på att du vill skapa den igen?',
+      'Skapa igen',
+      () => void runCreateTasks()
+    );
   }, [issues.length, inspectionTasks.length, runCreateTasks, setInspectionDone, goToJobList, ensureStepEmployee]);
 
   return (

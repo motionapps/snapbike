@@ -62,9 +62,10 @@ const SEARCH_STOCK_TOOL = {
   description:
     'Sök reservdelar: först bland butikens lagervaror, och om inget finns i ' +
     'lager i leverantörernas katalog (beställningsvaror). Returnerar namn, ' +
-    'artikelnummer, pris (kr) och lagersaldo (1 = i lager, 0 = beställningsvara). Sök med få, ' +
+    'artikelnummer, pris (kr) och lagersaldo (1 = i lager, 0 = beställningsvara). Använd ' +
+    'bara när mekanikern nämnt ett produktnamn eller en typ/specifikation. Sök med få, ' +
     'centrala ord (t.ex. "kedja sram force", "gp5000 25", "bromsbelägg shimano"). ' +
-    'Gör gärna flera sökningar med olika ord om första inte ger bra träffar.',
+    'Gör en ny sökning med andra ord bara om den första inte gav någon rimlig träff.',
   input_schema: {
     type: 'object' as const,
     properties: {
@@ -103,8 +104,9 @@ const JOB_ITEM_SCHEMA = {
     products: {
       type: 'array',
       description:
-        'Produktförslag för jobbet, från lagersökningarna. Först ' +
-        'samma märke/modell som kundens del, därefter 1–2 alternativ.',
+        'Produktförslag för jobbet, från lagersökningarna. Tom lista om ' +
+        'mekanikern inte nämnt produktnamn eller typ. Först bästa träffen, ' +
+        'därefter högst 1–2 alternativ ur samma sökresultat.',
       items: {
         type: 'object',
         properties: {
@@ -163,8 +165,8 @@ const JOB_LIST_TOOL = {
   description:
     'Registrera de cykelreparationsjobb som nämns i transkriptionen, matchade ' +
     'mot verkstadens prislista (CSV). Använd exakt Beskrivning och Pris från ' +
-    'prislistan för varje jobb. Föreslå produkter (reservdelar) per jobb ' +
-    'baserat på lagersökningarna.',
+    'prislistan för varje jobb. Produkter (reservdelar) bara enligt ' +
+    'produktreglerna, baserat på lagersökningarna.',
   input_schema: {
     type: 'object' as const,
     properties: {
@@ -248,9 +250,10 @@ const WHEEL_RULES =
 const PRODUCT_RULES =
   'PRODUKTREGEL: Prislistans kolumn Produkter styr produktförslagen. "nej" = ' +
   'föreslå INGA produkter för jobbet (tom lista). "ja" = föreslå produkter ' +
-  'fritt enligt reglerna ovan. Annars listar kolumnen jobbets standardprodukter ' +
+  'bara när mekanikern nämnt produktnamn eller typ/specifikation. Annars listar kolumnen jobbets standardprodukter ' +
   '(t.ex. "2 st Schwalbe Marathon | ..."): föreslå då ENDAST dem och ange antalet ' +
-  'som quantity. "läggs till automatiskt" = ta alltid med den. "bara vid behov" ' +
+  'som quantity. "läggs till automatiskt" = appen lägger till den själv: ta inte ' +
+  'med den och sök inte efter den. "bara vid behov" ' +
   '= ta bara med den när jobbet kräver det (t.ex. Eker när ekrar behöver bytas ' +
   'vid hjulriktning) och ange då antalet som nämns. En standardprodukt med ' +
   '"fast pris" får exakt det priset och behöver ingen lagersökning; övriga söker ' +
@@ -270,16 +273,19 @@ const systemPrompt = (prices: PriceItem[]) =>
   'och använd dess exakta Beskrivning och Pris.\n\n' +
   'Markera jobb som "kritisk" när felet gör cykeln trafikfarlig eller ' +
   'oanvändbar (t.ex. "går inte att cykla på", trasig broms), annars "normal".\n\n' +
-  'För varje jobb som kräver en reservdel: sök i lagret med search_stock och ' +
-  'föreslå verkliga produkter med exakta namn, priser, artikelnummer och ' +
-  'lagersaldon från sökresultaten. Prioritera samma märke och modell som ' +
-  'kundens nuvarande del (Shimano → Shimano, SRAM → SRAM, GP5000 → GP5000) och ' +
-  'ta hänsyn till det som nämns om cykeln (t.ex. växelsystem, antal växlar, ' +
-  'däckdimension). Lägg därefter till 1–2 alternativ: ett likvärdigt från annat ' +
-  'märke och/eller ett billigare. Föreslå i första hand varor med lagersaldo > 0; ' +
-  'om inget passande finns i lager, ta med bästa träffen ändå (lagersaldo 0 ' +
-  'visas som beställningsvara). Hittar du ingen rimlig produkt alls: lägg med ' +
-  'delen med pris 0 och utan artikelnummer.\n\n' +
+  'PRODUKTFÖRSLAG: Föreslå produkter och använd search_stock BARA när ' +
+  'mekanikern nämner ett produktnamn (märke/modell, t.ex. "Shimano Deore", ' +
+  '"GP5000") eller en typ/specifikation som räcker för en rimlig matchning ' +
+  '(t.ex. "12-delad kedja", "delad kedja", "däck 42-622"). Nämns inget sådant ' +
+  'för ett jobb: sök inte och lämna produktlistan tom. När något nämns: sök ' +
+  'en gång per del och föreslå bästa träffen med exakt namn, pris, ' +
+  'artikelnummer och lagersaldo från sökresultatet. Matcha det som nämnts ' +
+  '(Shimano → Shimano, 12-delad → 12-delad). Högst 1–2 alternativ ' +
+  '(likvärdig/billigare), och bara ur samma sökresultat: gör inga extra ' +
+  'sökningar för alternativ. Föreslå i första hand varor med lagersaldo > 0; ' +
+  'finns inget passande i lager, ta med bästa träffen ändå (lagersaldo 0 ' +
+  'visas som beställningsvara). Ger sökningen ingen rimlig träff: inga ' +
+  'produktförslag för jobbet.\n\n' +
   WHEEL_RULES +
   '\n\n' +
   PRODUCT_RULES +

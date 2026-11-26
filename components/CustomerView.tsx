@@ -52,8 +52,7 @@ const timeFormat = new Intl.DateTimeFormat('sv-SE', {
   minute: '2-digit',
 });
 
-export function CustomerView({ token }: { token: string }) {
-  const preview = isPreviewLocation();
+export function CustomerView({ token, preview = isPreviewLocation() }: { token: string; preview?: boolean }) {
   const [job, setJob] = useState<CustomerJob | null>(null);
   const [state, setState] = useState<'loading' | 'missing' | 'ready'>('loading');
   const [decisions, setDecisions] = useState<Record<string, Approval>>({});

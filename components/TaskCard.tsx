@@ -7,8 +7,9 @@ import {
   TextInput,
   View,
 } from 'react-native';
+import { confirmDestructive } from '../lib/confirm';
 import { colors } from '../lib/theme';
-import { Side, Task, Product } from '../lib/types';
+import { Side, Task, Product, taskTotal } from '../lib/types';
 import { BikeData } from '../lib/bikeAnalysis';
 import { needsSide, sideLabel, standardProductsFor, taskWarnings } from '../lib/prices';
 import { AddProductModal } from './AddProductModal';
@@ -70,14 +71,8 @@ export function TaskCard({
 
   return (
     <CategoryCard category={task.category} style={rejected && styles.cardRejected}>
-      {warnings.map((warning) => (
-        <View key={warning} style={styles.warning}>
-          <Ionicons name="warning" size={16} color={colors.danger} />
-          <Text style={styles.warningText}>{warning}</Text>
-        </View>
-      ))}
-      <View style={styles.header}>
-        <View style={styles.headerText}>
+      <View style={styles.topRow}>
+        <View style={styles.topRowBadges}>
           {task.severity === 'kritisk' || task.approval ? (
             <View style={styles.categoryRow}>
               {task.severity === 'kritisk' ? (
@@ -99,8 +94,31 @@ export function TaskCard({
               ) : null}
             </View>
           ) : null}
-          <Text style={styles.title}>{task.title}</Text>
         </View>
+        <Pressable
+          onPress={() =>
+            confirmDestructive(
+              'Ta bort produkten',
+              'Är du säker på att du vill ta bort produkten?',
+              'Ja',
+              () => onRemove(task.id)
+            )
+          }
+          hitSlop={8}
+          accessibilityLabel="Ta bort"
+          style={styles.delete}
+        >
+          <Ionicons name="trash-outline" size={19} color={colors.danger} />
+        </Pressable>
+      </View>
+      {warnings.map((warning) => (
+        <View key={warning} style={styles.warning}>
+          <Ionicons name="warning" size={16} color={colors.danger} />
+          <Text style={styles.warningText}>{warning}</Text>
+        </View>
+      ))}
+      <View style={styles.header}>
+        <Text style={[styles.title, styles.headerText]}>{task.title}</Text>
         <Text style={[styles.price, rejected && styles.priceStruck]}>{task.price} kr</Text>
         {onVoiceEdit ? (
           <Pressable
@@ -120,9 +138,6 @@ export function TaskCard({
             )}
           </Pressable>
         ) : null}
-        <Pressable onPress={() => onRemove(task.id)} hitSlop={8} style={styles.remove}>
-          <Ionicons name="close" size={20} color={colors.textSoft} />
-        </Pressable>
       </View>
       {voiceState === 'recording' ? (
         <Text style={styles.voiceHint}>
@@ -209,6 +224,15 @@ export function TaskCard({
           </Pressable>
         </View>
       ))}
+
+      {task.products.length > 0 ? (
+        <View style={styles.totalRow}>
+          <Text style={styles.totalLabel}>Totalt jobb + produkter</Text>
+          <Text style={[styles.totalPrice, rejected && styles.priceStruck]}>
+            {taskTotal(task).toLocaleString('sv-SE')} kr
+          </Text>
+        </View>
+      ) : null}
 
       <FitPressable onPress={() => setAdding(true)} style={styles.addProduct}>
         <Ionicons name="add-circle-outline" size={20} color={colors.accentLight} />

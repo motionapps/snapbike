@@ -175,7 +175,7 @@ export const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
-    gap: 10,
+    gap: 16,
   },
   actionRowItem: {
     flex: 1,
@@ -218,11 +218,12 @@ export const styles = StyleSheet.create({
   },
   readyWrap: {
     gap: 8,
+    marginTop: 12,
   },
   readyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
+    gap: 20,
   },
   notifyToggle: {
     flexDirection: 'row',

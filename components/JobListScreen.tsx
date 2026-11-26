@@ -3,7 +3,6 @@ import { ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { setTaskSide, taskFromPriceItem } from '../lib/prices';
 import {
   ActivityIndicator,
-  Linking,
   Platform,
   Pressable,
   ScrollView,
@@ -11,7 +10,7 @@ import {
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { WORKSHOP_NAME, customerLink } from '../lib/customerLink';
+import { WORKSHOP_NAME } from '../lib/customerLink';
 import { customerIdByPhone, sendMessage } from '../lib/messages';
 import { useOrderContext } from '../lib/orderContext';
 import { approveJobListVerbally, fetchJobList, fetchJobStatus, sendJobList } from '../lib/supabase';
@@ -30,6 +29,7 @@ import {
   Side,
 } from '../lib/types';
 import { AddTaskModal } from './AddTaskModal';
+import { CustomerPreviewModal } from './CustomerPreviewModal';
 import { CategoryCard } from './CategoryCard';
 import { DoneButton, LockedBanner, StepLock, useSetStepDone, useStepLocked } from './StepDone';
 import { StepEmployeePicker, useEnsureStepEmployee } from './StepEmployee';
@@ -104,6 +104,7 @@ export function JobListScreen({ active }: { active: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [showAddTask, setShowAddTask] = useState(false);
+  const [previewToken, setPreviewToken] = useState<string | null>(null);
 
   useEffect(() => {
     setEditing(false);
@@ -315,13 +316,7 @@ export function JobListScreen({ active }: { active: boolean }) {
     });
 
   const preview = () => {
-    if (!jobListSend) return;
-    const url = `${customerLink(jobListSend.shareToken)}?preview=1`;
-    if (Platform.OS === 'web') window.open(url, '_blank');
-    else
-      Linking.openURL(url).catch(() =>
-        setError(`Kunde inte öppna kundsidan (${url}). Är EXPO_PUBLIC_CUSTOMER_URL satt?`)
-      );
+    if (jobListSend) setPreviewToken(jobListSend.shareToken);
   };
 
   const split = splitJobList(inspectionTasks);
@@ -467,7 +462,7 @@ export function JobListScreen({ active }: { active: boolean }) {
               <View style={styles.actionRowItem}>
                 <SecondaryButton
                   label="Förhandsgranska"
-                  icon="open-outline"
+                  icon="eye-outline"
                   disabled={!jobListSend}
                   onPress={preview}
                 />
@@ -496,6 +491,7 @@ export function JobListScreen({ active }: { active: boolean }) {
         onClose={() => setShowAddTask(false)}
         onPick={pickTask}
       />
+      <CustomerPreviewModal token={previewToken} onClose={() => setPreviewToken(null)} />
     </View>
   );
 }

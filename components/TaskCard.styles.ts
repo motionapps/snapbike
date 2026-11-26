@@ -115,6 +115,23 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: colors.cardRaised,
   },
+  topRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  topRowBadges: {
+    flex: 1,
+  },
+  delete: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: colors.danger,
+  },
   voice: {
     width: 38,
     height: 38,
@@ -195,6 +212,24 @@ export const styles = StyleSheet.create({
     fontSize: fontSize.small,
     fontFamily: fonts.bold,
     letterSpacing: 0.5,
+  },
+  totalRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 8,
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+  },
+  totalLabel: {
+    fontSize: fontSize.body,
+    color: colors.textSecondary,
+    fontFamily: fonts.semiBold,
+  },
+  totalPrice: {
+    fontSize: fontSize.emphasis,
+    color: colors.text,
+    fontFamily: fonts.bold,
   },
   productPrice: {
     fontSize: fontSize.body,
