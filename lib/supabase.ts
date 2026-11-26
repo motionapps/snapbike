@@ -31,17 +31,16 @@ export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   },
 });
 
-/** Whether the signed-in user is on the snapbike_staff allowlist. */
-export async function isStaff(userId: string): Promise<boolean> {
-  const { data, error } = await supabase
-    .from('snapbike_staff')
-    .select('user_id')
-    .eq('user_id', userId)
-    .maybeSingle();
+/**
+ * Whether the signed-in login's store is on the snapbike_staff allowlist.
+ * An employee login counts through its admin's store.
+ */
+export async function isStaff(): Promise<boolean> {
+  const { data, error } = await supabase.rpc('snapbike_is_staff');
   if (error) {
     throw new Error(`Kunde inte kontrollera behörighet: ${error.message}`);
   }
-  return data !== null;
+  return data === true;
 }
 
 export type JobInput = {
@@ -155,7 +154,7 @@ function toCustomer(row: CustomerRow): Customer {
 }
 
 /**
- * Creates the customer, or updates the one with the same phone. Returns its id.
+ * Creates the customer, or updates the store's one with the same phone. Returns its id.
  * Without a phone, the job's existing customer row (existingId) is updated so
  * repeated auto-saves don't create duplicates; with no such row a new one is created.
  */
@@ -179,7 +178,7 @@ export async function saveCustomer(
           .single()
       : await supabase
           .from('snapbike_customer')
-          .upsert(row, { onConflict: 'phone' })
+          .upsert(row, { onConflict: 'auth_user_id,phone' })
           .select('id')
           .single();
   if (error) {
@@ -224,7 +223,11 @@ type JobRow = {
   bike_number: string | null;
   inspection: InspectionState | null;
   share_token: string;
+  sent_to_customer_at: string | null;
   customer_responded_at: string | null;
+  received_by: string | null;
+  inspected_by: string | null;
+  worked_by: string | null;
 };
 
 /** Fetches saved jobs, newest first, optionally only one status. */
@@ -232,7 +235,7 @@ export async function fetchJobs(status?: JobStatus): Promise<Job[]> {
   await pendingStatusWrites;
   let query = supabase
     .from('snapbike_jobs')
-    .select('id, created_at, transcript, inspection_transcript, customer_comment, mechanic_comment, tasks, inspection_tasks, image_path, total, status, customer:snapbike_customer(first_name, last_name, phone, email), bike, bike_number, inspection, share_token, customer_responded_at')
+    .select('id, created_at, transcript, inspection_transcript, customer_comment, mechanic_comment, tasks, inspection_tasks, image_path, total, status, customer:snapbike_customer(first_name, last_name, phone, email), bike, bike_number, inspection, share_token, sent_to_customer_at, customer_responded_at, received_by, inspected_by, worked_by')
     .order('created_at', { ascending: false });
   if (status) query = query.eq('status', status);
   const { data, error } = await query;
@@ -258,7 +261,9 @@ export async function fetchJobs(status?: JobStatus): Promise<Job[]> {
     bikeNumber: row.bike_number ?? '',
     inspection: row.inspection ?? {},
     shareToken: row.share_token,
+    sentToCustomerAt: row.sent_to_customer_at,
     customerRespondedAt: row.customer_responded_at,
+    stepEmployees: { note: row.received_by, inspect: row.inspected_by, jobList: row.worked_by },
   }));
 }
 

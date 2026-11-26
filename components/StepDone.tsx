@@ -7,6 +7,7 @@ import { setJobStatus } from '../lib/supabase';
 import { colors, PHONE_MAX_WIDTH } from '../lib/theme';
 import { styles } from './StepDone.styles';
 import { FitPressable } from './FitPressable';
+import { useEnsureStepEmployee } from './StepEmployee';
 
 /** Whether the tab is marked Klar for the current job, i.e. read-only. */
 export function useStepLocked(tab: StepTab): boolean {
@@ -57,25 +58,30 @@ export function DoneButton({ tab, alignRight = false }: { tab: StepTab; alignRig
   const [error, setError] = useState('');
   const done = useStepLocked(tab);
   const setStepDone = useSetStepDone(tab);
+  const ensureStepEmployee = useEnsureStepEmployee(tab);
   const jobId = order.bookingId;
   const { width } = useWindowDimensions();
 
-  const toggle = () => {
+  const toggle = async () => {
     setError('');
-    // Klar moves on to the next step: Mottagning → Besiktning → Jobblista.
-    if (!done) {
-      if (tab === 'note') goToInspection();
-      if (tab === 'inspect') goToJobList();
-    }
-    setStepDone(!done).catch((err) => {
+    try {
+      // Klar needs to know who did the step; Avbryt in the picker stops here.
+      if (!done && !(await ensureStepEmployee())) return;
+      // Klar moves on to the next step: Mottagning → Besiktning → Jobblista.
+      if (!done) {
+        if (tab === 'note') goToInspection();
+        if (tab === 'inspect') goToJobList();
+      }
+      await setStepDone(!done);
+    } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
-    });
+    }
   };
 
   return (
     <View style={[styles.wrap, alignRight && width >= PHONE_MAX_WIDTH && styles.wrapRight]}>
       <FitPressable
-        onPress={toggle}
+        onPress={() => void toggle()}
         disabled={!jobId}
         style={({ pressed }) => [
           styles.button,

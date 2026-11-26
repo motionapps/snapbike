@@ -32,6 +32,7 @@ import {
 import { AddTaskModal } from './AddTaskModal';
 import { CategoryCard } from './CategoryCard';
 import { DoneButton, LockedBanner, StepLock, useSetStepDone, useStepLocked } from './StepDone';
+import { StepEmployeePicker, useEnsureStepEmployee } from './StepEmployee';
 import { ChecklistRow, TaskDetailModal } from './TaskChecklist';
 import { TaskCard } from './TaskCard';
 import { styles } from './JobListScreen.styles';
@@ -380,6 +381,7 @@ export function JobListScreen({ active }: { active: boolean }) {
         keyboardShouldPersistTaps="handled"
       >
         <StepLock tab="jobList" gap={16}>
+        <StepEmployeePicker tab="jobList" />
         {inspectionTasks.length === 0 && !receptionOnly ? (
           <Text style={styles.empty}>
             Markera Mottagning som Klar, eller skapa jobblistan från anmärkningarna under Besiktning.
@@ -414,7 +416,7 @@ export function JobListScreen({ active }: { active: boolean }) {
           </>
         )}
 
-        {!locked && inspectionTasks.length > 0 ? (
+        {!locked ? (
           <Pressable onPress={() => setShowAddTask(true)} style={styles.addTask}>
             <Ionicons name="add-circle-outline" size={20} color={colors.accentLight} />
             <Text style={styles.addTaskText}>{STRINGS.addActionManually}</Text>
@@ -502,6 +504,7 @@ export function JobListScreen({ active }: { active: boolean }) {
 function ReadyRow() {
   const { order } = useOrderContext();
   const setStepDone = useSetStepDone('jobList');
+  const ensureStepEmployee = useEnsureStepEmployee('jobList');
   const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -516,6 +519,8 @@ function ReadyRow() {
     setBusy(true);
     setError('');
     try {
+      // Klar needs to know who did the work; Avbryt in the picker stops here.
+      if (!(await ensureStepEmployee())) return;
       await setStepDone(true);
       if (!notify) return;
       const customerId = order.customer ? await customerIdByPhone(order.customer.phone) : null;

@@ -5,13 +5,9 @@ import {
   Animated,
   Easing,
   LayoutChangeEvent,
-  Modal,
   Pressable,
-  ScrollView,
   Text,
-  TextInput,
   View,
-  useWindowDimensions,
 } from 'react-native';
 import {
   BIKE_TYPE_OPTIONS,
@@ -22,8 +18,17 @@ import {
   GEAR_BACK_OPTIONS,
   GEAR_FRONT_OPTIONS,
 } from '../lib/bikeAnalysis';
+import { BIKE_BRANDS } from '../lib/bikeBrands';
 import { colors } from '../lib/theme';
 import { styles } from './BikeDetails.styles';
+import {
+  DropdownAnchor,
+  DropdownMode,
+  DropdownOption,
+  measureAnchor,
+  OptionDropdown,
+  SuggestInput,
+} from './OptionDropdown';
 
 export type BikeAnalysisState =
   | { status: 'idle' }
@@ -86,14 +91,14 @@ const yesNo = (value: boolean) => (value ? 'Ja' : 'Nej');
 
 type Bike = BikeData['bike'];
 
-/** One editable row: an option list, a yes/no toggle, or free text. */
+/** One editable row: an option dropdown, a yes/no toggle, or free text with suggestions. */
 type Field =
   | {
       label: string;
       kind: 'options';
       options: readonly string[];
-      /** Shows a free-text filter at the top of the dropdown. */
-      filterable?: boolean;
+      /** How the dropdown behaves; default list. */
+      mode?: DropdownMode;
       get: (bike: Bike) => string;
       set: (bike: Bike, value: string) => Bike;
     }
@@ -106,6 +111,8 @@ type Field =
   | {
       label: string;
       kind: 'text';
+      /** Suggested as you type. */
+      suggestions: readonly string[];
       get: (bike: Bike) => string;
       set: (bike: Bike, value: string) => Bike;
     };
@@ -114,7 +121,9 @@ type Field =
 const FIELDS: Field[] = [
   {
     label: 'Märke',
+    // Free text: not every brand is in the list.
     kind: 'text',
+    suggestions: BIKE_BRANDS,
     get: (b) => b.brand,
     set: (b, v) => ({ ...b, brand: v }),
   },
@@ -122,6 +131,7 @@ const FIELDS: Field[] = [
     label: 'Typ',
     kind: 'options',
     options: BIKE_TYPE_OPTIONS,
+    mode: 'filter',
     get: (b) => b.bike_type,
     set: (b, v) => ({ ...b, bike_type: v as Bike['bike_type'] }),
   },
@@ -129,7 +139,7 @@ const FIELDS: Field[] = [
     label: 'Färg',
     kind: 'options',
     options: COMMON_COLORS,
-    filterable: true,
+    mode: 'filter',
     get: (b) => b.color,
     set: (b, v) => ({ ...b, color: v as Bike['color'] }),
   },
@@ -185,6 +195,8 @@ const FIELDS: Field[] = [
 export function BikeDetails({ state, onRetry, onChange, onEdit, expandNonce }: Props) {
   const [expanded, setExpanded] = useState(false);
   const [contentHeight, setContentHeight] = useState(0);
+  // Fully open: stop clipping so the brand suggestions can float past the rows.
+  const [open, setOpen] = useState(false);
   const progress = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -195,7 +207,7 @@ export function BikeDetails({ state, onRetry, onChange, onEdit, expandNonce }: P
       duration: 280,
       easing: Easing.out(Easing.cubic),
       useNativeDriver: false,
-    }).start();
+    }).start(({ finished }) => finished && setOpen(true));
   }, [expandNonce, state.status]);
 
   if (state.status === 'idle') return null;
@@ -227,13 +239,14 @@ export function BikeDetails({ state, onRetry, onChange, onEdit, expandNonce }: P
   const toggle = () => {
     const next = !expanded;
     setExpanded(next);
+    setOpen(false);
     Animated.timing(progress, {
       toValue: next ? 1 : 0,
       duration: 280,
       easing: Easing.out(Easing.cubic),
       // Height can't run on the native driver.
       useNativeDriver: false,
-    }).start();
+    }).start(({ finished }) => finished && setOpen(next));
   };
 
   const onContentLayout = (event: LayoutChangeEvent) => {
@@ -246,7 +259,7 @@ export function BikeDetails({ state, onRetry, onChange, onEdit, expandNonce }: P
   });
 
   return (
-    <View>
+    <View style={styles.root}>
       <Pressable onPress={toggle} style={styles.header} hitSlop={4}>
         <Ionicons name="sparkles" size={15} color={colors.accentLight} />
         <Text style={styles.headerText}>Information om cykeln</Text>
@@ -263,6 +276,7 @@ export function BikeDetails({ state, onRetry, onChange, onEdit, expandNonce }: P
       <Animated.View
         style={[
           styles.body,
+          open && styles.bodyOpen,
           {
             height: progress.interpolate({
               inputRange: [0, 1],
@@ -288,29 +302,69 @@ type RowsProps = {
   onChange?: (bike: Bike) => void;
 };
 
-type OptionsField = Extract<Field, { kind: 'options' }>;
-type Dropdown = { field: OptionsField; x: number; y: number; width: number };
+/** Space between the columns when the rows lay out in more than one. */
+const COLUMN_GAP = 24;
 
-/** The bike's fields as rows: brand is edited inline, options open a dropdown under the row. */
+type OptionsField = Extract<Field, { kind: 'options' }>;
+
+// Built once per list: the brand list has thousands of entries.
+const suggestionCache = new Map<readonly string[], DropdownOption[]>();
+function suggestionOptions(values: readonly string[]): DropdownOption[] {
+  let options = suggestionCache.get(values);
+  if (!options) {
+    options = values.map((value) => ({ value, label: value }));
+    suggestionCache.set(values, options);
+  }
+  return options;
+}
+type Dropdown = { field: OptionsField; anchor: DropdownAnchor };
+
+/** The bike's fields as rows: brand is typed inline, options open a dropdown under the row. */
 export function BikeFieldRows({ bike, onChange }: RowsProps) {
   const [dropdown, setDropdown] = useState<Dropdown | null>(null);
+  const [width, setWidth] = useState(0);
   const readOnly = !onChange;
+  // Wider containers lay the rows out in 2 or 3 columns.
+  const columns = width >= 960 ? 3 : width >= 620 ? 2 : 1;
+  const cellWidth =
+    columns > 1 ? Math.floor((width - COLUMN_GAP * (columns - 1)) / columns) : undefined;
+  const options = (dropdown?.field.options ?? []).map((option) => ({
+    value: option,
+    label: label(option),
+    leading: <Swatch value={option} />,
+  }));
 
   return (
     <>
-      {FIELDS.map((field, index) => (
-        <FieldRow
-          key={field.label}
-          field={field}
-          bike={bike}
-          divider={index > 0}
-          onChange={onChange}
-          onOpen={setDropdown}
-          readOnly={readOnly}
-        />
-      ))}
+      <View
+        style={[styles.grid, columns > 1 && { columnGap: COLUMN_GAP }]}
+        onLayout={(event) => setWidth(event.nativeEvent.layout.width)}
+      >
+        {FIELDS.map((field, index) => (
+          <View
+            key={field.label}
+            style={[
+              styles.cell,
+              { width: cellWidth ?? '100%' },
+              // Above the cells after it, so its suggestions float over them.
+              field.kind === 'text' && styles.cellOnTop,
+            ]}
+          >
+            <FieldRow
+              field={field}
+              bike={bike}
+              divider={index >= columns}
+              onChange={onChange}
+              onOpen={setDropdown}
+              readOnly={readOnly}
+            />
+          </View>
+        ))}
+      </View>
       <OptionDropdown
-        dropdown={dropdown}
+        anchor={dropdown?.anchor ?? null}
+        options={options}
+        mode={dropdown?.field.mode}
         value={dropdown ? dropdown.field.get(bike) : ''}
         onPick={(value) => {
           if (dropdown && onChange) onChange(dropdown.field.set(bike, value));
@@ -342,14 +396,12 @@ function FieldRow({ field, bike, divider, readOnly, onChange, onOpen }: FieldRow
         {readOnly ? (
           <Text style={styles.rowValue}>{field.get(bike) || '–'}</Text>
         ) : (
-          <TextInput
+          <SuggestInput
             style={[styles.rowValue, styles.rowInput]}
             value={field.get(bike)}
             onChangeText={(text) => onChange?.(field.set(bike, text))}
+            options={suggestionOptions(field.suggestions)}
             placeholder="Skriv märke"
-            placeholderTextColor={colors.textFaint}
-            autoCorrect={false}
-            returnKeyType="done"
           />
         )}
       </View>
@@ -362,9 +414,7 @@ function FieldRow({ field, bike, divider, readOnly, onChange, onOpen }: FieldRow
       onChange(field.set(bike, !field.get(bike)));
       return;
     }
-    ref.current?.measureInWindow((x, y, width, height) => {
-      onOpen({ field, x, y: y + height, width });
-    });
+    measureAnchor(ref, (anchor) => onOpen({ field, anchor }));
   };
 
   const value = field.kind === 'boolean' ? yesNo(field.get(bike)) : label(field.get(bike));
@@ -376,7 +426,6 @@ function FieldRow({ field, bike, divider, readOnly, onChange, onOpen }: FieldRow
       disabled={readOnly}
       style={({ pressed }) => [
         ...rowStyle,
-        field.kind === 'boolean' && (field.get(bike) ? styles.rowYes : styles.rowNo),
         pressed && styles.rowPressed,
       ]}
     >
@@ -396,92 +445,3 @@ function FieldRow({ field, bike, divider, readOnly, onChange, onOpen }: FieldRow
   );
 }
 
-type DropdownProps = {
-  dropdown: Dropdown | null;
-  value: string;
-  onPick: (value: string) => void;
-  onClose: () => void;
-};
-
-const DROPDOWN_MAX = 320;
-const DROPDOWN_MIN = 160;
-// Half the ~300 ms of the built-in modal fade.
-const DROPDOWN_FADE_MS = 150;
-
-/** Option list over everything else, dropping down right under the pressed row. */
-function OptionDropdown({ dropdown, value, onPick, onClose }: DropdownProps) {
-  const { height: windowHeight } = useWindowDimensions();
-  const opacity = useRef(new Animated.Value(0)).current;
-  const [filter, setFilter] = useState('');
-
-  useEffect(() => {
-    if (!dropdown) return;
-    setFilter('');
-    opacity.setValue(0);
-    Animated.timing(opacity, {
-      toValue: 1,
-      duration: DROPDOWN_FADE_MS,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: true,
-    }).start();
-  }, [dropdown]);
-
-  if (!dropdown) return null;
-
-  const below = windowHeight - dropdown.y - 24;
-  const maxHeight = Math.min(DROPDOWN_MAX, Math.max(below, DROPDOWN_MIN));
-  const query = filter.trim().toLowerCase();
-  const options = query
-    ? dropdown.field.options.filter((option) => label(option).toLowerCase().includes(query))
-    : dropdown.field.options;
-
-  return (
-    <Modal visible transparent animationType="none" onRequestClose={onClose}>
-      <Pressable style={styles.dropdownBackdrop} onPress={onClose} />
-      <Animated.View
-        style={[
-          styles.dropdown,
-          { top: dropdown.y, left: dropdown.x, width: dropdown.width, maxHeight, opacity },
-        ]}
-      >
-        {dropdown.field.filterable ? (
-          <View style={styles.dropdownFilterRow}>
-            <Ionicons name="search" size={16} color={colors.textFaint} />
-            <TextInput
-              style={styles.dropdownFilter}
-              value={filter}
-              onChangeText={setFilter}
-              placeholder="Filtrera…"
-              placeholderTextColor={colors.textFaint}
-              autoCorrect={false}
-            />
-          </View>
-        ) : null}
-        <ScrollView keyboardShouldPersistTaps="handled">
-          {options.map((option, index) => {
-            const selected = option === value;
-            return (
-              <Pressable
-                key={option}
-                onPress={() => onPick(option)}
-                style={({ pressed }) => [
-                  styles.dropdownOption,
-                  index > 0 && styles.dropdownDivider,
-                  pressed && styles.rowPressed,
-                ]}
-              >
-                <Swatch value={option} />
-                <Text style={[styles.dropdownText, selected && styles.dropdownTextSelected]}>
-                  {label(option)}
-                </Text>
-                {selected ? (
-                  <Ionicons name="checkmark" size={20} color={colors.accentLight} />
-                ) : null}
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </Animated.View>
-    </Modal>
-  );
-}

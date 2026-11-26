@@ -14,7 +14,7 @@ const EMPTY_BIKE: BikeData = {
     bike_type: 'city bike',
     color: 'black',
     gears: { front: 'none', back: 'hub' },
-    brakes: { front: 'roller brake', back: 'roller brake' },
+    brakes: { front: 'mechanical disc', back: 'foot brake' },
     dampers: { front: false, back: false },
     electric: false,
   },
@@ -50,7 +50,11 @@ export function ManualBikeModal({ visible, initial, onClose, onSave }: Props) {
             <Ionicons name="close" size={22} color={colors.textSecondary} />
           </Pressable>
         </View>
-        <ScrollView style={webScroll} contentContainerStyle={[styles.content, webScrollContent]}>
+        <ScrollView
+          style={webScroll}
+          contentContainerStyle={[styles.content, webScrollContent]}
+          keyboardShouldPersistTaps="handled"
+        >
           <View style={styles.card}>
             <BikeFieldRows bike={data.bike} onChange={(bike) => setData({ ...data, bike })} />
           </View>

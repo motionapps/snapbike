@@ -50,6 +50,7 @@ import { ImagePreviewModal } from './ImagePreviewModal';
 import { JobNotesModal } from './JobNotesModal';
 import { MicButton, MicPhase } from './MicButton';
 import { DoneButton, LockedBanner, StepLock, useSetStepDone, useStepLocked } from './StepDone';
+import { StepEmployeePicker, useEnsureStepEmployee } from './StepEmployee';
 import { WaveText } from './WaveText';
 import { styles } from './InspectionScreen.styles';
 import { webGrid, webHalf, webScroll, webScrollContent } from '../lib/webEdge';
@@ -342,6 +343,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
   const done = checkedCount === itemCount;
 
   const setInspectionDone = useSetStepDone('inspect');
+  const ensureStepEmployee = useEnsureStepEmployee('inspect');
 
   // Klar, skapa jobblista: make the Jobblista from the remarks, mark
   // Besiktning Klar and jump to the Jobblista tab.
@@ -369,7 +371,14 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
     }
   }, [issues, inspectionTranscript, prices, tasks, order.bookingId, setInspectionTasks, setJobListSend, setInspectionDone, goToJobList]);
 
-  const createTasks = useCallback(() => {
+  const createTasks = useCallback(async () => {
+    // Klar needs to know who did the inspection; Avbryt in the picker stops here.
+    try {
+      if (!(await ensureStepEmployee())) return;
+    } catch (err) {
+      setMicError(err instanceof Error ? err.message : String(err));
+      return;
+    }
     if (issues.length === 0) {
       // Nothing to list: just mark Besiktning Klar and move on.
       setMicError('');
@@ -392,7 +401,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
       { text: 'Avbryt', style: 'cancel' },
       { text: 'Skapa igen', style: 'destructive', onPress: () => void runCreateTasks() },
     ]);
-  }, [issues.length, inspectionTasks.length, runCreateTasks, setInspectionDone, goToJobList]);
+  }, [issues.length, inspectionTasks.length, runCreateTasks, setInspectionDone, goToJobList, ensureStepEmployee]);
 
   return (
     <View style={styles.root}>
@@ -446,6 +455,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
         keyboardDismissMode="on-drag"
       >
         <StepLock tab="inspect" gap={22}>
+          <StepEmployeePicker tab="inspect" />
           <View
             style={styles.micCard}
             onLayout={(e) => {
@@ -662,7 +672,7 @@ export function InspectionScreen({ scrollReset }: { scrollReset: number }) {
 
             {!stepLocked ? (
               <FitPressable
-                onPress={createTasks}
+                onPress={() => void createTasks()}
                 disabled={creatingTasks}
                 style={[styles.createTasks, creatingTasks && styles.createTasksBusy]}
               >

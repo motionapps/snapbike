@@ -36,7 +36,8 @@ export const styles = StyleSheet.create({
     borderCurve: 'continuous',
     borderWidth: 1,
     borderColor: colors.border,
-    overflow: 'hidden',
+    // Not clipped, and above the save button, so the brand suggestions float over both.
+    zIndex: 1,
   },
   save: {
     minHeight: 54,

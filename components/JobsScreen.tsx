@@ -10,6 +10,7 @@ import {
   Text,
   TextInput,
   View,
+  useWindowDimensions,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -25,6 +26,7 @@ import { JobCard } from './JobCard';
 import { useOrderContext } from '../lib/orderContext';
 import { CommentField } from './JobNotesModal';
 import { JobDetailModal } from './JobDetailModal';
+import { DropdownAnchor, measureAnchor, OptionDropdown } from './OptionDropdown';
 import { styles } from './JobsScreen.styles';
 import { webScroll, webScrollContent } from '../lib/webEdge';
 
@@ -34,6 +36,7 @@ type Props = {
   onEditBikeDetails: (job: Job) => void;
   onEditCustomer: (job: Job) => void;
   onStartInspection: (job: Job) => void;
+  onOpenJobList: (job: Job) => void;
   onSelectBike: (job: Job) => void;
   onNewJob: () => void;
   onJobDeleted: (id: string) => void;
@@ -48,6 +51,42 @@ const FILTERS: { key: Filter; label: string }[] = [
   { key: 'ready', label: 'Klara' },
   { key: 'all', label: 'Alla' },
 ];
+
+type SortKey = 'createdDesc' | 'createdAsc' | 'sentToCustomer' | 'customerResponded';
+
+const SORTS: { value: SortKey; label: string }[] = [
+  { value: 'createdDesc', label: 'Skapad – nyast först' },
+  { value: 'createdAsc', label: 'Skapad – äldst först' },
+  { value: 'sentToCustomer', label: 'Senast skickad till kund' },
+  { value: 'customerResponded', label: 'Senast kundsvar' },
+];
+
+const SORT_DROPDOWN_WIDTH = 240;
+
+/** Newest first by the chosen date; jobs without that date last, newest created first. */
+function sortJobs(jobs: Job[], sort: SortKey): Job[] {
+  const byCreated = (a: Job, b: Job) => b.createdAt.localeCompare(a.createdAt);
+  if (sort === 'createdDesc') return [...jobs].sort(byCreated);
+  if (sort === 'createdAsc') return [...jobs].sort((a, b) => byCreated(b, a));
+  const date = (job: Job) =>
+    sort === 'sentToCustomer' ? job.sentToCustomerAt : job.customerRespondedAt;
+  return [...jobs].sort((a, b) => {
+    const da = date(a);
+    const db = date(b);
+    if (da && db) return db.localeCompare(da);
+    if (da) return -1;
+    if (db) return 1;
+    return byCreated(a, b);
+  });
+}
+
+/** Cards per row: one on phones, more on wider screens. */
+function columnsFor(width: number): number {
+  // A 15–16" MacBook (up to ~1730 px wide) gets two; only bigger screens get three.
+  if (width >= 1900) return 3;
+  if (width >= 700) return 2;
+  return 1;
+}
 
 function matchesFilter(job: Job, filter: Filter): boolean {
   if (filter === 'active') {
@@ -78,6 +117,7 @@ export function JobsScreen({
   onEditBikeDetails,
   onEditCustomer,
   onStartInspection,
+  onOpenJobList,
   onSelectBike,
   onNewJob,
   onJobDeleted,
@@ -89,7 +129,11 @@ export function JobsScreen({
   const [error, setError] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>('active');
-  const listRef = useRef<FlatList<Job>>(null);
+  const [sort, setSort] = useState<SortKey>('createdDesc');
+  const [sortAnchor, setSortAnchor] = useState<DropdownAnchor | null>(null);
+  const sortButtonRef = useRef<View>(null);
+  const columns = columnsFor(useWindowDimensions().width);
+  const listRef = useRef<FlatList<Job | null>>(null);
   useScrollToTop('jobs', () => listRef.current?.scrollToOffset({ offset: 0, animated: true }));
   const [query, setQuery] = useState('');
   const [tagQuery, setTagQuery] = useState('');
@@ -98,7 +142,7 @@ export function JobsScreen({
     if (!jobs) return [];
     const words = query.trim().toLowerCase().split(/\s+/).filter(Boolean);
     const tag = tagQuery.trim();
-    return jobs.filter((job) => {
+    const matching = jobs.filter((job) => {
       if (!matchesFilter(job, filter)) return false;
       if (tag && job.bikeNumber !== tag) return false;
       if (words.length === 0) return true;
@@ -107,7 +151,14 @@ export function JobsScreen({
       const digits = text.replace(/[\s-]/g, '');
       return words.every((word) => text.includes(word) || digits.includes(word));
     });
-  }, [jobs, filter, query, tagQuery]);
+    return sortJobs(matching, sort);
+  }, [jobs, filter, query, tagQuery, sort]);
+
+  // Empty cells fill the last row, so a lone card keeps its column width.
+  const cells = useMemo<(Job | null)[]>(() => {
+    const rest = visible.length % columns;
+    return rest ? [...visible, ...Array<null>(columns - rest).fill(null)] : visible;
+  }, [visible, columns]);
 
   const load = useCallback(async () => {
     try {
@@ -204,15 +255,22 @@ export function JobsScreen({
   );
 
   const renderItem = useCallback(
-    ({ item }: ListRenderItemInfo<Job>) => (
-      <JobCard
-        job={item}
-        onChangeStatus={changeStatus}
-        onPress={setOpenId}
-      />
-    ),
-    [changeStatus]
+    ({ item }: ListRenderItemInfo<Job | null>) => {
+      if (!item) return <View style={styles.gridCell} />;
+      const card = <JobCard job={item} onChangeStatus={changeStatus} onPress={setOpenId} />;
+      return columns > 1 ? <View style={styles.gridCell}>{card}</View> : card;
+    },
+    [changeStatus, columns]
   );
+
+  const openSort = () =>
+    measureAnchor(sortButtonRef, (anchor) =>
+      setSortAnchor({
+        x: Math.max(8, anchor.x + anchor.width - SORT_DROPDOWN_WIDTH),
+        y: anchor.y + 4,
+        width: SORT_DROPDOWN_WIDTH,
+      })
+    );
 
   const openJob =
     jobs?.find((job) => job.id === openId) ?? null;
@@ -252,6 +310,13 @@ export function JobsScreen({
             </Pressable>
           );
         })}
+        <Pressable ref={sortButtonRef} onPress={openSort} style={styles.sortButton} hitSlop={4}>
+          <Ionicons name="swap-vertical" size={16} color={colors.textSecondary} />
+          <Text style={styles.filterText} numberOfLines={1}>
+            {SORTS.find((item) => item.value === sort)?.label}
+          </Text>
+          <Ionicons name="chevron-down" size={16} color={colors.textSecondary} />
+        </Pressable>
       </View>
 
       <View style={styles.searchRow}>
@@ -299,7 +364,11 @@ export function JobsScreen({
         <View style={[styles.listWrap, webScroll]}>
         <FlatList
           ref={listRef}
-          data={visible}
+          // numColumns can't change on a mounted list.
+          key={columns}
+          numColumns={columns}
+          columnWrapperStyle={columns > 1 ? styles.gridRow : undefined}
+          data={cells}
           keyExtractor={keyExtractor}
           renderItem={renderItem}
           contentContainerStyle={[styles.listContent, webScrollContent]}
@@ -324,6 +393,17 @@ export function JobsScreen({
         </View>
       )}
 
+      <OptionDropdown
+        anchor={sortAnchor}
+        options={SORTS}
+        value={sort}
+        onPick={(value) => {
+          setSort(value as SortKey);
+          setSortAnchor(null);
+        }}
+        onClose={() => setSortAnchor(null)}
+      />
+
       <JobDetailModal
         job={openJob}
         onClose={() => setOpenId(null)}
@@ -333,6 +413,7 @@ export function JobsScreen({
         onEditBikeDetails={onEditBikeDetails}
         onEditCustomer={onEditCustomer}
         onStartInspection={onStartInspection}
+        onOpenJobList={onOpenJobList}
         onSelectBike={onSelectBike}
         onDelete={removeJob}
       />
@@ -340,6 +421,6 @@ export function JobsScreen({
   );
 }
 
-function keyExtractor(item: Job): string {
-  return item.id;
+function keyExtractor(item: Job | null, index: number): string {
+  return item?.id ?? `empty-${index}`;
 }

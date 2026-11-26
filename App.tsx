@@ -37,6 +37,9 @@ import { InspectionScreen } from './components/InspectionScreen';
 import { InspectionGuide } from './components/InspectionGuide';
 import { TaskCard } from './components/TaskCard';
 import { OrderContext, useOrderContext } from './lib/orderContext';
+import { EMPTY_STEP_EMPLOYEES, fetchStepEmployees, StepEmployees } from './lib/employees';
+import { StaffProvider } from './components/StaffProvider';
+import { StepEmployeePicker } from './components/StepEmployee';
 import { clearDraft, loadDraft, saveDraft } from './lib/persist';
 import { JobsScreen } from './components/JobsScreen';
 import { MessagesScreen } from './components/MessagesScreen';
@@ -197,6 +200,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     holdSave,
     currentStatus,
     setCurrentStatus,
+    setStepEmployees,
   } = useOrderContext();
 
   const [photoUri, setPhotoUri] = useState<string | null>(null);
@@ -457,6 +461,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
     setComments(EMPTY_COMMENTS);
     setOrder(EMPTY_ORDER);
     setCurrentStatus(null);
+    setStepEmployees(EMPTY_STEP_EMPLOYEES);
     setError('');
   }, []);
 
@@ -758,6 +763,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
           <LockedBanner tab="note" />
 
           <StepLock tab="note" gap={20}>
+            <StepEmployeePicker tab="note" />
             <View
               style={styles.photoSection}
               onLayout={(e) => (photoSectionY.current = e.nativeEvent.layout.y)}
@@ -969,6 +975,30 @@ function Root() {
   const [barNote, setBarNote] = useState<NoteEntry[] | null>(null);
   const [holdSave, setHoldSave] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<JobStatus | null>(null);
+  const [stepEmployees, setStepEmployees] = useState<StepEmployees>(EMPTY_STEP_EMPLOYEES);
+
+  // Who did each step is read from the job whenever it becomes current. A
+  // choice made before a new job had its row is kept (Ny order clears it).
+  useEffect(() => {
+    const id = order.bookingId;
+    if (!id) return;
+    let cancelled = false;
+    fetchStepEmployees(id)
+      .then((loaded) => {
+        if (cancelled) return;
+        setStepEmployees((current) => ({
+          note: loaded.note ?? current.note,
+          inspect: loaded.inspect ?? current.inspect,
+          jobList: loaded.jobList ?? current.jobList,
+        }));
+      })
+      .catch(() => {
+        // Offline: Klar asks again.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [order.bookingId]);
 
   const goToJobList = useCallback(() => setTab('jobList'), []);
   // Klar on Mottagning: Besiktning starts from the top.
@@ -1017,6 +1047,11 @@ function Root() {
   const startInspection = useCallback((job: Job) => {
     setLoadRequest({ job, nonce: Date.now() });
     setTab('inspect');
+  }, []);
+
+  const openJobList = useCallback((job: Job) => {
+    setLoadRequest({ job, nonce: Date.now() });
+    setTab('jobList');
   }, []);
 
   const startNewJob = useCallback(() => {
@@ -1095,6 +1130,8 @@ function Root() {
         setHoldSave,
         currentStatus,
         setCurrentStatus,
+        stepEmployees,
+        setStepEmployees,
       }}
     >
       <View style={[styles.root, webPage]}>
@@ -1169,6 +1206,7 @@ function Root() {
               onEditBikeDetails={editBikeDetails}
               onEditCustomer={editCustomer}
               onStartInspection={startInspection}
+              onOpenJobList={openJobList}
               onSelectBike={selectBike}
               onNewJob={startNewJob}
               onJobDeleted={jobDeleted}
@@ -1255,7 +1293,7 @@ function AuthGate() {
     setStaff(null);
     if (!userId) return;
     let cancelled = false;
-    isStaff(userId)
+    isStaff()
       .then((ok) => {
         if (!cancelled) setStaff(ok);
       })
@@ -1295,5 +1333,9 @@ function AuthGate() {
       </View>
     );
   }
-  return <Root />;
+  return (
+    <StaffProvider userId={session.user.id}>
+      <Root />
+    </StaffProvider>
+  );
 }

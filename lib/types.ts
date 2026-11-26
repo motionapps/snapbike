@@ -1,4 +1,5 @@
 import { BikeData } from './bikeAnalysis';
+import type { StepEmployees } from './employees';
 import type { InspectionState } from './inspection';
 
 export type Product = {
@@ -185,8 +186,12 @@ export type Job = {
   inspection: InspectionState;
   /** Secret token in the customer link. */
   shareToken: string;
+  /** When the Jobblista was last sent to the customer; null if never. */
+  sentToCustomerAt: string | null;
   /** When the customer first answered via the link; null if not yet. */
   customerRespondedAt: string | null;
+  /** Who did Mottagning, Besiktning and the work (employee ids). */
+  stepEmployees: StepEmployees;
 };
 
 /** Send state of the Jobblista, as stored on the job row. */

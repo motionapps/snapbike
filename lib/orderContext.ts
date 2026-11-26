@@ -1,5 +1,6 @@
 import { Dispatch, SetStateAction, createContext, useContext } from 'react';
 import type { BikeAnalysisState } from '../components/BikeDetails';
+import type { StepEmployees } from './employees';
 import type { InspectionState } from './inspection';
 import { ItemKind, JobComments, JobListSendState, JobStatus, Task, OrderInfo, PriceItem } from './types';
 
@@ -44,6 +45,9 @@ export type OrderContextValue = {
   /** Status of the current job; null until it is saved. Drives Klar / Lås upp. */
   currentStatus: JobStatus | null;
   setCurrentStatus: Dispatch<SetStateAction<JobStatus | null>>;
+  /** Who did Mottagning, Besiktning and the work on the current job. */
+  stepEmployees: StepEmployees;
+  setStepEmployees: Dispatch<SetStateAction<StepEmployees>>;
 };
 
 export const OrderContext = createContext<OrderContextValue | null>(null);

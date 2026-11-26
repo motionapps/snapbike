@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import { useRef, useState } from 'react';
 import {
-  Alert,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -33,6 +32,7 @@ type Props = {
   onEditBikeDetails: (job: Job) => void;
   onEditCustomer: (job: Job) => void;
   onStartInspection: (job: Job) => void;
+  onOpenJobList: (job: Job) => void;
   onSelectBike: (job: Job) => void;
   onDelete: (id: string) => void;
 };
@@ -49,17 +49,24 @@ export function JobDetailModal({
   onEditBikeDetails,
   onEditCustomer,
   onStartInspection,
+  onOpenJobList,
   onSelectBike,
   onDelete,
 }: Props) {
   const [zoomUri, setZoomUri] = useState<string | null>(null);
   // Snapshot of what the notes modal shows; null when it is closed.
   const [notes, setNotes] = useState<NoteEntry[] | null>(null);
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   // Rough overview of everything to do; denied Jobblista tasks are left out.
   const overviewTasks = job
     ? [...job.tasks, ...job.inspectionTasks.filter((task) => task.approval !== 'nekad')]
     : [];
+  const laborTotal = overviewTasks.reduce((sum, task) => sum + task.price, 0);
+  const productsTotal = overviewTasks.reduce(
+    (sum, task) => sum + task.products.reduce((p, prod) => p + productTotal(prod), 0),
+    0
+  );
 
   const transcripts: NoteEntry[] = job
     ? [
@@ -92,41 +99,32 @@ export function JobDetailModal({
   const close = () => {
     setZoomUri(null);
     setNotes(null);
+    setConfirmingDelete(false);
     onClose();
   };
 
-  const confirmDelete = () => {
+  const deleteJob = () => {
     if (!job) return;
-    const remove = () => {
-      close();
-      onDelete(job.id);
-    };
-    const message = 'Jobbet tas bort permanent.';
-    if (Platform.OS === 'web') {
-      if (window.confirm(`Ta bort jobbet? ${message}`)) remove();
-      return;
-    }
-    Alert.alert('Ta bort jobbet?', message, [
-      { text: 'Avbryt', style: 'cancel' },
-      { text: 'Ta bort', style: 'destructive', onPress: remove },
-    ]);
+    close();
+    onDelete(job.id);
   };
 
   const nextAction = ((): NextAction | null => {
     if (!job) return null;
     switch (job.status) {
+      // The first step not yet marked Klar.
       case 'booked':
+      case 'checked_in':
         return {
-          label: 'Starta mottagningen',
-          icon: 'mic',
+          label: 'Mottagning',
+          icon: 'enter',
           run: () => {
             closeThen(() => onStartCheckIn(job));
           },
         };
-      case 'checked_in':
       case 'received':
         return {
-          label: 'Starta besiktningen',
+          label: 'Besiktning',
           icon: 'clipboard',
           run: () => {
             closeThen(() => onStartInspection(job));
@@ -135,16 +133,13 @@ export function JobDetailModal({
       case 'inspected':
       case 'awaiting_customer':
       case 'customer_approved':
-        return {
-          label: 'Starta arbetet',
-          icon: 'construct',
-          run: () => onChangeStatus(job.id, 'in_progress'),
-        };
       case 'in_progress':
         return {
-          label: 'Markera klar',
-          icon: 'checkmark-circle',
-          run: () => onChangeStatus(job.id, 'ready'),
+          label: 'Jobblista',
+          icon: 'list',
+          run: () => {
+            closeThen(() => onOpenJobList(job));
+          },
         };
       case 'ready':
         return {
@@ -280,19 +275,48 @@ export function JobDetailModal({
               {overviewTasks.length === 0 ? (
                 <Text style={styles.overviewEmpty}>Inga jobb än</Text>
               ) : (
-                overviewTasks.map((task) => {
-                  const products = task.products.reduce((sum, p) => sum + productTotal(p), 0);
-                  return (
-                    <View key={task.id} style={styles.overviewRow}>
-                      <Text style={styles.overviewTitle}>{task.title}</Text>
-                      <Text style={styles.overviewLine}>Arbete {kr(task.price)}</Text>
-                      {task.products.length > 0 ? (
-                        <Text style={styles.overviewLine}>Produkter {kr(products)}</Text>
-                      ) : null}
+                overviewTasks.map((task) => (
+                  <View key={task.id} style={styles.overviewRow}>
+                    <Text style={styles.overviewTitle}>{task.title}</Text>
+                    <View style={styles.overviewLineRow}>
+                      <Text style={styles.overviewLine}>Arbete</Text>
+                      <Text style={styles.overviewLine}>{kr(task.price)}</Text>
                     </View>
-                  );
-                })
+                    {task.products.map((product) => (
+                      <View key={product.id} style={styles.overviewLineRow}>
+                        <Text style={[styles.overviewLine, styles.overviewProductName]}>
+                          {(product.quantity ?? 1) > 1
+                            ? `${product.quantity} × ${product.name} (${kr(product.price)}/st)`
+                            : product.name}
+                        </Text>
+                        <Text style={styles.overviewLine}>{kr(productTotal(product))}</Text>
+                      </View>
+                    ))}
+                    {task.note?.trim() ? (
+                      <Text style={styles.overviewNote}>{task.note.trim()}</Text>
+                    ) : null}
+                  </View>
+                ))
               )}
+              {[
+                { label: 'Verkstadskommentar', text: job.mechanicComment },
+                { label: 'Kundkommentar', text: job.customerComment },
+              ]
+                .filter((comment) => comment.text.trim() !== '')
+                .map((comment) => (
+                  <View key={comment.label} style={styles.overviewRow}>
+                    <Text style={styles.overviewTitle}>{comment.label}</Text>
+                    <Text style={styles.overviewNote}>{comment.text.trim()}</Text>
+                  </View>
+                ))}
+              <View style={styles.overviewLineRow}>
+                <Text style={styles.overviewLine}>Arbete</Text>
+                <Text style={styles.overviewLine}>{kr(laborTotal)}</Text>
+              </View>
+              <View style={styles.overviewLineRow}>
+                <Text style={styles.overviewLine}>Produkter</Text>
+                <Text style={styles.overviewLine}>{kr(productsTotal)}</Text>
+              </View>
               <View style={styles.totalRow}>
                 <Text style={styles.totalLabel}>Totalt</Text>
                 <Text style={styles.totalValue}>
@@ -302,7 +326,7 @@ export function JobDetailModal({
             </View>
 
             <Pressable
-              onPress={confirmDelete}
+              onPress={() => setConfirmingDelete(true)}
               style={({ pressed }) => [
                 styles.deleteButton,
                 pressed && styles.selectButtonPressed,
@@ -319,6 +343,34 @@ export function JobDetailModal({
             onSave={(field, text) => onUpdateComment(job.id, field, text)}
             onClose={() => setNotes(null)}
           />
+          <Modal
+            visible={confirmingDelete}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setConfirmingDelete(false)}
+          >
+            <Pressable style={styles.confirmBackdrop} onPress={() => setConfirmingDelete(false)}>
+              <Pressable style={styles.confirmCard} onPress={() => {}}>
+                <Text style={styles.confirmTitle}>Ta bort jobbet?</Text>
+                <Text style={styles.confirmMessage}>Jobbet tas bort permanent.</Text>
+                <View style={styles.confirmButtons}>
+                  <Pressable
+                    onPress={() => setConfirmingDelete(false)}
+                    style={styles.confirmCancel}
+                    hitSlop={8}
+                  >
+                    <Text style={styles.confirmCancelText}>Avbryt</Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={deleteJob}
+                    style={({ pressed }) => [styles.confirmDelete, pressed && styles.confirmDeletePressed]}
+                  >
+                    <Text style={styles.confirmDeleteText}>Ta bort</Text>
+                  </Pressable>
+                </View>
+              </Pressable>
+            </Pressable>
+          </Modal>
         </KeyboardAvoidingView>
       ) : (
         <View style={[styles.sheet, webPage]} />

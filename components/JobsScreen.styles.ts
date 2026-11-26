@@ -64,6 +64,27 @@ export const styles = StyleSheet.create({
   filterTextActive: {
     color: colors.onAccent,
   },
+  sortButton: {
+    marginLeft: 'auto',
+    flexShrink: 1,
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: colors.card,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  gridRow: {
+    gap: 12,
+  },
+  gridCell: {
+    flex: 1,
+    minWidth: 0,
+  },
   searchRow: {
     flexDirection: 'row',
     gap: 8,
