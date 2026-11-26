@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -11,6 +11,7 @@ import { confirmDestructive } from '../lib/confirm';
 import { colors } from '../lib/theme';
 import { NewProduct, Side, Task, Product, taskTotal } from '../lib/types';
 import { productImageUrl } from '../lib/productSearch';
+import { findInStock, getInStockStatus, subscribeInStock } from '../lib/inStockCache';
 import { BikeData } from '../lib/bikeAnalysis';
 import { needsSide, sideLabel, standardProductsFor, taskWarnings } from '../lib/prices';
 import { AddProductModal } from './AddProductModal';
@@ -60,6 +61,8 @@ export function TaskCard({
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState('');
   const [previewUri, setPreviewUri] = useState<string | null>(null);
+  // Re-render when the in-stock list loads, so older products find their photo.
+  useSyncExternalStore(subscribeInStock, getInStockStatus);
 
   const commitPrice = () => {
     if (editingId) {
@@ -159,7 +162,13 @@ export function TaskCard({
       ) : null}
 
       {task.products.map((product) => {
-        const imageUrl = productImageUrl(product);
+        // A product saved before it kept its supplier gets it from the in-stock list.
+        const stocked = !product.supplier && product.articleNumber ? findInStock(product.articleNumber) : undefined;
+        const imageUrl = productImageUrl(
+          stocked
+            ? { ...product, supplier: stocked.supplier?.name, ean: stocked.ean, hasImage: stocked.hasImage }
+            : product
+        );
         return (
         <View key={product.id} style={styles.productRow}>
           <Ionicons name="cube-outline" size={15} color={colors.textSecondary} />

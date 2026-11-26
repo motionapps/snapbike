@@ -6,7 +6,8 @@ import { fetchInStockProducts, SearchProduct } from './productSearch';
  * search is instant and works without network. Refreshed at most once an hour.
  */
 const REFRESH_MS = 60 * 60 * 1000;
-const keyFor = (userId: string) => `inStockProducts:${userId}`;
+// v2: products carry hasImage; a list stored before that is fetched again.
+const keyFor = (userId: string) => `inStockProducts:v2:${userId}`;
 
 type Stored = { fetchedAt: number; products: SearchProduct[] };
 
@@ -93,6 +94,11 @@ export function subscribeInStock(listener: () => void): () => void {
 
 export function getInStockStatus(): InStockStatus {
   return status;
+}
+
+/** The cached in-stock product with this article number, if any. */
+export function findInStock(articleNumber: string): SearchProduct | undefined {
+  return cache?.products.find((product) => product.articleNumber === articleNumber);
 }
 
 /**
