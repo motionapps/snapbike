@@ -90,7 +90,9 @@ export function JobListScreen({ active }: { active: boolean }) {
     order,
     prices,
     setCurrentStatus,
+    bikeAnalysis,
   } = useOrderContext();
+  const bike = bikeAnalysis.status === 'ready' ? bikeAnalysis.bike.bike : null;
   const jobId = order.bookingId;
   const [editing, setEditing] = useState(false);
   const editingRef = useRef(false);
@@ -338,6 +340,7 @@ export function JobListScreen({ active }: { active: boolean }) {
         onUpdateProduct={updateProduct}
         onSetApproval={sent ? setApproval : undefined}
         onSetSide={setSide}
+        bike={bike}
       />
     );
 
@@ -347,7 +350,7 @@ export function JobListScreen({ active }: { active: boolean }) {
     ) : locked ? (
       <TaskRow key={task.id} task={task} />
     ) : (
-      <TaskCard key={task.id} task={task} {...receptionHandlers} />
+      <TaskCard key={task.id} task={task} bike={bike} {...receptionHandlers} />
     );
 
   const statusText = jobListSend?.verbalApprovalAt

@@ -36,6 +36,10 @@ export const styles = StyleSheet.create({
   },
   rowTitleDone: {
     color: colors.textSecondary,
+    textDecorationLine: 'line-through',
+  },
+  rowTextDone: {
+    textDecorationLine: 'line-through',
   },
   rowProduct: {
     color: colors.textSecondary,

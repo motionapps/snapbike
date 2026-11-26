@@ -9,7 +9,8 @@ import {
 } from 'react-native';
 import { colors } from '../lib/theme';
 import { Side, Task, Product } from '../lib/types';
-import { needsSide, sideLabel, standardProductsFor } from '../lib/prices';
+import { BikeData } from '../lib/bikeAnalysis';
+import { needsSide, sideLabel, standardProductsFor, taskWarnings } from '../lib/prices';
 import { AddProductModal } from './AddProductModal';
 import { FitPressable } from './FitPressable';
 import { CategoryCard } from './CategoryCard';
@@ -34,6 +35,8 @@ type Props = {
   onSetApproval?: (taskId: string, approval: 'godkänd' | 'nekad' | undefined) => void;
   /** Picks fram/bak/fram+bak on a sided task that has none yet. */
   onSetSide?: (taskId: string, side: Side) => void;
+  /** The bike the task is for; a task that doesn't fit it shows a warning. */
+  bike?: BikeData['bike'] | null;
 };
 
 const SIDES: Side[] = ['front', 'rear', 'both'];
@@ -48,6 +51,7 @@ export function TaskCard({
   onVoiceEdit,
   onSetApproval,
   onSetSide,
+  bike = null,
 }: Props) {
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -62,9 +66,16 @@ export function TaskCard({
   };
 
   const rejected = task.approval === 'nekad';
+  const warnings = taskWarnings(task, bike);
 
   return (
     <CategoryCard category={task.category} style={rejected && styles.cardRejected}>
+      {warnings.map((warning) => (
+        <View key={warning} style={styles.warning}>
+          <Ionicons name="warning" size={16} color={colors.danger} />
+          <Text style={styles.warningText}>{warning}</Text>
+        </View>
+      ))}
       <View style={styles.header}>
         <View style={styles.headerText}>
           {task.severity === 'kritisk' || task.approval ? (

@@ -165,6 +165,22 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 8,
   },
+  warning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    backgroundColor: 'rgba(196, 79, 91, 0.12)',
+    borderRadius: radius.md,
+    borderCurve: 'continuous',
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
+  warningText: {
+    flex: 1,
+    color: colors.danger,
+    fontSize: fontSize.body,
+    fontFamily: fonts.semiBold,
+  },
   criticalBadge: {
     flexDirection: 'row',
     alignItems: 'center',

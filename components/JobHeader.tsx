@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, Text, View } from 'react-native';
 import { colors } from '../lib/theme';
 import { Job, customerWarning } from '../lib/types';
-import { bikeLabel } from './BikeDetails';
+import { bikeLabel } from '../lib/bikeLabels';
 import { bikeColorHex, textColorOnBike } from './CurrentBikeBar';
 import { styles } from './JobHeader.styles';
 

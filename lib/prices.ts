@@ -1,4 +1,5 @@
 import { BikeData } from './bikeAnalysis';
+import { bikeLabel } from './bikeLabels';
 import { PRICE_MODEL_CSV } from './priceModelCsv';
 import { ItemKind, PriceItem, Product, Side, StandardProduct, Task, uid } from './types';
 
@@ -425,4 +426,48 @@ export function applyProductRules(task: Task): Task {
 export function setTaskSide(task: Task, side: Side): Task {
   const item = itemForTask(task);
   return item ? applyProductRules({ ...task, title: item.title, side }) : task;
+}
+
+/**
+ * Requirements (requirements.csv): a part + action that only fits some bikes,
+ * e.g. bleeding needs a hydraulic brake. A mismatch only warns; it never blocks.
+ */
+const REQUIREMENTS = parseCsv(PRICE_MODEL_CSV.requirements).map((row) => ({
+  key: `${row.part_id}|${row.action_id}`,
+  requires: row.requires.split('|').filter(Boolean),
+  message: row.message,
+}));
+
+/** The conditions a bike's brake on one side meets; 'none' and unknown values meet nothing. */
+const BRAKE_CONDITIONS: Record<string, string[]> = {
+  'hydraulic disc': ['brake_type=disc', 'brake_system=hydraulic'],
+  'mechanical disc': ['brake_type=disc', 'brake_system=mechanical'],
+  'mechanical rim': ['brake_type=rim'],
+  'roller brake': ['brake_type=roller'],
+  'foot brake': ['brake_type=coaster'],
+};
+
+/**
+ * Warnings for a task that doesn't fit the bike: one per side whose brake
+ * fails a requirement. No bike, no side or an unknown brake → no warning.
+ */
+export function taskWarnings(task: Task, bike: BikeData['bike'] | null): string[] {
+  const item = itemForTask(task);
+  if (!bike || !item) return [];
+  const rules = REQUIREMENTS.filter((rule) => rule.key === `${item.partId}|${item.actionId}`);
+  const side = task.side ?? (item.conditions.position as Side | undefined);
+  if (rules.length === 0 || !side) return [];
+  const sides: ('front' | 'rear')[] = side === 'both' ? ['front', 'rear'] : [side];
+  return sides.flatMap((s) => {
+    const brake = s === 'front' ? bike.brakes.front : bike.brakes.back;
+    const meets = BRAKE_CONDITIONS[brake];
+    if (!meets) return [];
+    return rules
+      .filter((rule) => !rule.requires.some((condition) => meets.includes(condition)))
+      .map((rule) =>
+        rule.message
+          .replaceAll('{brake}', bikeLabel(brake).toLowerCase())
+          .replaceAll('{side}', sideLabel(s))
+      );
+  });
 }

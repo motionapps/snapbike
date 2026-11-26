@@ -3,7 +3,7 @@ import { Pressable, Text, View } from 'react-native';
 import { BikeData } from '../lib/bikeAnalysis';
 import { colors, statusColors } from '../lib/theme';
 import { Customer, JobComments, JobStatus, STATUS_LABELS, customerWarning } from '../lib/types';
-import { bikeLabel } from './BikeDetails';
+import { bikeLabel } from '../lib/bikeLabels';
 import type { CommentField } from './JobNotesModal';
 import { styles } from './CurrentBikeBar.styles';
 

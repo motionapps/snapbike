@@ -30,6 +30,15 @@ kort och entydigt.
   vid behov (däck och slang vid Byt däck, Eker vid hjulriktning).
 - `packages.csv` – servicepaket; `covers` listar `part.action` som ingår.
 - `add_ons.csv` – tillägg (Elcykel, Lådcykel, Express …).
+- `requirements.csv` – `part_id, action_id, requires, message`. Krav som del +
+  åtgärd ställer på cykeln (alla dess prisrader). `requires` är villkor
+  separerade med `|`; minst ett ska stämma. Stämmer inget visar jobbkortet
+  (Mottagning och Jobblista) en röd varning med `message`; `{brake}` och
+  `{side}` fylls i. Varningen stoppar ingenting. Bara bromsar kollas nu, per
+  jobbets sida mot cykelns broms fram/bak (fotbroms = `brake_type=coaster`,
+  hydraulisk skiva = `brake_type=disc` + `brake_system=hydraulic` osv., se
+  `taskWarnings` i `lib/prices.ts`). Okänd broms eller sida → ingen varning.
+  Skickas inte till AI:n.
 
 ## Sidor (fram / bak / fram+bak)
 
@@ -63,7 +72,7 @@ Om någon CSV ändras, regenerera `lib/priceModelCsv.ts` från projektroten:
 node -e "
 const fs = require('fs');
 const dir = 'assets/price-model/';
-const files = { parts: 'parts', actions: 'actions', prices: 'prices', standardProducts: 'standard_products', packages: 'packages', addOns: 'add_ons', conditions: 'conditions' };
+const files = { parts: 'parts', actions: 'actions', prices: 'prices', standardProducts: 'standard_products', packages: 'packages', addOns: 'add_ons', conditions: 'conditions', requirements: 'requirements' };
 const body = Object.entries(files).map(([key, f]) => '  ' + key + ': \\\`' + fs.readFileSync(dir + f + '.csv', 'utf8').trim() + '\\\`,').join('\\n');
 fs.writeFileSync('lib/priceModelCsv.ts', '// Auto-generated from assets/price-model/*.csv — regenerate with the snippet in assets/price-model/README.md\\nexport const PRICE_MODEL_CSV = {\\n' + body + '\\n};\\n');
 "

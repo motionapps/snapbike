@@ -1,0 +1,2 @@
+part_id,action_id,requires,message
+brake,bleed,brake_system=hydraulic,Cykeln har {brake} {side}. Det går inte att lufta en {brake}. Byt till rätt typ.

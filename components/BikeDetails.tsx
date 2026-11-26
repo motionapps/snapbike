@@ -19,6 +19,7 @@ import {
   GEAR_FRONT_OPTIONS,
 } from '../lib/bikeAnalysis';
 import { BIKE_BRANDS } from '../lib/bikeBrands';
+import { bikeLabel } from '../lib/bikeLabels';
 import { colors } from '../lib/theme';
 import { styles } from './BikeDetails.styles';
 import {
@@ -46,31 +47,6 @@ type Props = {
   /** Changing it to a non-zero value expands the details. */
   expandNonce?: number;
 };
-
-// Swedish display labels for the prototype's English option values.
-const LABELS: Record<string, string> = {
-  'road bike': 'Racercykel',
-  'mountain bike': 'Mountainbike',
-  'hybrid bike': 'Hybridcykel',
-  'city bike': 'Stadscykel',
-  'kids bike': 'Barncykel',
-  'cargo bike': 'Lastcykel',
-  black: 'Svart', white: 'Vit', red: 'Röd', blue: 'Blå', green: 'Grön',
-  yellow: 'Gul', orange: 'Orange', purple: 'Lila', pink: 'Rosa', brown: 'Brun',
-  gray: 'Grå', silver: 'Silver', gold: 'Guld', navy: 'Marinblå',
-  maroon: 'Vinröd', teal: 'Blågrön', lime: 'Limegrön', cyan: 'Cyan',
-  magenta: 'Magenta', beige: 'Beige',
-  none: 'Ingen',
-  external: 'Utvändig',
-  hub: 'Nav',
-  'mechanical disc': 'Mekanisk skivbroms',
-  'hydraulic disc': 'Hydraulisk skivbroms',
-  'roller brake': 'Rullbroms',
-  'mechanical rim': 'Fälgbroms',
-  'foot brake': 'Fotbroms',
-};
-
-export const bikeLabel = (value: string) => LABELS[value] ?? value;
 
 // Swatch colour for each COMMON_COLORS value.
 const SWATCHES: Record<string, string> = {

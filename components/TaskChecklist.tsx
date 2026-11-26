@@ -86,7 +86,7 @@ export function ChecklistRow({
             <View style={styles.rowText}>
               <Text style={[styles.rowTitle, done && styles.rowTitleDone]}>{task.title}</Text>
               {task.products.map((product) => (
-                <Text key={product.id} style={styles.rowProduct}>
+                <Text key={product.id} style={[styles.rowProduct, done && styles.rowTextDone]}>
                   {product.name}
                 </Text>
               ))}

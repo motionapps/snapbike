@@ -866,6 +866,7 @@ function Screen({ loadRequest }: { loadRequest: LoadRequest | null }) {
                     }
                     onVoiceEdit={toggleTaskVoice}
                     onSetSide={setSide}
+                    bike={bikeAnalysis.status === 'ready' ? bikeAnalysis.bike.bike : null}
                   />
                 ))}
               </View>

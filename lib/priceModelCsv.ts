@@ -93,7 +93,7 @@ brake_lever,replace,,,299,true
 brake_lever,replace,brake_system=hydraulic,inkl. luftning,499,true
 chain,replace,,,449,true
 chain,replace,gears=external,,349,true
-chain,replace,gears=hub,,399,false
+chain,replace,gears=hub,,399,true
 chain,adjust,gears=hub,,199,true
 chain,clean_lube,,,59,false
 cassette,replace,gears=external,,359,true
@@ -199,4 +199,6 @@ bike_type=racer,racer
 bike_type=cargo,lådcykel
 item=trolley,barnvagn
 item=part,lös del`,
+  requirements: `part_id,action_id,requires,message
+brake,bleed,brake_system=hydraulic,Cykeln har {brake} {side}. Det går inte att lufta en {brake}. Byt till rätt typ.`,
 };
