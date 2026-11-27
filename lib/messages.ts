@@ -84,13 +84,14 @@ export async function fetchConversations(): Promise<Conversation[]> {
   return [...seen.values()];
 }
 
-/** Stores an outgoing message. Nothing is delivered to the customer yet. */
+/** Sends an outgoing message as SMS (46elks, via the send-sms edge function) and stores it. */
 export async function sendMessage(customerId: string, body: string): Promise<Message> {
-  const { data, error } = await supabase
-    .from('snapbike_messages')
-    .insert({ customer_id: customerId, direction: 'out', body: body.trim() })
-    .select('id, created_at, customer_id, direction, body')
-    .single();
-  if (error) throw new Error(`Kunde inte skicka: ${error.message}`);
+  const { data, error } = await supabase.functions.invoke('send-sms', {
+    body: { customerId, body: body.trim() },
+  });
+  if (error) {
+    const detail = await (error as { context?: Response }).context?.json?.().catch(() => null);
+    throw new Error(detail?.error ?? `Kunde inte skicka: ${error.message}`);
+  }
   return toMessage(data as MessageRow);
 }
