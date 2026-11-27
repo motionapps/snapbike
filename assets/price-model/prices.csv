@@ -12,7 +12,7 @@ wheel,align,,,499,true
 wheel,align,mounting=loose,,449,true
 wheel,align,hub_motor=yes,,899,true
 wheel,replace,,,399,true
-wheel,build,,,1299,true
+wheel,build,,,1299,false
 wheel,build,hub_motor=yes,,1599,false
 hub,adjust,,,199,false
 hub,replace,,,399,true
@@ -25,14 +25,14 @@ brake_pads,replace,brake_type=disc,,249,true
 brake_pads,replace,brake_type=rim,,169,true
 brake_disc,replace,,,299,true
 brake_disc,align,,,169,false
-brake_cable,replace,position=front,,279,false
-brake_cable,replace,position=rear,,329,false
+brake_cable,replace,position=front,,279,true
+brake_cable,replace,position=rear,,329,true
 brake_lever,replace,,,299,true
 brake_lever,replace,brake_system=hydraulic,inkl. luftning,499,true
 chain,replace,,,449,true
 chain,replace,gears=external,,349,true
 chain,replace,gears=hub,,399,true
-chain,adjust,gears=hub,,199,true
+chain,adjust,gears=hub,,199,false
 chain,clean_lube,,,59,false
 cassette,replace,gears=external,,359,true
 jockey_wheels,replace,gears=external,,249,true
